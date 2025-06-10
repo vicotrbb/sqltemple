@@ -137,3 +137,6 @@ dist
 
 # webpack
 .webpack
+
+# macos
+.DS_Store

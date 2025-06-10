@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
-import { app } from 'electron';
-import * as path from 'path';
-import { DatabaseConnectionConfig } from '../database/interfaces';
+import Database from "better-sqlite3";
+import { app } from "electron";
+import * as path from "path";
+import { DatabaseConnectionConfig } from "../database/interfaces";
 
 export interface QueryHistoryEntry {
   id?: number;
@@ -17,9 +17,9 @@ export class StorageManager {
   private db: Database.Database;
 
   constructor() {
-    const userDataPath = app.getPath('userData');
-    const dbPath = path.join(userDataPath, 'sqltemple.db');
-    
+    const userDataPath = app.getPath("userData");
+    const dbPath = path.join(userDataPath, "sqltemple.db");
+
     this.db = new Database(dbPath);
     this.initializeTables();
   }
@@ -76,7 +76,7 @@ export class StorageManager {
 
   // Connection management
   async getConnections(): Promise<DatabaseConnectionConfig[]> {
-    const stmt = this.db.prepare('SELECT * FROM connections ORDER BY name');
+    const stmt = this.db.prepare("SELECT * FROM connections ORDER BY name");
     return stmt.all() as DatabaseConnectionConfig[];
   }
 
@@ -90,7 +90,7 @@ export class StorageManager {
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
-      
+
       stmt.run(
         connection.name,
         connection.type,
@@ -102,7 +102,7 @@ export class StorageManager {
         connection.ssl ? 1 : 0,
         connection.id
       );
-      
+
       return connection.id;
     } else {
       // Insert new
@@ -110,7 +110,7 @@ export class StorageManager {
         INSERT INTO connections (name, type, host, port, database, username, password, ssl)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       const result = stmt.run(
         connection.name,
         connection.type,
@@ -121,16 +121,18 @@ export class StorageManager {
         connection.password || null,
         connection.ssl ? 1 : 0
       );
-      
+
       return result.lastInsertRowid as number;
     }
   }
 
   async deleteConnection(id: number): Promise<void> {
     // Delete related history first
-    this.db.prepare('DELETE FROM query_history WHERE connection_id = ?').run(id);
+    this.db
+      .prepare("DELETE FROM query_history WHERE connection_id = ?")
+      .run(id);
     // Then delete connection
-    this.db.prepare('DELETE FROM connections WHERE id = ?').run(id);
+    this.db.prepare("DELETE FROM connections WHERE id = ?").run(id);
   }
 
   // Query history management
@@ -139,7 +141,7 @@ export class StorageManager {
       INSERT INTO query_history (connection_id, query, run_at, duration, row_count, success)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       entry.connectionId,
       entry.query,
@@ -150,30 +152,33 @@ export class StorageManager {
     );
   }
 
-  async getQueryHistory(connectionId?: number, limit: number = 100): Promise<QueryHistoryEntry[]> {
-    let query = 'SELECT * FROM query_history';
+  async getQueryHistory(
+    connectionId?: number,
+    limit: number = 100
+  ): Promise<QueryHistoryEntry[]> {
+    let query = "SELECT * FROM query_history";
     const params: any[] = [];
-    
+
     if (connectionId !== undefined) {
-      query += ' WHERE connection_id = ?';
+      query += " WHERE connection_id = ?";
       params.push(connectionId);
     }
-    
-    query += ' ORDER BY run_at DESC LIMIT ?';
+
+    query += " ORDER BY run_at DESC LIMIT ?";
     params.push(limit);
-    
+
     const stmt = this.db.prepare(query);
     const results = stmt.all(...params);
-    
+
     return results.map((row: any) => ({
       ...row,
-      success: Boolean(row.success)
+      success: Boolean(row.success),
     }));
   }
 
   // Settings management
   async getSetting(key: string): Promise<string | null> {
-    const stmt = this.db.prepare('SELECT value FROM settings WHERE key = ?');
+    const stmt = this.db.prepare("SELECT value FROM settings WHERE key = ?");
     const result = stmt.get(key) as { value: string } | undefined;
     return result?.value || null;
   }
@@ -188,21 +193,21 @@ export class StorageManager {
   // AI Configuration
   async saveAIConfig(config: { apiKey: string; model: string }): Promise<void> {
     // Store API key securely (in a real app, consider using electron-store with encryption)
-    await this.setSetting('ai_api_key', config.apiKey);
-    await this.setSetting('ai_model', config.model);
+    await this.setSetting("ai_api_key", config.apiKey);
+    await this.setSetting("ai_model", config.model);
   }
 
   async getAIConfig(): Promise<{ apiKey: string; model: string } | null> {
-    const apiKey = await this.getSetting('ai_api_key');
-    const model = await this.getSetting('ai_model');
-    
+    const apiKey = await this.getSetting("ai_api_key");
+    const model = await this.getSetting("ai_model");
+
     if (!apiKey) {
       return null;
     }
-    
+
     return {
       apiKey,
-      model: model || 'gpt-4o-mini'
+      model: model || "gpt-4o-mini",
     };
   }
 
