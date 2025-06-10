@@ -1,0 +1,63 @@
+{
+  "name": "sqltemple",
+  "version": "1.0.0",
+  "description": "",
+  "main": ".webpack/main",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts,.tsx .",
+    "typecheck": "tsc --noEmit"
+  },
+  "config": {
+    "forge": "./forge.config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.1",
+    "@electron-forge/maker-deb": "^7.8.1",
+    "@electron-forge/maker-dmg": "^7.8.1",
+    "@electron-forge/maker-rpm": "^7.8.1",
+    "@electron-forge/maker-squirrel": "^7.8.1",
+    "@electron-forge/maker-zip": "^7.8.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
+    "@electron-forge/plugin-webpack": "^7.8.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.30",
+    "@types/pg": "^8.15.4",
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6",
+    "autoprefixer": "^10.4.21",
+    "buffer": "^6.0.3",
+    "css-loader": "^7.1.2",
+    "electron": "^36.4.0",
+    "electron-forge": "^5.2.4",
+    "electron-rebuild": "^3.2.9",
+    "electron-squirrel-startup": "^1.0.1",
+    "events": "^3.3.0",
+    "html-webpack-plugin": "^5.6.3",
+    "mini-css-extract-plugin": "^2.9.2",
+    "monaco-editor-webpack-plugin": "^7.1.0",
+    "postcss": "^8.5.4",
+    "postcss-loader": "^8.1.1",
+    "process": "^0.11.10",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "better-sqlite3": "^11.10.0",
+    "monaco-editor": "^0.52.2",
+    "openai": "^5.2.0",
+    "pg": "^8.16.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}
