@@ -35,7 +35,6 @@ module.exports = {
   externals: [
     {
       "better-sqlite3": "commonjs better-sqlite3",
-      openai: "commonjs openai",
       pg: "commonjs pg",
     },
   ],

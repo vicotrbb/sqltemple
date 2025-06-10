@@ -10,8 +10,8 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
-    "rebuild-better-sqlite3": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "npm run rebuild-better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "config": {
     "forge": "./forge.config.js"
