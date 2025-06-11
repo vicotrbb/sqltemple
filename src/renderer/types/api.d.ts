@@ -2,6 +2,7 @@ import {
   DatabaseConnectionConfig,
   QueryResult,
   DatabaseSchema,
+  ColumnInfo,
 } from "../../main/database/interfaces";
 import { QueryHistoryEntry } from "../../main/storage/StorageManager";
 
@@ -24,6 +25,14 @@ export interface IElectronAPI {
   getSchemaInfo: () => Promise<{
     success: boolean;
     schema?: DatabaseSchema;
+    error?: string;
+  }>;
+  getTableColumns: (
+    schemaName: string,
+    tableName: string
+  ) => Promise<{
+    success: boolean;
+    columns?: ColumnInfo[];
     error?: string;
   }>;
   getQueryPlan: (sql: string) => Promise<{

@@ -1,4 +1,4 @@
-const OpenAI = require('openai');
+import OpenAI from "openai";
 
 export interface AIConfig {
   apiKey: string;
@@ -29,21 +29,21 @@ export class AIService {
 
   getAvailableModels(): string[] {
     return [
-      'gpt-4o',
-      'gpt-4o-mini',
-      'o1-preview',
-      'o1-mini',
-      'gpt-4-turbo',
-      'gpt-4-turbo-preview',
-      'gpt-4',
-      'gpt-3.5-turbo',
-      'gpt-3.5-turbo-16k'
+      "gpt-4o",
+      "gpt-4o-mini",
+      "o1-preview",
+      "o1-mini",
+      "gpt-4-turbo",
+      "gpt-4-turbo-preview",
+      "gpt-4",
+      "gpt-3.5-turbo",
+      "gpt-3.5-turbo-16k",
     ];
   }
 
   async analyzeQueryPlan(query: string, plan: any): Promise<string> {
     if (!this.openai || !this.config) {
-      throw new Error('AI service not configured. Please set your API key.');
+      throw new Error("AI service not configured. Please set your API key.");
     }
 
     const systemPrompt = `You are an expert database performance analyst specializing in PostgreSQL query optimization. Your role is to analyze query execution plans and provide clear, actionable insights.
@@ -80,7 +80,7 @@ Provide a detailed analysis with specific optimization recommendations.`;
 
   async explainQuery(query: string, schema?: any): Promise<string> {
     if (!this.openai || !this.config) {
-      throw new Error('AI service not configured. Please set your API key.');
+      throw new Error("AI service not configured. Please set your API key.");
     }
 
     const systemPrompt = `You are an expert SQL instructor who explains queries in a clear, educational manner. Your explanations should be:
@@ -100,8 +100,12 @@ Structure your explanation with:
 
 ${query}
 
-${schema ? `Available schema information:
-${JSON.stringify(schema, null, 2)}` : ''}
+${
+  schema
+    ? `Available schema information:
+${JSON.stringify(schema, null, 2)}`
+    : ""
+}
 
 Provide a comprehensive explanation that helps understand what this query does and how it works.`;
 
@@ -110,7 +114,7 @@ Provide a comprehensive explanation that helps understand what this query does a
 
   async createQuery(userRequest: string, schema: any): Promise<string> {
     if (!this.openai || !this.config) {
-      throw new Error('AI service not configured. Please set your API key.');
+      throw new Error("AI service not configured. Please set your API key.");
     }
 
     const systemPrompt = `You are an expert SQL query writer. Your role is to create efficient, correct SQL queries based on user requirements and database schema.
@@ -134,13 +138,17 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the SQL query without any explanations or markdown formatting.`;
 
-    const result = await this.callOpenAI({ systemPrompt, userPrompt, temperature: 0.3 });
+    const result = await this.callOpenAI({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.3,
+    });
     return this.cleanSQLResponse(result);
   }
 
   async optimizeQuery(query: string, plan: any, schema: any): Promise<string> {
     if (!this.openai || !this.config) {
-      throw new Error('AI service not configured. Please set your API key.');
+      throw new Error("AI service not configured. Please set your API key.");
     }
 
     const systemPrompt = `You are a database optimization expert. Your task is to rewrite SQL queries for better performance based on their execution plans.
@@ -169,37 +177,41 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the optimized SQL query.`;
 
-    const result = await this.callOpenAI({ systemPrompt, userPrompt, temperature: 0.2 });
+    const result = await this.callOpenAI({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+    });
     return this.cleanSQLResponse(result);
   }
 
   private cleanSQLResponse(response: string): string {
     // Remove markdown code blocks
     let cleaned = response.trim();
-    
+
     // Remove ```sql or ``` markers
-    cleaned = cleaned.replace(/^```(?:sql)?\s*\n?/i, '');
-    cleaned = cleaned.replace(/\n?```\s*$/i, '');
-    
+    cleaned = cleaned.replace(/^```(?:sql)?\s*\n?/i, "");
+    cleaned = cleaned.replace(/\n?```\s*$/i, "");
+
     // Remove any leading/trailing whitespace
     return cleaned.trim();
   }
 
   private async callOpenAI(prompt: AIPrompt): Promise<string> {
     if (!this.openai || !this.config) {
-      throw new Error('AI service not configured');
+      throw new Error("AI service not configured");
     }
 
     try {
       // o1 models have special requirements
-      const isO1Model = this.config.model.startsWith('o1-');
-      
+      const isO1Model = this.config.model.startsWith("o1-");
+
       const params: any = {
         model: this.config.model,
         messages: [
-          { role: 'system', content: prompt.systemPrompt },
-          { role: 'user', content: prompt.userPrompt }
-        ]
+          { role: "system", content: prompt.systemPrompt },
+          { role: "user", content: prompt.userPrompt },
+        ],
       };
 
       // o1 models don't support temperature, top_p, etc.
@@ -213,14 +225,16 @@ Return ONLY the optimized SQL query.`;
 
       const response = await this.openai.chat.completions.create(params);
 
-      return response.choices[0]?.message?.content || 'No response from AI';
+      return response.choices[0]?.message?.content || "No response from AI";
     } catch (error: any) {
       if (error.status === 401) {
-        throw new Error('Invalid API key. Please check your OpenAI API key.');
+        throw new Error("Invalid API key. Please check your OpenAI API key.");
       } else if (error.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
+        throw new Error("Rate limit exceeded. Please try again later.");
       } else if (error.status === 404) {
-        throw new Error(`Model "${this.config.model}" not found. Please select a different model.`);
+        throw new Error(
+          `Model "${this.config.model}" not found. Please select a different model.`
+        );
       } else {
         throw new Error(`AI request failed: ${error.message}`);
       }

@@ -49,6 +49,8 @@ const AppContent: React.FC = () => {
   const [editingConnection, setEditingConnection] =
     useState<DatabaseConnectionConfig | null>(null);
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [resultsPanelHeight, setResultsPanelHeight] = useState(256); // 256px = h-64 in tailwind
+  const [isResizing, setIsResizing] = useState(false);
   const { getShortcut } = useSettings();
 
   // Initialize with one tab
@@ -94,6 +96,47 @@ const AppContent: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTabId, showQueryHistory]);
+
+  // Handle panel resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const container = document.querySelector(".main-content-area");
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY;
+
+      // Limit the height between 100px and 80% of container height
+      const minHeight = 100;
+      const maxHeight = containerRect.height * 0.8;
+
+      setResultsPanelHeight(
+        Math.min(Math.max(newHeight, minHeight), maxHeight)
+      );
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.body.classList.remove("resizing");
+    };
+
+    if (isResizing) {
+      document.body.style.cursor = "ns-resize";
+      document.body.style.userSelect = "none";
+      document.body.classList.add("resizing");
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
 
   const createNewTab = () => {
     setTabs((prevTabs) => {
@@ -159,29 +202,49 @@ const AppContent: React.FC = () => {
   };
 
   const executeQuery = async (selectedText?: string) => {
+    // Prevent multiple simultaneous executions
+    if (isExecuting) return;
+
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (!activeTab) return;
+    if (!activeTab) {
+      console.error("No active tab found");
+      return;
+    }
 
     // Use selected text if provided, otherwise use full content
     const queryToExecute = selectedText || activeTab.content;
-    if (!queryToExecute.trim()) return;
+    if (!queryToExecute.trim()) {
+      console.log("No query to execute");
+      return;
+    }
 
-    setIsExecuting(true);
-    const result = await window.api.executeQuery(queryToExecute);
+    try {
+      setIsExecuting(true);
+      const result = await window.api.executeQuery(queryToExecute);
 
-    if (result.success && result.result) {
-      setQueryResult(result.result);
-    } else {
+      if (result.success && result.result) {
+        setQueryResult(result.result);
+      } else {
+        setQueryResult({
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          duration: 0,
+          error: result.error || "Unknown error",
+        });
+      }
+    } catch (error) {
+      console.error("Error executing query:", error);
       setQueryResult({
         columns: [],
         rows: [],
         rowCount: 0,
         duration: 0,
-        error: result.error || "Unknown error",
+        error: "Failed to execute query",
       });
+    } finally {
+      setIsExecuting(false);
     }
-
-    setIsExecuting(false);
   };
 
   const handleTableClick = (tableName: string, schemaName: string) => {
@@ -379,7 +442,10 @@ const AppContent: React.FC = () => {
               )}
 
               <button
-                onClick={() => executeQuery()}
+                onClick={async () => {
+                  if (!isConnected || isExecuting) return;
+                  await executeQuery();
+                }}
                 disabled={!isConnected || isExecuting}
                 className={`px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center space-x-2 ${
                   isConnected && !isExecuting
@@ -452,7 +518,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Editor and Results */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 main-content-area relative">
             {/* Tab Manager */}
             <TabManager
               tabs={tabs}
@@ -463,7 +529,10 @@ const AppContent: React.FC = () => {
             />
 
             {/* Editor */}
-            <div className="flex-1 min-h-0 bg-vscode-bg">
+            <div
+              className="flex-1 min-h-0 bg-vscode-bg"
+              style={{ marginBottom: `${resultsPanelHeight}px` }}
+            >
               {activeTab && (
                 <SQLEditor
                   value={activeTab.content}
@@ -479,8 +548,23 @@ const AppContent: React.FC = () => {
               )}
             </div>
 
+            {/* Resize Handle */}
+            <div
+              className="absolute left-0 right-0 h-1 cursor-ns-resize hover:bg-vscode-blue transition-colors z-10 resize-handle"
+              style={{ bottom: `${resultsPanelHeight}px` }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsResizing(true);
+              }}
+            >
+              <div className="absolute inset-x-0 -top-1 -bottom-1" />
+            </div>
+
             {/* Results Panel */}
-            <div className="h-64 border-t border-vscode-border overflow-hidden bg-vscode-bg-secondary">
+            <div
+              className="absolute bottom-0 left-0 right-0 border-t border-vscode-border overflow-hidden bg-vscode-bg-secondary"
+              style={{ height: `${resultsPanelHeight}px` }}
+            >
               <ResultsGrid result={queryResult} isLoading={isExecuting} />
             </div>
           </div>
