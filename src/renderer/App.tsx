@@ -12,6 +12,7 @@ import { TitleBar } from "./components/TitleBar";
 import { AISettings } from "./components/AISettings";
 import { AIQueryDialog } from "./components/AIQueryDialog";
 import { AIResultDialog } from "./components/AIResultDialog";
+import { TableTopology } from "./components/TableTopology";
 import {
   DatabaseConnectionConfig,
   DatabaseSchema,
@@ -26,6 +27,14 @@ const AppContent: React.FC = () => {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showAIQueryDialog, setShowAIQueryDialog] = useState(false);
+  const [showTableTopology, setShowTableTopology] = useState(false);
+  const [rightSidebarView, setRightSidebarView] = useState<"topology" | null>(
+    null
+  );
+  const [topologyTable, setTopologyTable] = useState<{
+    name: string;
+    schema: string;
+  } | null>(null);
   const [aiResult, setAIResult] = useState<{
     type: "explain" | "optimize";
     content: string;
@@ -362,6 +371,12 @@ const AppContent: React.FC = () => {
     setAIResult(null);
   };
 
+  const handleShowTopology = (tableName: string, schemaName: string) => {
+    setTopologyTable({ name: tableName, schema: schemaName });
+    setShowTableTopology(true);
+    setRightSidebarView("topology");
+  };
+
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
   return (
@@ -419,6 +434,7 @@ const AppContent: React.FC = () => {
                 onTableClick={handleTableClick}
                 onViewClick={handleViewClick}
                 onRefresh={loadSchema}
+                onShowTopology={handleShowTopology}
               />
             )}
           </div>
@@ -581,6 +597,20 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Right Sidebar - Topology */}
+        {rightSidebarView === "topology" && topologyTable && (
+          <div className="w-96 bg-vscode-bg-secondary border-l border-vscode-border flex-shrink-0">
+            <TableTopology
+              schemaName={topologyTable.schema}
+              tableName={topologyTable.name}
+              onClose={() => {
+                setRightSidebarView(null);
+                setTopologyTable(null);
+              }}
+            />
+          </div>
+        )}
 
         {/* Connection Manager Modal */}
         {showConnectionManager && (

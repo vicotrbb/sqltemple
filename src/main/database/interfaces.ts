@@ -128,4 +128,10 @@ export interface IDatabaseClient {
   getTriggers?(schemaName: string): Promise<TriggerInfo[]>;
   getIndexes?(schemaName: string): Promise<IndexInfo[]>;
   getDomains?(schemaName: string): Promise<DomainInfo[]>;
+  getTableRelationships?(
+    schemaName: string,
+    tableName: string,
+    depth?: number,
+    visitedTables?: Set<string>
+  ): Promise<any>;
 }

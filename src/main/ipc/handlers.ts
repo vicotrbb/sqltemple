@@ -375,4 +375,25 @@ export async function initializeIpcHandlers(
       return { success: false, error: error.message || String(error) };
     }
   });
+
+  // Get table relationships
+  ipcMain.handle(
+    "get-table-relationships",
+    async (event, schemaName: string, tableName: string, depth: number = 3) => {
+      try {
+        if (!currentClient || !currentClient.getTableRelationships) {
+          throw new Error("Database not connected or method not supported");
+        }
+
+        const relationships = await currentClient.getTableRelationships(
+          schemaName,
+          tableName,
+          depth
+        );
+        return { success: true, relationships };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
 }

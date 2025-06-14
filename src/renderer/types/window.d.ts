@@ -1,10 +1,9 @@
-export interface IElectronAPI {
+interface IElectronAPI {
   // Database operations
-  connectDatabase: (config: any) => Promise<any>;
+  connectDatabase: (config: DatabaseConnectionConfig) => Promise<any>;
   disconnectDatabase: () => Promise<any>;
   executeQuery: (sql: string) => Promise<any>;
   getSchemaInfo: () => Promise<any>;
-  getQueryPlan: (sql: string) => Promise<any>;
   getTableColumns: (schemaName: string, tableName: string) => Promise<any>;
   getViewColumns: (schemaName: string, viewName: string) => Promise<any>;
   getViews: (schemaName: string) => Promise<any>;
@@ -14,6 +13,7 @@ export interface IElectronAPI {
   getTriggers: (schemaName: string) => Promise<any>;
   getIndexes: (schemaName: string) => Promise<any>;
   getDomains: (schemaName: string) => Promise<any>;
+  getQueryPlan: (sql: string) => Promise<any>;
   getTableRelationships: (
     schemaName: string,
     tableName: string,
@@ -22,24 +22,6 @@ export interface IElectronAPI {
 
   // Connection profiles
   getConnections: () => Promise<any>;
-  saveConnection: (connection: any) => Promise<any>;
+  saveConnection: (connection: DatabaseConnectionConfig) => Promise<any>;
   deleteConnection: (id: number) => Promise<any>;
-
-  // Query history
-  getQueryHistory: (connectionId?: number) => Promise<any>;
-
-  // AI operations
-  aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
-  aiGetConfig: () => Promise<any>;
-  aiGetModels: () => Promise<any>;
-  aiAnalyzePlan: (query: string, plan: any) => Promise<any>;
-  aiExplainQuery: (sql: string) => Promise<any>;
-  aiCreateQuery: (prompt: string) => Promise<any>;
-  aiOptimizeQuery: (sql: string) => Promise<any>;
-}
-
-declare global {
-  interface Window {
-    api: IElectronAPI;
-  }
 }

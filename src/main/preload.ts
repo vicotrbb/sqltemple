@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld("api", {
   getDomains: (schemaName: string) =>
     ipcRenderer.invoke("get-domains", schemaName),
   getQueryPlan: (sql: string) => ipcRenderer.invoke("get-query-plan", sql),
+  getTableRelationships: (
+    schemaName: string,
+    tableName: string,
+    depth?: number
+  ) =>
+    ipcRenderer.invoke("get-table-relationships", schemaName, tableName, depth),
 
   // Connection profiles
   getConnections: () => ipcRenderer.invoke("get-connections"),

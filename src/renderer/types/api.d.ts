@@ -85,6 +85,15 @@ export interface IElectronAPI {
     domains?: DomainInfo[];
     error?: string;
   }>;
+  getTableRelationships: (
+    schemaName: string,
+    tableName: string,
+    depth?: number
+  ) => Promise<{
+    success: boolean;
+    relationships?: any;
+    error?: string;
+  }>;
   getQueryPlan: (sql: string) => Promise<{
     success: boolean;
     plan?: any;

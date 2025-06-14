@@ -1,23 +1,23 @@
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const path = require('path');
-const webpack = require('webpack');
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const path = require("path");
+const webpack = require("webpack");
+const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
-  entry: './src/renderer/index.tsx',
-  target: 'web',
+  entry: "./src/renderer/index.tsx",
+  target: "web",
   module: {
     rules: [
       {
         test: /\.tsx?$/,
         exclude: /node_modules/,
         use: {
-          loader: 'ts-loader',
+          loader: "ts-loader",
           options: {
-            transpileOnly: true
-          }
-        }
+            transpileOnly: true,
+          },
+        },
       },
       {
         test: /\.css$/,
@@ -26,48 +26,54 @@ module.exports = {
           {
             loader: MiniCssExtractPlugin.loader,
             options: {
-              publicPath: '/main_window/'
-            }
+              publicPath: "/main_window/",
+            },
           },
           {
-            loader: 'css-loader',
+            loader: "css-loader",
             options: {
-              importLoaders: 1
-            }
+              importLoaders: 1,
+            },
           },
-          'postcss-loader'
-        ]
+          "postcss-loader",
+        ],
       },
       {
         test: /\.css$/,
         include: /monaco-editor/,
-        use: [
-          MiniCssExtractPlugin.loader,
-          'css-loader'
-        ]
-      }
-    ]
+        use: [MiniCssExtractPlugin.loader, "css-loader"],
+      },
+      {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: "javascript/auto",
+      },
+    ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js', '.jsx'],
+    extensions: [".tsx", ".ts", ".js", ".jsx", ".mjs"],
+    alias: {
+      "process/browser": require.resolve("process/browser.js"),
+    },
     fallback: {
-      "events": require.resolve("events/")
-    }
+      events: require.resolve("events/"),
+      process: require.resolve("process/browser"),
+    },
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './src/renderer/index.html',
-      publicPath: '/main_window/'
+      template: "./src/renderer/index.html",
+      publicPath: "/main_window/",
     }),
     new webpack.ProvidePlugin({
-      process: 'process/browser',
-      Buffer: ['buffer', 'Buffer']
+      process: "process/browser",
+      Buffer: ["buffer", "Buffer"],
     }),
     new MonacoWebpackPlugin({
-      languages: ['sql', 'json']
+      languages: ["sql", "json"],
     }),
     new MiniCssExtractPlugin({
-      filename: '[name].css'
-    })
-  ]
+      filename: "[name].css",
+    }),
+  ],
 };

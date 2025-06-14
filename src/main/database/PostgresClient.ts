@@ -563,4 +563,189 @@ export class PostgresClient implements IDatabaseClient {
 
     return typeMap[oid] || "unknown";
   }
+
+  async getTableRelationships(
+    schemaName: string,
+    tableName: string,
+    depth: number = 3,
+    visitedTables: Set<string> = new Set()
+  ): Promise<any> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const tableKey = `${schemaName}.${tableName}`;
+    if (visitedTables.has(tableKey) || depth <= 0) {
+      return { table: tableKey, relationships: [] };
+    }
+
+    visitedTables.add(tableKey);
+
+    // Query to get both incoming and outgoing foreign key relationships
+    const relationshipsQuery = `
+      WITH foreign_keys AS (
+        -- Outgoing foreign keys (this table references others)
+        SELECT 
+          'outgoing' as direction,
+          tc.constraint_name,
+          tc.table_schema,
+          tc.table_name,
+          kcu.column_name,
+          ccu.table_schema AS foreign_table_schema,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name
+        FROM 
+          information_schema.table_constraints AS tc 
+          JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_schema = $1
+          AND tc.table_name = $2
+        
+        UNION ALL
+        
+        -- Incoming foreign keys (other tables reference this one)
+        SELECT 
+          'incoming' as direction,
+          tc.constraint_name,
+          tc.table_schema,
+          tc.table_name,
+          kcu.column_name,
+          ccu.table_schema AS foreign_table_schema,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name
+        FROM 
+          information_schema.table_constraints AS tc 
+          JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' 
+          AND ccu.table_schema = $1
+          AND ccu.table_name = $2
+          AND NOT (tc.table_schema = $1 AND tc.table_name = $2)
+      )
+      SELECT * FROM foreign_keys
+      ORDER BY direction, foreign_table_schema, foreign_table_name;
+    `;
+
+    const result = await this.client.query(relationshipsQuery, [
+      schemaName,
+      tableName,
+    ]);
+
+    const relationships: any[] = [];
+    const relatedTables: Set<string> = new Set();
+
+    for (const row of result.rows) {
+      const relationship = {
+        direction: row.direction,
+        constraintName: row.constraint_name,
+        sourceSchema:
+          row.direction === "outgoing" ? schemaName : row.table_schema,
+        sourceTable: row.direction === "outgoing" ? tableName : row.table_name,
+        sourceColumn:
+          row.direction === "outgoing"
+            ? row.column_name
+            : row.foreign_column_name,
+        targetSchema:
+          row.direction === "outgoing" ? row.foreign_table_schema : schemaName,
+        targetTable:
+          row.direction === "outgoing" ? row.foreign_table_name : tableName,
+        targetColumn:
+          row.direction === "outgoing"
+            ? row.foreign_column_name
+            : row.column_name,
+        hasMore: false,
+        children: null,
+      };
+
+      relationships.push(relationship);
+
+      // Track related tables for recursive fetching
+      if (row.direction === "outgoing") {
+        relatedTables.add(
+          `${row.foreign_table_schema}.${row.foreign_table_name}`
+        );
+      } else {
+        relatedTables.add(`${row.table_schema}.${row.table_name}`);
+      }
+    }
+
+    // Check if there are more relationships at the next depth level
+    if (depth > 1) {
+      for (const relationship of relationships) {
+        const nextTableSchema =
+          relationship.direction === "outgoing"
+            ? relationship.targetSchema
+            : relationship.sourceSchema;
+        const nextTableName =
+          relationship.direction === "outgoing"
+            ? relationship.targetTable
+            : relationship.sourceTable;
+
+        // Check if this related table has more relationships
+        const hasMoreQuery = `
+          SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.table_constraints AS tc 
+            WHERE tc.constraint_type = 'FOREIGN KEY' 
+              AND (
+                (tc.table_schema = $1 AND tc.table_name = $2)
+                OR EXISTS (
+                  SELECT 1 
+                  FROM information_schema.constraint_column_usage AS ccu
+                  WHERE ccu.constraint_name = tc.constraint_name
+                    AND ccu.table_schema = $1
+                    AND ccu.table_name = $2
+                )
+              )
+          ) as has_more;
+        `;
+
+        const hasMoreResult = await this.client.query(hasMoreQuery, [
+          nextTableSchema,
+          nextTableName,
+        ]);
+
+        relationship.hasMore = hasMoreResult.rows[0].has_more;
+      }
+    }
+
+    // Recursively fetch relationships for related tables if depth > 1
+    if (depth > 1) {
+      for (const relationship of relationships) {
+        const nextTableSchema =
+          relationship.direction === "outgoing"
+            ? relationship.targetSchema
+            : relationship.sourceSchema;
+        const nextTableName =
+          relationship.direction === "outgoing"
+            ? relationship.targetTable
+            : relationship.sourceTable;
+
+        const childRelationships = await this.getTableRelationships(
+          nextTableSchema,
+          nextTableName,
+          depth - 1,
+          new Set(visitedTables)
+        );
+
+        relationship.children = childRelationships;
+      }
+    }
+
+    return {
+      table: tableKey,
+      schema: schemaName,
+      name: tableName,
+      relationships,
+    };
+  }
 }

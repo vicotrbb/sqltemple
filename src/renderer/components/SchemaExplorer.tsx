@@ -19,6 +19,7 @@ interface SchemaExplorerProps {
   onTableClick?: (tableName: string, schemaName: string) => void;
   onViewClick?: (viewName: string, schemaName: string) => void;
   onRefresh?: () => void;
+  onShowTopology?: (tableName: string, schemaName: string) => void;
 }
 
 type SchemaObjectType =
@@ -47,6 +48,7 @@ export const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   onTableClick,
   onViewClick,
   onRefresh,
+  onShowTopology,
 }) => {
   const [expandedDatabases, setExpandedDatabases] = useState<Set<string>>(
     new Set()
@@ -559,6 +561,54 @@ export const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
                                   "table"
                                 )
                               }
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setContextMenu({
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                  items: [
+                                    {
+                                      label: "See Topology",
+                                      onClick: () => {
+                                        onShowTopology?.(
+                                          table.name,
+                                          schemaInfo.name
+                                        );
+                                        setContextMenu(null);
+                                      },
+                                      icon: (
+                                        <svg
+                                          viewBox="0 0 16 16"
+                                          fill="currentColor"
+                                        >
+                                          <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z" />
+                                          <path d="M6 4.5H1.866a1 1 0 1 0 0 1h5.47A2.5 2.5 0 0 1 10 7.936V8.5a.5.5 0 0 0 1 0v-.564a3.5 3.5 0 0 0-5-3.436V4.5z" />
+                                        </svg>
+                                      ),
+                                    },
+                                    { divider: true },
+                                    {
+                                      label: "Select from Table",
+                                      onClick: () => {
+                                        onTableClick?.(
+                                          table.name,
+                                          schemaInfo.name
+                                        );
+                                        setContextMenu(null);
+                                      },
+                                      icon: (
+                                        <svg
+                                          viewBox="0 0 16 16"
+                                          fill="currentColor"
+                                        >
+                                          <path d="M14 4.5V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6.5L14 5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H3v12h10V4.5z" />
+                                        </svg>
+                                      ),
+                                    },
+                                  ],
+                                });
+                              }}
                             >
                               <span className="mr-1 text-vscode-text-tertiary">
                                 {isExpanded ? "▼" : "▶"}
