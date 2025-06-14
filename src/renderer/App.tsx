@@ -258,6 +258,17 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleViewClick = (viewName: string, schemaName: string) => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+    if (activeTab) {
+      const newContent =
+        activeTab.content +
+        (activeTab.content && !activeTab.content.endsWith("\n") ? "\n" : "") +
+        `SELECT * FROM ${schemaName}.${viewName} LIMIT 100;`;
+      updateTabContent(activeTab.id, newContent);
+    }
+  };
+
   const handleQuerySelect = (query: string) => {
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (activeTab) {
@@ -406,6 +417,7 @@ const AppContent: React.FC = () => {
               <SchemaExplorer
                 schema={schema}
                 onTableClick={handleTableClick}
+                onViewClick={handleViewClick}
                 onRefresh={loadSchema}
               />
             )}

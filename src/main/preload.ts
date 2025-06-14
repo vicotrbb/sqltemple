@@ -11,6 +11,21 @@ contextBridge.exposeInMainWorld("api", {
   getSchemaInfo: () => ipcRenderer.invoke("get-schema-info"),
   getTableColumns: (schemaName: string, tableName: string) =>
     ipcRenderer.invoke("get-table-columns", schemaName, tableName),
+  getViewColumns: (schemaName: string, viewName: string) =>
+    ipcRenderer.invoke("get-view-columns", schemaName, viewName),
+  getViews: (schemaName: string) => ipcRenderer.invoke("get-views", schemaName),
+  getFunctions: (schemaName: string) =>
+    ipcRenderer.invoke("get-functions", schemaName),
+  getProcedures: (schemaName: string) =>
+    ipcRenderer.invoke("get-procedures", schemaName),
+  getSequences: (schemaName: string) =>
+    ipcRenderer.invoke("get-sequences", schemaName),
+  getTriggers: (schemaName: string) =>
+    ipcRenderer.invoke("get-triggers", schemaName),
+  getIndexes: (schemaName: string) =>
+    ipcRenderer.invoke("get-indexes", schemaName),
+  getDomains: (schemaName: string) =>
+    ipcRenderer.invoke("get-domains", schemaName),
   getQueryPlan: (sql: string) => ipcRenderer.invoke("get-query-plan", sql),
 
   // Connection profiles

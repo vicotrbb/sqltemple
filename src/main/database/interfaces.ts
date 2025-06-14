@@ -38,12 +38,76 @@ export interface DatabaseInfo {
 export interface SchemaInfo {
   name: string;
   tables: TableInfo[];
+  views?: ViewInfo[];
+  functions?: FunctionInfo[];
+  procedures?: ProcedureInfo[];
+  sequences?: SequenceInfo[];
+  triggers?: TriggerInfo[];
+  indexes?: IndexInfo[];
+  domains?: DomainInfo[];
 }
 
 export interface TableInfo {
   name: string;
   columns: ColumnInfo[];
   columnCount?: number; // Optional, for lazy loading
+}
+
+export interface ViewInfo {
+  name: string;
+  definition?: string;
+  columns?: ColumnInfo[];
+  columnCount?: number;
+}
+
+export interface FunctionInfo {
+  name: string;
+  returnType?: string;
+  arguments?: string;
+  language?: string;
+  definition?: string;
+}
+
+export interface ProcedureInfo {
+  name: string;
+  arguments?: string;
+  language?: string;
+  definition?: string;
+}
+
+export interface SequenceInfo {
+  name: string;
+  dataType?: string;
+  startValue?: string;
+  minValue?: string;
+  maxValue?: string;
+  incrementBy?: string;
+  cycleOption?: boolean;
+}
+
+export interface TriggerInfo {
+  name: string;
+  tableName: string;
+  eventManipulation: string;
+  actionTiming: string;
+  actionStatement?: string;
+}
+
+export interface IndexInfo {
+  name: string;
+  tableName: string;
+  isUnique: boolean;
+  isPrimary: boolean;
+  columns?: string[];
+  definition?: string;
+}
+
+export interface DomainInfo {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  defaultValue?: string;
+  checkConstraint?: string;
 }
 
 export interface IDatabaseClient {
@@ -56,4 +120,12 @@ export interface IDatabaseClient {
     schemaName: string,
     tableName: string
   ): Promise<ColumnInfo[]>; // Optional for backward compatibility
+  getViewColumns?(schemaName: string, viewName: string): Promise<ColumnInfo[]>;
+  getViews?(schemaName: string): Promise<ViewInfo[]>;
+  getFunctions?(schemaName: string): Promise<FunctionInfo[]>;
+  getProcedures?(schemaName: string): Promise<ProcedureInfo[]>;
+  getSequences?(schemaName: string): Promise<SequenceInfo[]>;
+  getTriggers?(schemaName: string): Promise<TriggerInfo[]>;
+  getIndexes?(schemaName: string): Promise<IndexInfo[]>;
+  getDomains?(schemaName: string): Promise<DomainInfo[]>;
 }

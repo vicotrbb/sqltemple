@@ -3,6 +3,13 @@ import {
   QueryResult,
   DatabaseSchema,
   ColumnInfo,
+  ViewInfo,
+  FunctionInfo,
+  ProcedureInfo,
+  SequenceInfo,
+  TriggerInfo,
+  IndexInfo,
+  DomainInfo,
 } from "../../main/database/interfaces";
 import { QueryHistoryEntry } from "../../main/storage/StorageManager";
 
@@ -33,6 +40,49 @@ export interface IElectronAPI {
   ) => Promise<{
     success: boolean;
     columns?: ColumnInfo[];
+    error?: string;
+  }>;
+  getViewColumns: (
+    schemaName: string,
+    viewName: string
+  ) => Promise<{
+    success: boolean;
+    columns?: ColumnInfo[];
+    error?: string;
+  }>;
+  getViews: (schemaName: string) => Promise<{
+    success: boolean;
+    views?: ViewInfo[];
+    error?: string;
+  }>;
+  getFunctions: (schemaName: string) => Promise<{
+    success: boolean;
+    functions?: FunctionInfo[];
+    error?: string;
+  }>;
+  getProcedures: (schemaName: string) => Promise<{
+    success: boolean;
+    procedures?: ProcedureInfo[];
+    error?: string;
+  }>;
+  getSequences: (schemaName: string) => Promise<{
+    success: boolean;
+    sequences?: SequenceInfo[];
+    error?: string;
+  }>;
+  getTriggers: (schemaName: string) => Promise<{
+    success: boolean;
+    triggers?: TriggerInfo[];
+    error?: string;
+  }>;
+  getIndexes: (schemaName: string) => Promise<{
+    success: boolean;
+    indexes?: IndexInfo[];
+    error?: string;
+  }>;
+  getDomains: (schemaName: string) => Promise<{
+    success: boolean;
+    domains?: DomainInfo[];
     error?: string;
   }>;
   getQueryPlan: (sql: string) => Promise<{

@@ -8,6 +8,13 @@ import {
   SchemaInfo,
   TableInfo,
   ColumnInfo,
+  ViewInfo,
+  FunctionInfo,
+  ProcedureInfo,
+  SequenceInfo,
+  TriggerInfo,
+  IndexInfo,
+  DomainInfo,
 } from "./interfaces";
 
 export class PostgresClient implements IDatabaseClient {
@@ -216,6 +223,285 @@ export class PostgresClient implements IDatabaseClient {
       name: col.column_name,
       dataType: this.formatDataType(col),
       nullable: col.is_nullable === "YES",
+    }));
+  }
+
+  async getViewColumns(
+    schemaName: string,
+    viewName: string
+  ): Promise<ColumnInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const columnsQuery = `
+      SELECT 
+        column_name,
+        data_type,
+        is_nullable,
+        character_maximum_length,
+        numeric_precision,
+        numeric_scale
+      FROM information_schema.columns
+      WHERE table_schema = $1 AND table_name = $2
+      ORDER BY ordinal_position;
+    `;
+
+    const columnsResult = await this.client.query(columnsQuery, [
+      schemaName,
+      viewName,
+    ]);
+
+    return columnsResult.rows.map((col) => ({
+      name: col.column_name,
+      dataType: this.formatDataType(col),
+      nullable: col.is_nullable === "YES",
+    }));
+  }
+
+  async getViews(schemaName: string): Promise<ViewInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const viewsQuery = `
+      SELECT 
+        v.table_name as view_name,
+        (SELECT COUNT(*) FROM information_schema.columns c 
+         WHERE c.table_schema = v.table_schema 
+         AND c.table_name = v.table_name) as column_count
+      FROM information_schema.views v
+      WHERE v.table_schema = $1
+      ORDER BY v.table_name;
+    `;
+
+    const viewsResult = await this.client.query(viewsQuery, [schemaName]);
+
+    return viewsResult.rows.map((row) => ({
+      name: row.view_name,
+      columnCount: row.column_count,
+    }));
+  }
+
+  async getFunctions(schemaName: string): Promise<FunctionInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    // Check PostgreSQL version to use appropriate query
+    const versionQuery = "SELECT version()";
+    const versionResult = await this.client.query(versionQuery);
+    const versionString = versionResult.rows[0].version;
+    const versionMatch = versionString.match(/PostgreSQL (\d+)/);
+    const majorVersion = versionMatch ? parseInt(versionMatch[1]) : 0;
+
+    let functionsQuery: string;
+    if (majorVersion >= 11) {
+      // PostgreSQL 11+ has prokind column
+      functionsQuery = `
+        SELECT 
+          p.proname as function_name,
+          pg_catalog.pg_get_function_result(p.oid) as return_type,
+          pg_catalog.pg_get_function_arguments(p.oid) as arguments,
+          l.lanname as language
+        FROM pg_catalog.pg_proc p
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+        WHERE n.nspname = $1
+          AND p.prokind = 'f'
+        ORDER BY p.proname;
+      `;
+    } else {
+      // Older PostgreSQL versions use proisagg and proiswindow
+      functionsQuery = `
+        SELECT 
+          p.proname as function_name,
+          pg_catalog.pg_get_function_result(p.oid) as return_type,
+          pg_catalog.pg_get_function_arguments(p.oid) as arguments,
+          l.lanname as language
+        FROM pg_catalog.pg_proc p
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+        WHERE n.nspname = $1
+          AND NOT p.proisagg
+          AND p.prorettype != 'pg_catalog.trigger'::pg_catalog.regtype
+        ORDER BY p.proname;
+      `;
+    }
+
+    const functionsResult = await this.client.query(functionsQuery, [
+      schemaName,
+    ]);
+
+    return functionsResult.rows.map((row) => ({
+      name: row.function_name,
+      returnType: row.return_type,
+      arguments: row.arguments,
+      language: row.language,
+    }));
+  }
+
+  async getProcedures(schemaName: string): Promise<ProcedureInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    // Check PostgreSQL version to use appropriate query
+    const versionQuery = "SELECT version()";
+    const versionResult = await this.client.query(versionQuery);
+    const versionString = versionResult.rows[0].version;
+    const versionMatch = versionString.match(/PostgreSQL (\d+)/);
+    const majorVersion = versionMatch ? parseInt(versionMatch[1]) : 0;
+
+    if (majorVersion < 11) {
+      // Procedures don't exist before PostgreSQL 11
+      return [];
+    }
+
+    const proceduresQuery = `
+      SELECT 
+        p.proname as procedure_name,
+        pg_catalog.pg_get_function_arguments(p.oid) as arguments,
+        l.lanname as language
+      FROM pg_catalog.pg_proc p
+      LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+      LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+      WHERE n.nspname = $1
+        AND p.prokind = 'p'
+      ORDER BY p.proname;
+    `;
+
+    const proceduresResult = await this.client.query(proceduresQuery, [
+      schemaName,
+    ]);
+
+    return proceduresResult.rows.map((row) => ({
+      name: row.procedure_name,
+      arguments: row.arguments,
+      language: row.language,
+    }));
+  }
+
+  async getSequences(schemaName: string): Promise<SequenceInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const sequencesQuery = `
+      SELECT 
+        sequence_name,
+        data_type,
+        start_value,
+        minimum_value,
+        maximum_value,
+        increment,
+        cycle_option
+      FROM information_schema.sequences
+      WHERE sequence_schema = $1
+      ORDER BY sequence_name;
+    `;
+
+    const sequencesResult = await this.client.query(sequencesQuery, [
+      schemaName,
+    ]);
+
+    return sequencesResult.rows.map((row) => ({
+      name: row.sequence_name,
+      dataType: row.data_type,
+      startValue: row.start_value,
+      minValue: row.minimum_value,
+      maxValue: row.maximum_value,
+      incrementBy: row.increment,
+      cycleOption: row.cycle_option === "YES",
+    }));
+  }
+
+  async getTriggers(schemaName: string): Promise<TriggerInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const triggersQuery = `
+      SELECT 
+        trigger_name,
+        event_object_table as table_name,
+        event_manipulation,
+        action_timing,
+        action_statement
+      FROM information_schema.triggers
+      WHERE trigger_schema = $1
+      ORDER BY event_object_table, trigger_name;
+    `;
+
+    const triggersResult = await this.client.query(triggersQuery, [schemaName]);
+
+    return triggersResult.rows.map((row) => ({
+      name: row.trigger_name,
+      tableName: row.table_name,
+      eventManipulation: row.event_manipulation,
+      actionTiming: row.action_timing,
+      actionStatement: row.action_statement,
+    }));
+  }
+
+  async getIndexes(schemaName: string): Promise<IndexInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const indexesQuery = `
+      SELECT 
+        i.indexname as index_name,
+        i.tablename as table_name,
+        i.indexdef as definition,
+        idx.indisunique as is_unique,
+        idx.indisprimary as is_primary
+      FROM pg_indexes i
+      JOIN pg_class c ON c.relname = i.indexname
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_index idx ON idx.indexrelid = c.oid
+      WHERE i.schemaname = $1
+        AND n.nspname = $1
+      ORDER BY i.tablename, i.indexname;
+    `;
+
+    const indexesResult = await this.client.query(indexesQuery, [schemaName]);
+
+    return indexesResult.rows.map((row) => ({
+      name: row.index_name,
+      tableName: row.table_name,
+      isUnique: row.is_unique,
+      isPrimary: row.is_primary,
+      definition: row.definition,
+    }));
+  }
+
+  async getDomains(schemaName: string): Promise<DomainInfo[]> {
+    if (!this.client) {
+      throw new Error("Database not connected");
+    }
+
+    const domainsQuery = `
+      SELECT 
+        domain_name,
+        data_type,
+        is_nullable,
+        domain_default,
+        character_maximum_length,
+        numeric_precision,
+        numeric_scale
+      FROM information_schema.domains
+      WHERE domain_schema = $1
+      ORDER BY domain_name;
+    `;
+
+    const domainsResult = await this.client.query(domainsQuery, [schemaName]);
+
+    return domainsResult.rows.map((row) => ({
+      name: row.domain_name,
+      dataType: this.formatDataType(row),
+      nullable: row.is_nullable === "YES",
+      defaultValue: row.domain_default,
     }));
   }
 

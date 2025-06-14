@@ -110,20 +110,16 @@ export async function initializeIpcHandlers(
   ipcMain.handle(
     "get-table-columns",
     async (event, schemaName: string, tableName: string) => {
-      if (!currentClient) {
-        return { success: false, error: "No database connection" };
-      }
-
       try {
-        if (currentClient.getTableColumns) {
-          const columns = await currentClient.getTableColumns(
-            schemaName,
-            tableName
-          );
-          return { success: true, columns };
-        } else {
-          return { success: false, error: "Method not supported" };
+        if (!currentClient || !currentClient.getTableColumns) {
+          throw new Error("Database not connected or method not supported");
         }
+
+        const columns = await currentClient.getTableColumns(
+          schemaName,
+          tableName
+        );
+        return { success: true, columns };
       } catch (error: any) {
         return { success: false, error: error.message || String(error) };
       }
@@ -265,6 +261,116 @@ export async function initializeIpcHandlers(
 
       const optimizedQuery = await aiService.optimizeQuery(sql, plan, schema);
       return { success: true, result: optimizedQuery };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle(
+    "get-view-columns",
+    async (event, schemaName: string, viewName: string) => {
+      try {
+        if (!currentClient || !currentClient.getViewColumns) {
+          throw new Error("Database not connected or method not supported");
+        }
+
+        const columns = await currentClient.getViewColumns(
+          schemaName,
+          viewName
+        );
+        return { success: true, columns };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
+  ipcMain.handle("get-views", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getViews) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const views = await currentClient.getViews(schemaName);
+      return { success: true, views };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-functions", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getFunctions) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const functions = await currentClient.getFunctions(schemaName);
+      return { success: true, functions };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-procedures", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getProcedures) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const procedures = await currentClient.getProcedures(schemaName);
+      return { success: true, procedures };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-sequences", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getSequences) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const sequences = await currentClient.getSequences(schemaName);
+      return { success: true, sequences };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-triggers", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getTriggers) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const triggers = await currentClient.getTriggers(schemaName);
+      return { success: true, triggers };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-indexes", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getIndexes) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const indexes = await currentClient.getIndexes(schemaName);
+      return { success: true, indexes };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("get-domains", async (event, schemaName: string) => {
+    try {
+      if (!currentClient || !currentClient.getDomains) {
+        throw new Error("Database not connected or method not supported");
+      }
+
+      const domains = await currentClient.getDomains(schemaName);
+      return { success: true, domains };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }
