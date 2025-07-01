@@ -396,4 +396,10 @@ export async function initializeIpcHandlers(
       }
     }
   );
+
+  // Menu state update handler
+  ipcMain.on("update-menu-state", (event, state) => {
+    // TODO: Update menu items based on state
+    console.log("Menu state updated:", state);
+  });
 }

@@ -24,4 +24,33 @@ interface IElectronAPI {
   getConnections: () => Promise<any>;
   saveConnection: (connection: DatabaseConnectionConfig) => Promise<any>;
   deleteConnection: (id: number) => Promise<any>;
+
+  // Query history
+  getQueryHistory: (connectionId?: number) => Promise<any>;
+
+  // AI operations
+  aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
+  aiGetConfig: () => Promise<any>;
+  aiGetModels: () => Promise<any>;
+  aiAnalyzePlan: (query: string, plan: any) => Promise<any>;
+  aiExplainQuery: (sql: string) => Promise<any>;
+  aiCreateQuery: (prompt: string) => Promise<any>;
+  aiOptimizeQuery: (sql: string) => Promise<any>;
+
+  // Menu communication
+  ipcRenderer: {
+    on: (channel: string, listener: (...args: any[]) => void) => void;
+    removeListener: (
+      channel: string,
+      listener: (...args: any[]) => void
+    ) => void;
+    removeAllListeners: (channel: string) => void;
+    send: (channel: string, ...args: any[]) => void;
+  };
+}
+
+declare global {
+  interface Window {
+    api: IElectronAPI;
+  }
 }

@@ -13,6 +13,15 @@ import { AISettings } from "./components/AISettings";
 import { AIQueryDialog } from "./components/AIQueryDialog";
 import { AIResultDialog } from "./components/AIResultDialog";
 import { TableTopology } from "./components/TableTopology";
+import { AboutDialog } from "./components/AboutDialog";
+import { PreferencesDialog } from "./components/PreferencesDialog";
+import { useMenuActions, useMenuState } from "./hooks/useMenuActions";
+import {
+  PlayIcon,
+  ConnectIcon,
+  HistoryIcon,
+  ConnectedIcon,
+} from "./components/icons/IconLibrary";
 import {
   DatabaseConnectionConfig,
   DatabaseSchema,
@@ -28,6 +37,8 @@ const AppContent: React.FC = () => {
   const [showAISettings, setShowAISettings] = useState(false);
   const [showAIQueryDialog, setShowAIQueryDialog] = useState(false);
   const [showTableTopology, setShowTableTopology] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const [rightSidebarView, setRightSidebarView] = useState<"topology" | null>(
     null
   );
@@ -61,6 +72,7 @@ const AppContent: React.FC = () => {
   const [resultsPanelHeight, setResultsPanelHeight] = useState(256); // 256px = h-64 in tailwind
   const [isResizing, setIsResizing] = useState(false);
   const { getShortcut } = useSettings();
+  const { updateMenuState } = useMenuState();
 
   // Initialize with one tab
   useEffect(() => {
@@ -377,6 +389,57 @@ const AppContent: React.FC = () => {
     setRightSidebarView("topology");
   };
 
+  // Menu action handlers
+  useMenuActions({
+    onNewTab: createNewTab,
+    onConnectDatabase: () => setShowConnectionManager(true),
+    onDisconnectDatabase: handleDisconnect,
+    onRefreshSchema: loadSchema,
+    onExecuteQuery: () => executeQuery(),
+    onExplainQuery: explainQuery,
+    onToggleHistory: () => setShowQueryHistory(!showQueryHistory),
+    onAICreateQuery: () => setShowAIQueryDialog(true),
+    onAIExplainQuery: () => {
+      // TODO: Get selected text from editor
+      console.log("AI Explain Query triggered from menu");
+    },
+    onAIOptimizeQuery: () => {
+      // TODO: Get selected text from editor
+      console.log("AI Optimize Query triggered from menu");
+    },
+    onAISettings: () => setShowPreferences(true), // Open preferences instead
+    onShowPreferences: () => setShowPreferences(true),
+    onCloseTab: () => activeTabId && closeTab(activeTabId),
+    onNextTab: () => {
+      const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+      const nextIndex = (currentIndex + 1) % tabs.length;
+      if (tabs[nextIndex]) setActiveTabId(tabs[nextIndex].id);
+    },
+    onPreviousTab: () => {
+      const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+      const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
+      if (tabs[prevIndex]) setActiveTabId(tabs[prevIndex].id);
+    },
+    onShowKeyboardShortcuts: () => setShowKeyboardShortcuts(true),
+    onShowAbout: () => setShowAbout(true),
+    onToggleConnections: () =>
+      setSidebarView(sidebarView === "connections" ? "schema" : "connections"),
+    onToggleSchema: () =>
+      setSidebarView(sidebarView === "schema" ? "connections" : "schema"),
+  });
+
+  // Update menu state when app state changes
+  useEffect(() => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+    updateMenuState({
+      isConnected,
+      hasActiveQuery: Boolean(activeTab?.content?.trim()),
+      hasSelectedText: false, // TODO: Get from editor
+      canUndo: false, // TODO: Get from editor
+      canRedo: false, // TODO: Get from editor
+    });
+  }, [isConnected, activeTabId, tabs, updateMenuState]);
+
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
   return (
@@ -444,104 +507,64 @@ const AppContent: React.FC = () => {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Toolbar */}
           <div className="bg-vscode-bg-tertiary border-b border-vscode-border px-4 py-2">
-            <div className="flex items-center space-x-3">
-              {!isConnected ? (
-                <button
-                  onClick={() => setShowConnectionManager(true)}
-                  className="px-4 py-1.5 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-sm font-medium transition-colors"
-                >
-                  Connect
-                </button>
-              ) : (
-                <>
+            <div className="flex items-center justify-between">
+              {/* Left side - Essential actions only */}
+              <div className="flex items-center space-x-3">
+                {!isConnected ? (
                   <button
-                    onClick={handleDisconnect}
-                    className="px-4 py-1.5 bg-vscode-bg-quaternary hover:bg-vscode-red hover:bg-opacity-20 rounded text-sm font-medium transition-colors border border-vscode-border"
+                    onClick={() => setShowConnectionManager(true)}
+                    className="px-4 py-1.5 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-sm font-medium transition-colors flex items-center space-x-2"
                   >
-                    Disconnect
+                    <ConnectIcon className="w-4 h-4" />
+                    <span>Connect</span>
                   </button>
-                  <span style={{ fontSize: "12px", color: "#969696" }}>
-                    Connected to:{" "}
-                    <span style={{ color: "#4ec9b0", fontWeight: 500 }}>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      if (!isConnected || isExecuting) return;
+                      await executeQuery();
+                    }}
+                    disabled={!isConnected || isExecuting}
+                    className={`px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      isConnected && !isExecuting
+                        ? "bg-vscode-green hover:opacity-90 text-vscode-bg"
+                        : "bg-vscode-bg-quaternary text-vscode-text-tertiary cursor-not-allowed"
+                    }`}
+                  >
+                    <PlayIcon className="w-4 h-4" />
+                    <span>Run</span>
+                    <span className="text-xs opacity-70">
+                      ({getShortcut("execute-query")[0] || "⌘+↵"})
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Center - Connection status */}
+              {isConnected && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <ConnectedIcon className="w-4 h-4 text-vscode-green" />
+                  <span className="text-vscode-text-secondary">
+                    Connected to{" "}
+                    <span className="text-vscode-green font-medium">
                       {currentConnection?.name}
                     </span>
                   </span>
-                </>
+                </div>
               )}
 
-              <button
-                onClick={async () => {
-                  if (!isConnected || isExecuting) return;
-                  await executeQuery();
-                }}
-                disabled={!isConnected || isExecuting}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center space-x-2 ${
-                  isConnected && !isExecuting
-                    ? "bg-vscode-green hover:opacity-90 text-vscode-bg"
-                    : "bg-vscode-bg-quaternary text-vscode-text-tertiary cursor-not-allowed"
-                }`}
-              >
-                <span style={{ fontSize: "18px" }}>▶</span>
-                <span>Run</span>
-                <span style={{ fontSize: "11px", opacity: 0.7 }}>
-                  ({getShortcut("execute-query")[0] || "⌘+↵"})
-                </span>
-              </button>
-
-              {isConnected && (
-                <>
+              {/* Right side - Quick actions */}
+              <div className="flex items-center space-x-2">
+                {isConnected && (
                   <button
                     onClick={() => setShowQueryHistory(true)}
-                    className="px-4 py-1.5 bg-vscode-bg-quaternary hover:bg-vscode-bg border border-vscode-border rounded text-sm font-medium transition-colors"
+                    className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
+                    title="Query History (⌘+H)"
                   >
-                    History
+                    <HistoryIcon className="w-4 h-4 text-vscode-text-secondary" />
                   </button>
-
-                  <button
-                    onClick={explainQuery}
-                    disabled={isExecuting}
-                    className="px-4 py-1.5 bg-vscode-purple bg-opacity-20 hover:bg-opacity-30 border border-vscode-purple border-opacity-30 rounded text-sm font-medium transition-colors disabled:bg-vscode-bg-quaternary disabled:border-vscode-border disabled:text-vscode-text-tertiary disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <span>Explain</span>
-                    <span style={{ fontSize: "11px", opacity: 0.7 }}>
-                      ({getShortcut("explain-query")[0] || "⌘+E"})
-                    </span>
-                  </button>
-                </>
-              )}
-
-              <button
-                onClick={() => setShowKeyboardShortcuts(true)}
-                className="px-4 py-1.5 bg-vscode-bg-quaternary hover:bg-vscode-bg border border-vscode-border rounded text-sm font-medium transition-colors"
-                title="Keyboard Shortcuts"
-              >
-                ⌨️
-              </button>
-
-              <div className="h-4 w-px bg-vscode-border"></div>
-
-              <button
-                onClick={() => setShowAIQueryDialog(true)}
-                className="px-4 py-1.5 bg-vscode-blue bg-opacity-20 hover:bg-opacity-30 border border-vscode-blue border-opacity-30 rounded text-sm font-medium transition-colors flex items-center gap-2"
-                title="Create Query with AI"
-              >
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path d="M11.25 1h-1.5L8 3.75 6.25 1h-1.5L3 3.75 1.25 1H0v.75l2.75 3.5L0 8.75v.75h1.25L3 6.75 4.75 9.5h1.5L8 6.75 9.75 9.5h1.5L13 6.75l1.75 2.75H16v-.75l-2.75-3.5L16 1.75V1h-1.25L13 3.75 11.25 1zM8 5.25L6.25 3h3.5L8 5.25z" />
-                </svg>
-                Create Query
-              </button>
-
-              <button
-                onClick={() => setShowAISettings(true)}
-                className="px-4 py-1.5 bg-vscode-bg-quaternary hover:bg-vscode-bg border border-vscode-border rounded text-sm font-medium transition-colors"
-                title="AI Settings"
-              >
-                ⚙️ AI
-              </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -677,6 +700,14 @@ const AppContent: React.FC = () => {
             loading={aiLoading}
             error={aiError}
           />
+        )}
+
+        {/* About Dialog */}
+        {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+
+        {/* Preferences Dialog */}
+        {showPreferences && (
+          <PreferencesDialog onClose={() => setShowPreferences(false)} />
         )}
       </div>
     </div>

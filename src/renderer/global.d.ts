@@ -36,6 +36,16 @@ export interface IElectronAPI {
   aiExplainQuery: (sql: string) => Promise<any>;
   aiCreateQuery: (prompt: string) => Promise<any>;
   aiOptimizeQuery: (sql: string) => Promise<any>;
+
+  ipcRenderer: {
+    on: (channel: string, listener: (...args: any[]) => void) => void;
+    removeListener: (
+      channel: string,
+      listener: (...args: any[]) => void
+    ) => void;
+    removeAllListeners: (channel: string) => void;
+    send: (channel: string, ...args: any[]) => void;
+  };
 }
 
 declare global {
