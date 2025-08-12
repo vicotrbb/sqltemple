@@ -389,3 +389,107 @@ export const DisconnectedIcon: React.FC<IconProps> = (props) => (
     <line x1="1" y1="1" x2="23" y2="23" />
   </Icon>
 );
+
+export const ServerIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </Icon>
+);
+
+export const FolderIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z" />
+  </Icon>
+);
+
+export const SchemaIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14,2 14,8 20,8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10,9 9,9 8,9" />
+  </Icon>
+);
+
+export const ViewIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+
+export const FunctionIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M8 1a2 2 0 0 0-2 2v4H3a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4v-4a2 2 0 0 0 2-2V5h4a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H8z" />
+  </Icon>
+);
+
+export const ProcedureIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14,2 14,8 20,8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </Icon>
+);
+
+export const SequenceIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <polyline points="9 18 15 12 9 6" />
+  </Icon>
+);
+
+export const TriggerIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z" />
+  </Icon>
+);
+
+export const IndexIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <circle cx="6" cy="13" r="2" />
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="18" cy="13" r="2" />
+    <path d="M8 13h6" />
+    <path d="M10 7l4 6" />
+  </Icon>
+);
+
+export const DomainIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+  </Icon>
+);
+
+export const ColumnIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <rect x="3" y="2" width="18" height="20" rx="2" ry="2" />
+    <line x1="9" y1="9" x2="15" y2="9" />
+    <line x1="9" y1="15" x2="15" y2="15" />
+  </Icon>
+);
+
+export const AddConnectionIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+  </Icon>
+);
+
+export const ChevronDownIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <polyline points="6 9 12 15 18 9" />
+  </Icon>
+);
+
+export const ChevronUpIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <polyline points="18 15 12 9 6 15" />
+  </Icon>
+);

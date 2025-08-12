@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ConnectionManager } from "./components/ConnectionManager";
-import { ConnectionsPanel } from "./components/ConnectionsPanel";
-import { SchemaExplorer } from "./components/SchemaExplorer";
+import { UnifiedExplorer } from "./components/UnifiedExplorer";
+import { ResizeHandle } from "./components/ResizeHandle";
 import { SQLEditor } from "./components/SQLEditor";
 import { ResultsGrid } from "./components/ResultsGrid";
 import { TabManager, QueryTab } from "./components/TabManager";
@@ -55,9 +55,11 @@ const AppContent: React.FC = () => {
   } | null>(null);
   const [aiLoading, setAILoading] = useState(false);
   const [aiError, setAIError] = useState<string | null>(null);
-  const [sidebarView, setSidebarView] = useState<"connections" | "schema">(
-    "connections"
-  );
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebarWidth');
+    return saved ? parseInt(saved, 10) : 256;
+  });
+  const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [currentConnection, setCurrentConnection] =
     useState<DatabaseConnectionConfig | null>(null);
@@ -82,6 +84,7 @@ const AppContent: React.FC = () => {
       createNewTab();
     }
   }, [tabs.length]);
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -146,11 +149,13 @@ const AppContent: React.FC = () => {
       }
       else if (matchesShortcut('toggle-connections')) {
         e.preventDefault();
-        setSidebarView(sidebarView === 'connections' ? 'schema' : 'connections');
+        // Toggle connections will now just refresh the explorer
+        refreshSchema();
       }
       else if (matchesShortcut('toggle-schema')) {
         e.preventDefault();
-        setSidebarView(sidebarView === 'schema' ? 'connections' : 'schema');
+        // Toggle schema will now just refresh the explorer
+        refreshSchema();
       }
       
       // Connection management
@@ -180,35 +185,54 @@ const AppContent: React.FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTabId, showQueryHistory, sidebarView, isConnected, getShortcut]);
+  }, [activeTabId, showQueryHistory, isConnected, getShortcut]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
+      if (isResizing) {
+        const container = document.querySelector(".main-content-area");
+        if (!container) return;
 
-      const container = document.querySelector(".main-content-area");
-      if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+        const newHeight = containerRect.bottom - e.clientY;
 
-      const containerRect = container.getBoundingClientRect();
-      const newHeight = containerRect.bottom - e.clientY;
+        const minHeight = 100;
+        const maxHeight = containerRect.height * 0.8;
 
-      const minHeight = 100;
-      const maxHeight = containerRect.height * 0.8;
+        setResultsPanelHeight(
+          Math.min(Math.max(newHeight, minHeight), maxHeight)
+        );
+      }
 
-      setResultsPanelHeight(
-        Math.min(Math.max(newHeight, minHeight), maxHeight)
-      );
+      if (isSidebarResizing) {
+        const newWidth = e.clientX;
+        const minWidth = 200;
+        const maxWidth = 600;
+
+        const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+        setSidebarWidth(constrainedWidth);
+      }
     };
 
     const handleMouseUp = () => {
-      setIsResizing(false);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      document.body.classList.remove("resizing");
+      if (isResizing) {
+        setIsResizing(false);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.body.classList.remove("resizing");
+      }
+
+      if (isSidebarResizing) {
+        setIsSidebarResizing(false);
+        localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.body.classList.remove("resizing");
+      }
     };
 
-    if (isResizing) {
-      document.body.style.cursor = "ns-resize";
+    if (isResizing || isSidebarResizing) {
+      document.body.style.cursor = isResizing ? "ns-resize" : "ew-resize";
       document.body.style.userSelect = "none";
       document.body.classList.add("resizing");
       document.addEventListener("mousemove", handleMouseMove);
@@ -219,7 +243,7 @@ const AppContent: React.FC = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing, isSidebarResizing, sidebarWidth]);
 
   const createNewTab = () => {
     setTabs((prevTabs) => {
@@ -259,10 +283,9 @@ const AppContent: React.FC = () => {
     
     const newTab: QueryTab = {
       id: Date.now().toString(),
-      name: `${tabToDuplicate.name} (Copy)`,
-      query: tabToDuplicate.query,
-      isModified: false,
-      filePath: null
+      title: `${tabToDuplicate.title} (Copy)`,
+      content: tabToDuplicate.content,
+      isDirty: false
     };
     
     setTabs([...tabs, newTab]);
@@ -713,10 +736,8 @@ const AppContent: React.FC = () => {
     onReplace: handleReplace,
     onFormatQuery: handleFormatQuery,
 
-    onToggleConnections: () =>
-      setSidebarView(sidebarView === "connections" ? "schema" : "connections"),
-    onToggleSchema: () =>
-      setSidebarView(sidebarView === "schema" ? "connections" : "schema"),
+    onToggleConnections: () => refreshSchema(),
+    onToggleSchema: () => refreshSchema(),
     onToggleResults: handleToggleResults,
     onToggleHistory: () => setShowQueryHistory(!showQueryHistory),
 
@@ -791,52 +812,34 @@ const AppContent: React.FC = () => {
       />
 
       <div className="flex flex-1 min-h-0">
-        <div className="w-64 bg-vscode-bg-secondary border-r border-vscode-border flex-shrink-0 flex flex-col">
-          <div className="flex border-b border-vscode-border">
-            <button
-              className={`flex-1 px-3 py-2 text-xs font-medium uppercase tracking-wide transition-colors ${
-                sidebarView === "connections"
-                  ? "text-vscode-text border-b-2 border-vscode-blue"
-                  : "text-vscode-text-secondary hover:text-vscode-text"
-              }`}
-              onClick={() => setSidebarView("connections")}
-            >
-              Connections
-            </button>
-            <button
-              className={`flex-1 px-3 py-2 text-xs font-medium uppercase tracking-wide transition-colors ${
-                sidebarView === "schema"
-                  ? "text-vscode-text border-b-2 border-vscode-blue"
-                  : "text-vscode-text-secondary hover:text-vscode-text"
-              }`}
-              onClick={() => setSidebarView("schema")}
-            >
-              Explorer
-            </button>
-          </div>
-
-          <div className="flex-1 min-h-0">
-            {sidebarView === "connections" ? (
-              <ConnectionsPanel
-                currentConnection={currentConnection}
-                onConnect={handleConnect}
-                onDisconnect={handleDisconnect}
-                onEdit={(config) => {
-                  setEditingConnection(config);
-                  setShowConnectionManager(true);
-                }}
-                onRefresh={loadSchema}
-              />
-            ) : (
-              <SchemaExplorer
-                schema={schema}
-                onTableClick={handleTableClick}
-                onViewClick={handleViewClick}
-                onRefresh={loadSchema}
-                onShowTopology={handleShowTopology}
-              />
-            )}
-          </div>
+        <div 
+          className="bg-vscode-bg-secondary border-r border-vscode-border flex-shrink-0 flex flex-col relative"
+          style={{ width: `${sidebarWidth}px` }}
+        >
+          <UnifiedExplorer
+            currentConnection={currentConnection}
+            schema={schema}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onEdit={(config) => {
+              setEditingConnection(config);
+              setShowConnectionManager(true);
+            }}
+            onRefresh={loadSchema}
+            onTableClick={handleTableClick}
+            onViewClick={handleViewClick}
+            onShowTopology={handleShowTopology}
+            onShowConnectionManager={() => setShowConnectionManager(true)}
+          />
+          
+          <ResizeHandle
+            direction="horizontal"
+            className="absolute top-0 right-0 bottom-0"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsSidebarResizing(true);
+            }}
+          />
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -967,7 +970,11 @@ const AppContent: React.FC = () => {
         {showConnectionManager && (
           <ConnectionManager
             onConnect={handleConnect}
-            onClose={() => setShowConnectionManager(false)}
+            onClose={() => {
+              setShowConnectionManager(false);
+              setEditingConnection(null);
+            }}
+            editingConnection={editingConnection}
           />
         )}
 

@@ -4,9 +4,10 @@ import { DatabaseConnectionConfig } from '../../main/database/interfaces';
 interface ConnectionManagerProps {
   onConnect: (config: DatabaseConnectionConfig) => void;
   onClose: () => void;
+  editingConnection?: DatabaseConnectionConfig | null;
 }
 
-export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect, onClose }) => {
+export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect, onClose, editingConnection }) => {
   const [connections, setConnections] = useState<DatabaseConnectionConfig[]>([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
   const [isNewConnection, setIsNewConnection] = useState(false);
@@ -24,6 +25,14 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect,
   useEffect(() => {
     loadConnections();
   }, []);
+
+  useEffect(() => {
+    if (editingConnection) {
+      setSelectedConnectionId(editingConnection.id || null);
+      setFormData(editingConnection);
+      setIsNewConnection(false);
+    }
+  }, [editingConnection]);
 
   const loadConnections = async () => {
     const result = await window.api.getConnections();
