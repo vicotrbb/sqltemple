@@ -77,7 +77,6 @@ export const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
   const [loadedSchemaObjects, setLoadedSchemaObjects] =
     useState<LoadedSchemaObjects>({});
 
-  // Auto-expand Tables sections when schema changes
   useEffect(() => {
     if (schema?.schemas) {
       const tablesExpanded = new Set<string>();
@@ -122,7 +121,6 @@ export const SchemaExplorer: React.FC<SchemaExplorerProps> = ({
     } else {
       newExpanded.add(sectionKey);
 
-      // Load objects if not already loaded
       if (
         !loadedSchemaObjects[schemaName]?.[objectType] &&
         !loadingObjects.has(sectionKey)

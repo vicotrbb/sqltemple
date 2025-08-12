@@ -4,7 +4,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // VS Code Dark Theme Colors
         vscode: {
           bg: "#1e1e1e",
           "bg-secondary": "#252526",

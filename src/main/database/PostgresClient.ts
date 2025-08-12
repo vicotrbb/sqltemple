@@ -25,7 +25,6 @@ export class PostgresClient implements IDatabaseClient {
     try {
       this.config = config;
 
-      // Clean the host URL - remove protocol if present
       let cleanHost = config.host;
       if (cleanHost.startsWith("https://")) {
         cleanHost = cleanHost.substring(8);
@@ -33,11 +32,9 @@ export class PostgresClient implements IDatabaseClient {
         cleanHost = cleanHost.substring(7);
       }
 
-      // Remove any trailing slashes or paths
       const hostParts = cleanHost.split("/");
       cleanHost = hostParts[0];
 
-      // Remove port if included in the host (e.g., host:5432)
       const hostPortParts = cleanHost.split(":");
       if (hostPortParts.length > 1) {
         cleanHost = hostPortParts[0];
@@ -62,8 +59,13 @@ export class PostgresClient implements IDatabaseClient {
 
   async disconnect(): Promise<void> {
     if (this.client) {
-      await this.client.end();
-      this.client = null;
+      try {
+        await this.client.end();
+      } catch (error) {
+        console.warn("Error during database disconnect:", error);
+      } finally {
+        this.client = null;
+      }
     }
   }
 
@@ -81,7 +83,7 @@ export class PostgresClient implements IDatabaseClient {
       const columns: ColumnInfo[] = result.fields.map((field) => ({
         name: field.name,
         dataType: this.getDataTypeName(field.dataTypeID),
-        nullable: true, // PG doesn't provide this in the result fields
+        nullable: true,
       }));
 
       return {
@@ -107,7 +109,6 @@ export class PostgresClient implements IDatabaseClient {
       throw new Error("Database not connected");
     }
 
-    // Get all databases (if we have permission)
     let databases: DatabaseInfo[] = [];
     try {
       const databasesQuery = `
@@ -127,14 +128,12 @@ export class PostgresClient implements IDatabaseClient {
         owner: row.owner,
       }));
     } catch (error: any) {
-      // If we don't have permission to query pg_database, that's okay
       console.log(
         "Could not fetch database list:",
         error.message || String(error)
       );
     }
 
-    // Get all schemas with table counts
     const schemasQuery = `
       SELECT 
         s.schema_name,
@@ -151,7 +150,6 @@ export class PostgresClient implements IDatabaseClient {
     const schemasResult = await this.client.query(schemasQuery);
     const schemas: SchemaInfo[] = [];
 
-    // Get all tables in one query for better performance
     const allTablesQuery = `
       SELECT 
         table_schema,
@@ -167,7 +165,6 @@ export class PostgresClient implements IDatabaseClient {
 
     const allTablesResult = await this.client.query(allTablesQuery);
 
-    // Group tables by schema
     const tablesBySchema: { [key: string]: TableInfo[] } = {};
     for (const row of allTablesResult.rows) {
       if (!tablesBySchema[row.table_schema]) {
@@ -175,12 +172,11 @@ export class PostgresClient implements IDatabaseClient {
       }
       tablesBySchema[row.table_schema].push({
         name: row.table_name,
-        columns: [], // Empty initially, will be loaded on demand
+        columns: [],
         columnCount: row.column_count,
       });
     }
 
-    // Build schema objects
     for (const schemaRow of schemasResult.rows) {
       const schemaName = schemaRow.schema_name;
       schemas.push({
@@ -288,7 +284,6 @@ export class PostgresClient implements IDatabaseClient {
       throw new Error("Database not connected");
     }
 
-    // Check PostgreSQL version to use appropriate query
     const versionQuery = "SELECT version()";
     const versionResult = await this.client.query(versionQuery);
     const versionString = versionResult.rows[0].version;
@@ -297,7 +292,6 @@ export class PostgresClient implements IDatabaseClient {
 
     let functionsQuery: string;
     if (majorVersion >= 11) {
-      // PostgreSQL 11+ has prokind column
       functionsQuery = `
         SELECT 
           p.proname as function_name,
@@ -312,7 +306,6 @@ export class PostgresClient implements IDatabaseClient {
         ORDER BY p.proname;
       `;
     } else {
-      // Older PostgreSQL versions use proisagg and proiswindow
       functionsQuery = `
         SELECT 
           p.proname as function_name,
@@ -346,7 +339,6 @@ export class PostgresClient implements IDatabaseClient {
       throw new Error("Database not connected");
     }
 
-    // Check PostgreSQL version to use appropriate query
     const versionQuery = "SELECT version()";
     const versionResult = await this.client.query(versionQuery);
     const versionString = versionResult.rows[0].version;
@@ -354,7 +346,6 @@ export class PostgresClient implements IDatabaseClient {
     const majorVersion = versionMatch ? parseInt(versionMatch[1]) : 0;
 
     if (majorVersion < 11) {
-      // Procedures don't exist before PostgreSQL 11
       return [];
     }
 
@@ -510,20 +501,54 @@ export class PostgresClient implements IDatabaseClient {
       throw new Error("Database not connected");
     }
 
+    if (!sql || !sql.trim()) {
+      throw new Error("SQL query is required for query plan analysis");
+    }
+
+    const trimmedSql = sql.trim();
+    
+    const forbiddenKeywords = /^\s*(DROP|DELETE|INSERT|UPDATE|CREATE|ALTER|TRUNCATE)\s+/i;
+    if (forbiddenKeywords.test(trimmedSql)) {
+      throw new Error("EXPLAIN is only supported for SELECT statements and non-destructive queries");
+    }
+
     try {
-      const planQuery = `EXPLAIN (FORMAT JSON, ANALYZE TRUE, BUFFERS TRUE) ${sql}`;
+      const planQuery = `EXPLAIN (FORMAT JSON, ANALYZE TRUE, BUFFERS TRUE) ${trimmedSql}`;
       const result = await this.client.query(planQuery);
 
-      // PostgreSQL returns the plan as a JSON string in the first row
-      if (result.rows.length > 0 && result.rows[0]["QUERY PLAN"]) {
-        return result.rows[0]["QUERY PLAN"];
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error("No query plan data returned from database");
       }
 
-      throw new Error("No query plan returned");
+      const planData = result.rows[0]["QUERY PLAN"];
+      if (!planData) {
+        throw new Error("Query plan column not found in result");
+      }
+
+      if (typeof planData === 'string') {
+        try {
+          return JSON.parse(planData);
+        } catch (parseError) {
+          console.warn("Failed to parse query plan JSON:", parseError);
+          return planData;
+        }
+      }
+
+      return planData;
     } catch (error: any) {
-      throw new Error(
-        `Failed to get query plan: ${error.message || String(error)}`
-      );
+      const errorMessage = error.message || String(error);
+      
+      if (errorMessage.includes('permission denied')) {
+        throw new Error("Permission denied: Unable to analyze query plan. Check database permissions.");
+      } else if (errorMessage.includes('syntax error')) {
+        throw new Error(`SQL syntax error: ${errorMessage}`);
+      } else if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+        throw new Error(`Table or relation not found: ${errorMessage}`);
+      } else if (errorMessage.includes('connection')) {
+        throw new Error("Database connection lost during query plan analysis");
+      }
+      
+      throw new Error(`Failed to get query plan: ${errorMessage}`);
     }
   }
 
@@ -542,7 +567,6 @@ export class PostgresClient implements IDatabaseClient {
   }
 
   private getDataTypeName(oid: number): string {
-    // Common PostgreSQL type OIDs
     const typeMap: { [key: number]: string } = {
       16: "boolean",
       20: "bigint",
@@ -581,10 +605,8 @@ export class PostgresClient implements IDatabaseClient {
 
     visitedTables.add(tableKey);
 
-    // Query to get both incoming and outgoing foreign key relationships
     const relationshipsQuery = `
       WITH foreign_keys AS (
-        -- Outgoing foreign keys (this table references others)
         SELECT 
           'outgoing' as direction,
           tc.constraint_name,
@@ -608,7 +630,6 @@ export class PostgresClient implements IDatabaseClient {
         
         UNION ALL
         
-        -- Incoming foreign keys (other tables reference this one)
         SELECT 
           'incoming' as direction,
           tc.constraint_name,
@@ -668,7 +689,6 @@ export class PostgresClient implements IDatabaseClient {
 
       relationships.push(relationship);
 
-      // Track related tables for recursive fetching
       if (row.direction === "outgoing") {
         relatedTables.add(
           `${row.foreign_table_schema}.${row.foreign_table_name}`
@@ -678,7 +698,6 @@ export class PostgresClient implements IDatabaseClient {
       }
     }
 
-    // Check if there are more relationships at the next depth level
     if (depth > 1) {
       for (const relationship of relationships) {
         const nextTableSchema =
@@ -690,7 +709,6 @@ export class PostgresClient implements IDatabaseClient {
             ? relationship.targetTable
             : relationship.sourceTable;
 
-        // Check if this related table has more relationships
         const hasMoreQuery = `
           SELECT EXISTS (
             SELECT 1
@@ -718,7 +736,6 @@ export class PostgresClient implements IDatabaseClient {
       }
     }
 
-    // Recursively fetch relationships for related tables if depth > 1
     if (depth > 1) {
       for (const relationship of relationships) {
         const nextTableSchema =

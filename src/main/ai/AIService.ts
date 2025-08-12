@@ -17,10 +17,86 @@ export class AIService {
   private config: AIConfig | null = null;
 
   constructor() {
-    // Initialize with empty config
   }
 
-  setConfig(config: AIConfig) {
+  validateConfig(config: AIConfig): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!config.apiKey || typeof config.apiKey !== 'string') {
+      errors.push('API key is required');
+    } else if (config.apiKey.trim().length === 0) {
+      errors.push('API key cannot be empty');
+    } else if (!config.apiKey.startsWith('sk-')) {
+      errors.push('API key must start with "sk-"');
+    } else if (config.apiKey.length < 20) {
+      errors.push('API key appears to be too short');
+    }
+
+    if (!config.model || typeof config.model !== 'string') {
+      errors.push('Model selection is required');
+    } else if (!this.getAvailableModels().includes(config.model)) {
+      errors.push(`Invalid model "${config.model}". Must be one of: ${this.getAvailableModels().join(', ')}`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  async validateApiKey(apiKey: string): Promise<{ isValid: boolean; error?: string }> {
+    try {
+      const testOpenAI = new OpenAI({ apiKey });
+      
+      await testOpenAI.models.list();
+      
+      return { isValid: true };
+    } catch (error: any) {
+      let errorMessage = 'API key validation failed';
+      
+      if (error.status === 401) {
+        errorMessage = 'Invalid API key. Please check your OpenAI API key.';
+      } else if (error.status === 429) {
+        errorMessage = 'API rate limit exceeded. Please try again later.';
+      } else if (error.status === 403) {
+        errorMessage = 'API key does not have sufficient permissions.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return { isValid: false, error: errorMessage };
+    }
+  }
+
+  async setConfig(config: AIConfig): Promise<{ success: boolean; errors?: string[] }> {
+    const validation = this.validateConfig(config);
+    if (!validation.isValid) {
+      return { success: false, errors: validation.errors };
+    }
+
+    try {
+      const apiValidation = await this.validateApiKey(config.apiKey);
+      if (!apiValidation.isValid) {
+        return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
+      }
+
+      this.config = config;
+      this.openai = new OpenAI({
+        apiKey: config.apiKey,
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, errors: [`Failed to configure AI service: ${error.message}`] };
+    }
+  }
+
+  setConfigSync(config: AIConfig) {
+    const validation = this.validateConfig(config);
+    if (!validation.isValid) {
+      throw new Error(`Invalid AI configuration: ${validation.errors.join(', ')}`);
+    }
+
     this.config = config;
     this.openai = new OpenAI({
       apiKey: config.apiKey,
@@ -186,14 +262,11 @@ Return ONLY the optimized SQL query.`;
   }
 
   private cleanSQLResponse(response: string): string {
-    // Remove markdown code blocks
     let cleaned = response.trim();
 
-    // Remove ```sql or ``` markers
     cleaned = cleaned.replace(/^```(?:sql)?\s*\n?/i, "");
     cleaned = cleaned.replace(/\n?```\s*$/i, "");
 
-    // Remove any leading/trailing whitespace
     return cleaned.trim();
   }
 
@@ -203,7 +276,6 @@ Return ONLY the optimized SQL query.`;
     }
 
     try {
-      // o1 models have special requirements
       const isO1Model = this.config.model.startsWith("o1-");
 
       const params: any = {
@@ -214,12 +286,10 @@ Return ONLY the optimized SQL query.`;
         ],
       };
 
-      // o1 models don't support temperature, top_p, etc.
       if (!isO1Model) {
         params.temperature = prompt.temperature ?? 0.7;
         params.max_tokens = prompt.maxTokens ?? 2000;
       } else {
-        // o1 models use max_completion_tokens instead
         params.max_completion_tokens = prompt.maxTokens ?? 2000;
       }
 

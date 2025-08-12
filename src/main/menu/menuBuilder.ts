@@ -51,7 +51,6 @@ export class MenuBuilder {
   }
 
   private registerDefaultActions(): void {
-    // File menu actions
     this.registerAction("file:new-tab", () => {
       this.mainWindow.webContents.send("menu:new-tab");
     });
@@ -72,7 +71,14 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:show-preferences");
     });
 
-    // Edit menu actions
+    this.registerAction("file:import-connections", () => {
+      this.mainWindow.webContents.send("menu:import-connections");
+    });
+
+    this.registerAction("file:export-connections", () => {
+      this.mainWindow.webContents.send("menu:export-connections");
+    });
+
     this.registerAction("edit:undo", () => {
       this.mainWindow.webContents.undo();
     });
@@ -109,7 +115,6 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:format-query");
     });
 
-    // View menu actions
     this.registerAction("view:toggle-connections", () => {
       this.mainWindow.webContents.send("menu:toggle-connections");
     });
@@ -150,7 +155,6 @@ export class MenuBuilder {
       this.mainWindow.webContents.toggleDevTools();
     });
 
-    // Database menu actions
     this.registerAction("database:connect", () => {
       this.mainWindow.webContents.send("menu:connect-database");
     });
@@ -179,7 +183,6 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:show-topology");
     });
 
-    // AI Assistant menu actions
     this.registerAction("ai:create-query", () => {
       this.mainWindow.webContents.send("menu:ai-create-query");
     });
@@ -196,7 +199,6 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:ai-settings");
     });
 
-    // Window menu actions
     this.registerAction("window:minimize", () => {
       this.mainWindow.minimize();
     });
@@ -213,7 +215,6 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:previous-tab");
     });
 
-    // Help menu actions
     this.registerAction("help:documentation", () => {
       shell.openExternal("https://github.com/yourusername/sqltemple/wiki");
     });

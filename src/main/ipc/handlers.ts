@@ -1,4 +1,6 @@
-import { ipcMain } from "electron";
+import { ipcMain, dialog, BrowserWindow } from "electron";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { PostgresClient } from "../database/PostgresClient";
 import { StorageManager } from "../storage/StorageManager";
 import { AIService } from "../ai/AIService";
@@ -15,21 +17,22 @@ export async function initializeIpcHandlers(
   storageManager = storage;
   aiService = new AIService();
 
-  // Load saved AI config
   const savedConfig = await storageManager.getAIConfig();
   if (savedConfig) {
-    aiService.setConfig(savedConfig);
+    try {
+      aiService.setConfigSync(savedConfig);
+    } catch (error) {
+      console.warn("Failed to load saved AI config:", error);
+    }
   }
 
-  // Database connection handlers
   ipcMain.handle(
     "connect-database",
     async (event, config: DatabaseConnectionConfig) => {
       try {
         console.log("Attempting to connect to database:", config.host);
 
-        // Disconnect current connection if any
-        if (currentClient) {
+            if (currentClient) {
           await currentClient.disconnect();
         }
 
@@ -37,7 +40,6 @@ export async function initializeIpcHandlers(
         await currentClient.connect(config);
         currentConnection = config;
 
-        // Save or update connection
         if (!config.id) {
           config.id = await storageManager.saveConnection(config);
         }
@@ -64,7 +66,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Query execution
   ipcMain.handle("execute-query", async (event, sql: string) => {
     if (!currentClient || !currentConnection) {
       return {
@@ -76,7 +77,6 @@ export async function initializeIpcHandlers(
     try {
       const result = await currentClient.executeQuery(sql);
 
-      // Log to history
       await storageManager.addQueryHistory({
         connectionId: currentConnection.id!,
         query: sql,
@@ -92,7 +92,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Schema information
   ipcMain.handle("get-schema-info", async () => {
     if (!currentClient) {
       return { success: false, error: "No database connection" };
@@ -106,7 +105,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Get table columns (lazy loading)
   ipcMain.handle(
     "get-table-columns",
     async (event, schemaName: string, tableName: string) => {
@@ -126,7 +124,6 @@ export async function initializeIpcHandlers(
     }
   );
 
-  // Query plan
   ipcMain.handle("get-query-plan", async (event, sql: string) => {
     if (!currentClient) {
       return { success: false, error: "No database connection" };
@@ -140,7 +137,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Connection profiles
   ipcMain.handle("get-connections", async () => {
     try {
       const connections = await storageManager.getConnections();
@@ -171,7 +167,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Query history
   ipcMain.handle("get-query-history", async (event, connectionId?: number) => {
     try {
       const history = await storageManager.getQueryHistory(connectionId);
@@ -181,17 +176,40 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // AI configuration
   ipcMain.handle(
     "ai-set-config",
     async (event, config: { apiKey: string; model: string }) => {
       try {
-        aiService.setConfig(config);
-        // Store config securely
+        const result = await aiService.setConfig(config);
+        if (!result.success) {
+          return { success: false, error: result.errors?.join('; ') || 'Configuration validation failed' };
+        }
+
         await storageManager.saveAIConfig(config);
         return { success: true };
       } catch (error: any) {
         return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "ai-validate-config",
+    async (event, config: { apiKey: string; model: string }) => {
+      try {
+        const validation = aiService.validateConfig(config);
+        if (!validation.isValid) {
+          return { success: false, errors: validation.errors };
+        }
+
+        const apiValidation = await aiService.validateApiKey(config.apiKey);
+        if (!apiValidation.isValid) {
+          return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
+        }
+
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, errors: [error.message || String(error)] };
       }
     }
   );
@@ -214,7 +232,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // AI operations
   ipcMain.handle("ai-analyze-plan", async (event, query: string, plan: any) => {
     try {
       const analysis = await aiService.analyzeQueryPlan(query, plan);
@@ -255,7 +272,6 @@ export async function initializeIpcHandlers(
         throw new Error("No database connection");
       }
 
-      // Get the query plan
       const plan = await currentClient.getQueryPlan(sql);
       const schema = await currentClient.getSchemaMetadata();
 
@@ -376,7 +392,6 @@ export async function initializeIpcHandlers(
     }
   });
 
-  // Get table relationships
   ipcMain.handle(
     "get-table-relationships",
     async (event, schemaName: string, tableName: string, depth: number = 3) => {
@@ -397,9 +412,212 @@ export async function initializeIpcHandlers(
     }
   );
 
-  // Menu state update handler
+  ipcMain.handle("storage-get", async (event, key: string) => {
+    try {
+      const value = await storageManager.getSetting(key);
+      return { success: true, value };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("storage-set", async (event, key: string, value: string) => {
+    try {
+      await storageManager.setSetting(key, value);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
   ipcMain.on("update-menu-state", (event, state) => {
-    // TODO: Update menu items based on state
     console.log("Menu state updated:", state);
+  });
+
+  ipcMain.handle("file:open-query", async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        throw new Error("No window found");
+      }
+
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Open SQL Query File",
+        filters: [
+          { name: "SQL Files", extensions: ["sql", "SQL"] },
+          { name: "Text Files", extensions: ["txt"] },
+          { name: "All Files", extensions: ["*"] }
+        ],
+        properties: ["openFile"]
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      const content = await fs.readFile(filePath, "utf-8");
+      const fileName = path.basename(filePath, path.extname(filePath));
+
+      return {
+        success: true,
+        content,
+        fileName,
+        filePath
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("file:save-query", async (event, content: string, currentFilePath?: string) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        throw new Error("No window found");
+      }
+
+      let filePath = currentFilePath;
+
+      if (!filePath) {
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: "Save SQL Query",
+          defaultPath: "query.sql",
+          filters: [
+            { name: "SQL Files", extensions: ["sql"] },
+            { name: "Text Files", extensions: ["txt"] },
+            { name: "All Files", extensions: ["*"] }
+          ]
+        });
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, canceled: true };
+        }
+
+        filePath = result.filePath;
+      }
+
+      await fs.writeFile(filePath, content, "utf-8");
+      const fileName = path.basename(filePath, path.extname(filePath));
+
+      return {
+        success: true,
+        filePath,
+        fileName
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("file:save-query-as", async (event, content: string) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        throw new Error("No window found");
+      }
+
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Save SQL Query As",
+        defaultPath: "query.sql",
+        filters: [
+          { name: "SQL Files", extensions: ["sql"] },
+          { name: "Text Files", extensions: ["txt"] },
+          { name: "All Files", extensions: ["*"] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true };
+      }
+
+      await fs.writeFile(result.filePath, content, "utf-8");
+      const fileName = path.basename(result.filePath, path.extname(result.filePath));
+
+      return {
+        success: true,
+        filePath: result.filePath,
+        fileName
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("file:import-connections", async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        throw new Error("No window found");
+      }
+
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Import Connections",
+        filters: [
+          { name: "JSON Files", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] }
+        ],
+        properties: ["openFile"]
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      const content = await fs.readFile(filePath, "utf-8");
+      const connections = JSON.parse(content);
+
+      if (!Array.isArray(connections)) {
+        throw new Error("Invalid connections format: expected an array");
+      }
+
+      return {
+        success: true,
+        connections
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("file:export-connections", async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        throw new Error("No window found");
+      }
+
+      const connections = await storageManager.getConnections();
+
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Export Connections",
+        defaultPath: "sqltemple-connections.json",
+        filters: [
+          { name: "JSON Files", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true };
+      }
+
+      const exportableConnections = connections.map(conn => ({
+        ...conn,
+        password: undefined,
+        id: undefined
+      }));
+
+      await fs.writeFile(result.filePath, JSON.stringify(exportableConnections, null, 2), "utf-8");
+
+      return {
+        success: true,
+        filePath: result.filePath,
+        count: connections.length
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
   });
 }

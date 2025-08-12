@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from "react";
 
 export interface MenuActionHandlers {
-  // File menu
   onNewTab?: () => void;
   onOpenQuery?: () => void;
   onSaveQuery?: () => void;
@@ -10,18 +9,15 @@ export interface MenuActionHandlers {
   onImportConnections?: () => void;
   onExportConnections?: () => void;
 
-  // Edit menu
   onFind?: () => void;
   onReplace?: () => void;
   onFormatQuery?: () => void;
 
-  // View menu
   onToggleConnections?: () => void;
   onToggleSchema?: () => void;
   onToggleResults?: () => void;
   onToggleHistory?: () => void;
 
-  // Database menu
   onConnectDatabase?: () => void;
   onDisconnectDatabase?: () => void;
   onRefreshSchema?: () => void;
@@ -30,18 +26,15 @@ export interface MenuActionHandlers {
   onExplainQuery?: () => void;
   onShowTopology?: () => void;
 
-  // AI menu
   onAICreateQuery?: () => void;
   onAIExplainQuery?: () => void;
   onAIOptimizeQuery?: () => void;
   onAISettings?: () => void;
 
-  // Window menu
   onCloseTab?: () => void;
   onNextTab?: () => void;
   onPreviousTab?: () => void;
 
-  // Help menu
   onShowKeyboardShortcuts?: () => void;
   onShowAbout?: () => void;
 }
@@ -94,7 +87,6 @@ export function useMenuActions(handlers: MenuActionHandlers) {
       }
     });
 
-    // Cleanup
     return () => {
       listeners.forEach(([channel, listener]) => {
         window.api.ipcRenderer.removeListener(channel, listener);
@@ -103,7 +95,6 @@ export function useMenuActions(handlers: MenuActionHandlers) {
   }, [handlers]);
 }
 
-// Hook to update menu state from renderer
 export function useMenuState() {
   const updateMenuState = useCallback(
     (state: {

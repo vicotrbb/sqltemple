@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables - Default Dark Theme */
+:root {
+  --vscode-bg: #1e1e1e;
+  --vscode-bg-secondary: #252526;
+  --vscode-bg-tertiary: #2d2d30;
+  --vscode-bg-quaternary: #383838;
+  --vscode-text: #cccccc;
+  --vscode-text-secondary: #858585;
+  --vscode-text-tertiary: #6e6e6e;
+  --vscode-border: #454545;
+  --vscode-blue: #007ACC;
+  --vscode-blue-light: #1177BB;
+  --vscode-green: #4ec9b0;
+  --vscode-error: #f44747;
+  --vscode-warning: #ffcc02;
+  
+  /* Editor settings */
+  --editor-font-size: 14px;
+  --editor-font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  
+  /* UI scale */
+  --ui-scale: 1;
+}
+
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 10px;
@@ -9,16 +33,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--vscode-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: var(--vscode-bg-quaternary);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5a;
+  background: var(--vscode-border);
 }
 
 /* Base styles */
@@ -29,9 +53,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #1e1e1e;
-  color: #d4d4d4;
+  background-color: var(--vscode-bg);
+  color: var(--vscode-text);
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -41,7 +66,8 @@ body {
 
 /* Monaco Editor custom styles */
 .monaco-editor {
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
 }
 
 /* Custom button styles */
@@ -55,7 +81,7 @@ button:active {
 
 /* Tab styles */
 .tab-active {
-  border-bottom: 2px solid #007acc;
+  border-bottom: 2px solid var(--vscode-blue);
 }
 
 /* Results table styles */
@@ -66,7 +92,7 @@ table {
 th {
   position: sticky;
   top: 0;
-  background-color: #2d2d2d;
+  background-color: var(--vscode-bg-tertiary);
   z-index: 10;
 }
 
@@ -77,13 +103,13 @@ th {
 
 /* Custom selection colors */
 ::selection {
-  background-color: #264f78;
-  color: #ffffff;
+  background-color: var(--vscode-blue);
+  color: var(--vscode-bg);
 }
 
 ::-moz-selection {
-  background-color: #264f78;
-  color: #ffffff;
+  background-color: var(--vscode-blue);
+  color: var(--vscode-bg);
 }
 
 /* Focus styles */
@@ -94,7 +120,7 @@ th {
 input:focus,
 textarea:focus,
 select:focus {
-  box-shadow: 0 0 0 1px #007acc;
+  box-shadow: 0 0 0 1px var(--vscode-blue);
 }
 
 /* Smooth transitions */
@@ -130,7 +156,7 @@ select:focus {
   transform: translate(-50%, -50%);
   width: 30px;
   height: 3px;
-  background-color: #4a4a4a;
+  background-color: var(--vscode-bg-quaternary);
   border-radius: 2px;
   opacity: 0;
   transition: opacity 0.2s;
@@ -162,17 +188,45 @@ select:focus {
   animation: fadeIn 0.3s ease-out;
 }
 
-/* VS Code-like colors */
-.vscode-dark {
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d2d;
-  --border-color: #3e3e42;
-  --text-primary: #d4d4d4;
-  --text-secondary: #969696;
-  --accent-blue: #007acc;
-  --accent-green: #4ec9b0;
-  --accent-red: #f48771;
-  --accent-yellow: #dcdcaa;
-  --accent-purple: #c586c0;
+/* Theme-specific overrides */
+body.theme-light {
+  color-scheme: light;
+}
+
+body.theme-dark {
+  color-scheme: dark;
+}
+
+/* Toggle switch styles */
+.toggle {
+  appearance: none;
+  width: 40px;
+  height: 20px;
+  background-color: var(--vscode-bg-quaternary);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: 1px solid var(--vscode-border);
+}
+
+.toggle:checked {
+  background-color: var(--vscode-blue);
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--vscode-text);
+  top: 1px;
+  left: 1px;
+  transition: transform 0.3s ease;
+}
+
+.toggle:checked::before {
+  transform: translateX(20px);
+  background-color: white;
 }

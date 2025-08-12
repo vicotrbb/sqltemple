@@ -140,3 +140,6 @@ dist
 
 # macos
 .DS_Store
+
+# Internal Documentation
+documentation/

@@ -27,6 +27,12 @@ const defaultShortcuts: KeyboardShortcut[] = [
     defaultKeys: ['Cmd+Enter', 'Ctrl+Enter']
   },
   {
+    id: 'execute-selection',
+    name: 'Execute Selection',
+    description: 'Run the selected SQL query',
+    defaultKeys: ['Cmd+Shift+Enter', 'Ctrl+Shift+Enter']
+  },
+  {
     id: 'explain-query',
     name: 'Explain Query',
     description: 'Show query execution plan',
@@ -79,6 +85,72 @@ const defaultShortcuts: KeyboardShortcut[] = [
     name: 'Create Query with AI',
     description: 'Open AI query creation dialog',
     defaultKeys: ['Cmd+Shift+N', 'Ctrl+Shift+N']
+  },
+  {
+    id: 'connect-database',
+    name: 'Connect to Database',
+    description: 'Open connection dialog',
+    defaultKeys: ['Cmd+Shift+C', 'Ctrl+Shift+C']
+  },
+  {
+    id: 'disconnect-database',
+    name: 'Disconnect Database',
+    description: 'Disconnect from current database',
+    defaultKeys: ['Cmd+Shift+D', 'Ctrl+Shift+D']
+  },
+  {
+    id: 'refresh-schema',
+    name: 'Refresh Schema',
+    description: 'Refresh database schema information',
+    defaultKeys: ['F5']
+  },
+  {
+    id: 'clear-editor',
+    name: 'Clear Editor',
+    description: 'Clear the current query editor',
+    defaultKeys: ['Cmd+Shift+K', 'Ctrl+Shift+K']
+  },
+  {
+    id: 'duplicate-tab',
+    name: 'Duplicate Tab',
+    description: 'Duplicate current tab',
+    defaultKeys: ['Cmd+Shift+T', 'Ctrl+Shift+T']
+  },
+  {
+    id: 'toggle-connections',
+    name: 'Toggle Connections Panel',
+    description: 'Show/hide connections panel',
+    defaultKeys: ['Cmd+1', 'Ctrl+1']
+  },
+  {
+    id: 'toggle-schema',
+    name: 'Toggle Schema Explorer',
+    description: 'Show/hide schema explorer',
+    defaultKeys: ['Cmd+2', 'Ctrl+2']
+  },
+  {
+    id: 'toggle-results',
+    name: 'Toggle Results Panel',
+    description: 'Show/hide results panel',
+    defaultKeys: ['Cmd+3', 'Ctrl+3']
+  },
+  {
+    id: 'focus-editor',
+    name: 'Focus Editor',
+    description: 'Focus the query editor',
+    defaultKeys: ['Cmd+0', 'Ctrl+0']
+  },
+  {
+    id: 'next-tab',
+    name: 'Next Tab',
+    description: 'Switch to next tab',
+    defaultKeys: ['Cmd+Tab', 'Ctrl+Tab']
+  },
+  {
+    id: 'previous-tab',
+    name: 'Previous Tab',
+    description: 'Switch to previous tab',
+    defaultKeys: ['Cmd+Shift+Tab', 'Ctrl+Shift+Tab']
   }
 ];
 
@@ -101,7 +173,6 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     keyboardShortcuts: defaultShortcuts
   });
 
-  // Load settings from localStorage on mount
   useEffect(() => {
     const savedSettings = localStorage.getItem('sqltemple-settings');
     if (savedSettings) {
@@ -114,7 +185,6 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     }
   }, []);
 
-  // Save settings to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('sqltemple-settings', JSON.stringify(settings));
   }, [settings]);

@@ -60,7 +60,6 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onClose })
 
     document.addEventListener('keydown', handleKeyDown);
 
-    // Remove listener after 5 seconds
     setTimeout(() => {
       document.removeEventListener('keydown', handleKeyDown);
       setRecording(false);

@@ -156,7 +156,6 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect,
                       onChange={e => {
                         const host = e.target.value;
                         setFormData({ ...formData, host });
-                        // Auto-enable SSL for common cloud providers
                         if (host.includes('supabase.co') || 
                             host.includes('amazonaws.com') || 
                             host.includes('azure.com') ||

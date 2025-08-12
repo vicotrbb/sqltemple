@@ -17,13 +17,11 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
 
   const loadSettings = async () => {
     try {
-      // Load available models
       const modelsResult = await window.api.aiGetModels();
       if (modelsResult.success && modelsResult.models) {
         setModels(modelsResult.models);
       }
 
-      // Load current config
       const configResult = await window.api.aiGetConfig();
       if (configResult.success && configResult.config) {
         setApiKey(configResult.config.apiKey);

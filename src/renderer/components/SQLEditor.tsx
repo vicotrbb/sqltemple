@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import Editor, { Monaco, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings, useConfig } from '../contexts/ConfigContext';
+import { useEditorConfig } from '../hooks/useEditorConfig';
 
-// Configure Monaco to use local files instead of CDN
 loader.config({ monaco });
 
 interface SQLEditorProps {
@@ -13,13 +13,28 @@ interface SQLEditorProps {
   onExplainQuery?: (selectedText: string) => void;
   onOptimizeQuery?: (selectedText: string) => void;
   onEditorMount?: (editor: any) => void;
-  schema?: any; // We'll type this properly later
+  schema?: any;
 }
 
 export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute, onExplainQuery, onOptimizeQuery, onEditorMount, schema }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
+  const completionProviderRef = useRef<monaco.IDisposable | null>(null);
   const { getShortcut } = useSettings();
+  const { config } = useConfig();
+  const editorUtils = useEditorConfig(editorRef.current);
+
+  useEffect(() => {
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+      
+      if (editorRef.current) {
+        editorRef.current.dispose();
+      }
+    };
+  }, []);
 
   const parseKeybinding = (keys: string, monaco: Monaco): number | null => {
     const parts = keys.split('+').map(p => p.trim());
@@ -42,7 +57,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
           result |= monaco.KeyCode.Enter;
           break;
         default:
-          // Handle single letter keys
           if (part.length === 1) {
             const keyCode = part.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0) + monaco.KeyCode.KeyA;
             result |= keyCode;
@@ -50,19 +64,17 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
       }
     }
 
-    return result || null;
+    return result !== 0 ? result : null;
   };
 
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
     
-    // Call the onEditorMount callback if provided
     if (onEditorMount) {
       onEditorMount(editor);
     }
 
-    // Add execute shortcut with custom keybinding
     const executeKeys = getShortcut('execute-query');
     const keybinding = executeKeys.length > 0 ? parseKeybinding(executeKeys[0], monaco) : null;
     
@@ -75,19 +87,20 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
       run: (ed) => {
         const selection = ed.getModel()?.getValueInRange(ed.getSelection()!);
         if (selection && selection.trim()) {
-          // Execute only the selected text
           onExecute(selection);
         } else {
-          // Execute the entire content
           onExecute();
         }
       }
     });
 
-    // Add execute selection action
+    const executeSelectionKeys = getShortcut('execute-selection');
+    const executeSelectionKeybinding = executeSelectionKeys.length > 0 ? parseKeybinding(executeSelectionKeys[0], monaco) : null;
+    
     editor.addAction({
       id: 'execute-selection',
       label: 'Execute Selection',
+      keybindings: executeSelectionKeybinding ? [executeSelectionKeybinding] : [],
       contextMenuGroupId: 'navigation',
       contextMenuOrder: 1.6,
       precondition: 'editorHasSelection',
@@ -99,7 +112,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
       }
     });
 
-    // Add AI context menu actions with keyboard shortcuts
     if (onExplainQuery) {
       const explainKeys = getShortcut('explain-query-ai');
       editor.addAction({
@@ -113,7 +125,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
           if (selection && selection.trim()) {
             onExplainQuery(selection);
           } else {
-            // If no selection, use the entire content
             const fullContent = ed.getModel()?.getValue();
             if (fullContent && fullContent.trim()) {
               onExplainQuery(fullContent);
@@ -136,7 +147,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
           if (selection && selection.trim()) {
             onOptimizeQuery(selection);
           } else {
-            // If no selection, use the entire content
             const fullContent = ed.getModel()?.getValue();
             if (fullContent && fullContent.trim()) {
               onOptimizeQuery(fullContent);
@@ -146,16 +156,47 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
       });
     }
 
-    // Register SQL completion provider
+    // Clear editor shortcut
+    const clearKeys = getShortcut('clear-editor');
+    const clearKeybinding = clearKeys.length > 0 ? parseKeybinding(clearKeys[0], monaco) : null;
+    
+    editor.addAction({
+      id: 'clear-editor',
+      label: 'Clear Editor',
+      keybindings: clearKeybinding ? [clearKeybinding] : [],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 2.0,
+      run: (ed) => {
+        ed.setValue('');
+        ed.focus();
+      }
+    });
+
+    // Focus editor shortcut
+    const focusKeys = getShortcut('focus-editor');
+    const focusKeybinding = focusKeys.length > 0 ? parseKeybinding(focusKeys[0], monaco) : null;
+    
+    editor.addAction({
+      id: 'focus-editor',
+      label: 'Focus Editor',
+      keybindings: focusKeybinding ? [focusKeybinding] : [],
+      run: (ed) => {
+        ed.focus();
+      }
+    });
+
     registerSQLCompletionProvider(monaco, schema);
   };
 
   const registerSQLCompletionProvider = (monaco: Monaco, schema?: any) => {
-    monaco.languages.registerCompletionItemProvider('sql', {
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider('sql', {
       provideCompletionItems: (model, position) => {
         const suggestions: monaco.languages.CompletionItem[] = [];
         
-        // SQL Keywords
         const sqlKeywords = [
           'SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP',
           'ALTER', 'TABLE', 'INDEX', 'VIEW', 'TRIGGER', 'PROCEDURE', 'FUNCTION',
@@ -173,7 +214,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
           endColumn: word.endColumn
         };
 
-        // Add keywords
         sqlKeywords.forEach(keyword => {
           suggestions.push({
             label: keyword,
@@ -183,9 +223,7 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
           });
         });
 
-        // Add schema-based suggestions if available
         if (schema) {
-          // Add table names
           schema.schemas?.forEach((schemaInfo: any) => {
             schemaInfo.tables?.forEach((table: any) => {
               suggestions.push({
@@ -196,7 +234,6 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
                 range: range
               });
 
-              // Add columns
               table.columns?.forEach((column: any) => {
                 suggestions.push({
                   label: `${table.name}.${column.name}`,
@@ -221,27 +258,39 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
     }
   }, [schema]);
 
+  const theme = config.appearance.theme === 'light' || 
+               (config.appearance.theme === 'system' && 
+                !window.matchMedia('(prefers-color-scheme: dark)').matches) 
+               ? 'vs' : 'vs-dark';
+
   return (
     <Editor
       height="100%"
       defaultLanguage="sql"
-      theme="vs-dark"
+      theme={theme}
       value={value}
       onChange={(value) => onChange(value || '')}
       onMount={handleEditorDidMount}
       options={{
         minimap: { enabled: false },
-        fontSize: 14,
-        lineNumbers: 'on',
+        fontSize: config.appearance.fontSize,
+        fontFamily: config.appearance.fontFamily,
+        lineNumbers: config.editor.showLineNumbers ? 'on' : 'off',
+        wordWrap: config.editor.wordWrap ? 'on' : 'off',
+        tabSize: config.editor.tabSize,
+        insertSpaces: config.editor.insertSpaces,
+        renderWhitespace: config.editor.showWhitespace ? 'all' : 'none',
+        folding: config.editor.enableCodeFolding,
+        renderLineHighlight: config.editor.highlightActiveLine ? 'all' : 'none',
         scrollBeyondLastLine: false,
         automaticLayout: true,
-        wordWrap: 'on',
-        suggestOnTriggerCharacters: true,
-        quickSuggestions: true,
+        suggestOnTriggerCharacters: config.editor.autoComplete,
+        quickSuggestions: config.editor.autoComplete,
+        acceptSuggestionOnEnter: config.editor.autoComplete ? 'on' : 'off',
         autoClosingBrackets: 'always',
         autoClosingQuotes: 'always',
-        formatOnPaste: true,
-        formatOnType: true
+        formatOnPaste: config.editor.formatOnSave,
+        formatOnType: config.editor.formatOnSave
       }}
     />
   );

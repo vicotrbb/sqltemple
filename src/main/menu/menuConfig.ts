@@ -14,7 +14,6 @@ export interface MenuConfig {
   [key: string]: MenuItemConfig[];
 }
 
-// This configuration makes it easy to add, remove, or modify menu items
 export const menuConfig: MenuConfig = {
   file: [
     { id: "file:new-tab", label: "New Query Tab", accelerator: "CmdOrCtrl+T" },
@@ -162,7 +161,6 @@ export const menuConfig: MenuConfig = {
   ],
 };
 
-// Dynamic menu state management
 export interface MenuState {
   isConnected: boolean;
   hasActiveQuery: boolean;
@@ -171,7 +169,6 @@ export interface MenuState {
   canRedo: boolean;
 }
 
-// Function to get enabled state based on current app state
 export function getMenuItemEnabled(itemId: string, state: MenuState): boolean {
   const enabledWhenConnected = [
     "database:disconnect",
@@ -218,5 +215,5 @@ export function getMenuItemEnabled(itemId: string, state: MenuState): boolean {
   if (itemId === "edit:undo") return state.canUndo;
   if (itemId === "edit:redo") return state.canRedo;
 
-  return true; // Default to enabled
+  return true;
 }

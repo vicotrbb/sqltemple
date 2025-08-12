@@ -1,7 +1,7 @@
 export interface DatabaseConnectionConfig {
   id?: number;
   name: string;
-  type: "postgres"; // Can be extended later
+  type: "postgres";
   host: string;
   port: number;
   database: string;
@@ -50,7 +50,7 @@ export interface SchemaInfo {
 export interface TableInfo {
   name: string;
   columns: ColumnInfo[];
-  columnCount?: number; // Optional, for lazy loading
+  columnCount?: number;
 }
 
 export interface ViewInfo {
@@ -119,7 +119,7 @@ export interface IDatabaseClient {
   getTableColumns?(
     schemaName: string,
     tableName: string
-  ): Promise<ColumnInfo[]>; // Optional for backward compatibility
+  ): Promise<ColumnInfo[]>;
   getViewColumns?(schemaName: string, viewName: string): Promise<ColumnInfo[]>;
   getViews?(schemaName: string): Promise<ViewInfo[]>;
   getFunctions?(schemaName: string): Promise<FunctionInfo[]>;

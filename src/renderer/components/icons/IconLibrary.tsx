@@ -5,7 +5,6 @@ export interface IconProps {
   size?: number;
 }
 
-// Base icon component for consistent sizing and styling
 const Icon: React.FC<
   IconProps & { children: React.ReactNode; viewBox?: string }
 > = ({ children, className = "", size = 16, viewBox = "0 0 24 24" }) => (
@@ -24,7 +23,6 @@ const Icon: React.FC<
   </svg>
 );
 
-// File & Document Icons
 export const NewFileIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
@@ -68,7 +66,6 @@ export const ExportIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Edit Icons
 export const UndoIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <polyline points="1 4 1 10 7 10" />
@@ -129,7 +126,6 @@ export const FormatIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// View Icons
 export const EyeIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -178,7 +174,6 @@ export const RefreshIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Database Icons
 export const DatabaseIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -224,7 +219,6 @@ export const TableIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// AI Icons
 export const SparklesIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.582a.5.5 0 0 1 0 .962L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0L9.937 15.5Z" />
@@ -260,7 +254,6 @@ export const BrainIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Utility Icons
 export const HistoryIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <circle cx="12" cy="12" r="10" />
@@ -313,7 +306,6 @@ export const ExternalLinkIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Window & Navigation Icons
 export const MinimizeIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <line x1="5" y1="12" x2="19" y2="12" />
@@ -346,7 +338,6 @@ export const PlusIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Status Icons
 export const CheckIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <polyline points="20 6 9 17 4 12" />
@@ -382,7 +373,6 @@ export const LoadingIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
-// Connection Status
 export const ConnectedIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <circle cx="12" cy="12" r="3" />

@@ -28,7 +28,6 @@ interface RelationshipNode {
   relationships: TableRelationship[];
 }
 
-// Initialize mermaid once globally
 let mermaidInitialized = false;
 
 const initializeMermaid = () => {
@@ -93,12 +92,10 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
 
   useEffect(() => {
     if (topology && mermaidRef.current) {
-      // Clear any existing timeout
       if (renderTimeoutRef.current) {
         clearTimeout(renderTimeoutRef.current);
       }
 
-      // Add a small delay to ensure DOM is ready
       renderTimeoutRef.current = setTimeout(() => {
         renderMermaidDiagram();
       }, 100);
@@ -221,7 +218,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
       const sourceId = sanitizeNodeId(sourceKey);
       const targetId = sanitizeNodeId(targetKey);
 
-      // Add nodes if not already added
       if (!visitedNodes.has(sourceKey) && sourceKey !== node.table) {
         lines.push(
           `  ${sourceId}[${sanitizeLabel(rel.sourceTable)}<br/>${sanitizeLabel(
@@ -239,7 +235,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         visitedNodes.add(targetKey);
       }
 
-      // Add relationship arrow
       const label = `${sanitizeLabel(rel.sourceColumn)} → ${sanitizeLabel(
         rel.targetColumn
       )}`;
@@ -252,7 +247,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         );
       }
 
-      // Add expand button if there are more relationships
       if (
         rel.hasMore &&
         !expandedNodes.has(targetKey) &&
@@ -268,7 +262,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         );
       }
 
-      // Recursively add children if expanded
       if (rel.children && expandedNodes.has(targetKey)) {
         const childLines = generateMermaidCode(
           rel.children,
@@ -291,7 +284,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
   };
 
   const sanitizeLabel = (label: string): string => {
-    // Escape special characters for mermaid
     return label
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;")
@@ -312,24 +304,19 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     try {
       const mermaidCode = generateMermaidCode(topology);
 
-      // Clear previous content
       mermaidRef.current.innerHTML = "";
 
-      // Create a container div for the diagram
       const containerDiv = document.createElement("div");
       containerDiv.className = "mermaid";
       containerDiv.textContent = mermaidCode;
       mermaidRef.current.appendChild(containerDiv);
 
-      // Ensure mermaid is initialized
       initializeMermaid();
 
-      // Render the diagram
       await mermaid.run({
         querySelector: ".mermaid",
       });
 
-      // Add click handlers for expand buttons after rendering
       topology.relationships.forEach((rel) => {
         const targetKey =
           rel.direction === "outgoing"
@@ -337,7 +324,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
             : `${rel.sourceSchema}.${rel.sourceTable}`;
 
         if (rel.hasMore && !expandedNodes.has(targetKey)) {
-          // Use the click handler that mermaid generates
           (window as any)[`expandNode_${sanitizeNodeId(targetKey)}`] = () => {
             const [schema, table] = targetKey.split(".");
             loadMoreRelationships(targetKey, schema, table);
@@ -345,11 +331,9 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         }
       });
 
-      // Clear any error state
       setError(null);
     } catch (err) {
       console.error("Mermaid rendering error:", err);
-      // Only set error if we haven't already retried
       if (!error) {
         setError("Failed to render diagram. Please click retry.");
       }
@@ -387,11 +371,9 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
 
   const handleRetry = async () => {
     setError(null);
-    // Try to render again if we have topology
     if (topology) {
       await renderMermaidDiagram();
     } else {
-      // Otherwise reload the topology
       await loadInitialTopology();
     }
   };

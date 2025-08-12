@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { app } from "electron";
 import * as path from "path";
+import * as crypto from "crypto";
 import { DatabaseConnectionConfig } from "../database/interfaces";
 
 export interface QueryHistoryEntry {
@@ -15,17 +16,76 @@ export interface QueryHistoryEntry {
 
 export class StorageManager {
   private db: Database.Database;
+  private encryptionKey: Buffer;
 
   constructor() {
     const userDataPath = app.getPath("userData");
     const dbPath = path.join(userDataPath, "sqltemple.db");
 
     this.db = new Database(dbPath);
+    this.encryptionKey = this.getOrCreateEncryptionKey();
     this.initializeTables();
   }
 
+  private getOrCreateEncryptionKey(): Buffer {
+    const keyPath = path.join(app.getPath("userData"), ".encryption-key");
+    
+    try {
+      const fs = require("fs");
+      if (fs.existsSync(keyPath)) {
+        return fs.readFileSync(keyPath);
+      }
+    } catch (error) {
+    }
+
+    const key = crypto.randomBytes(32);
+    try {
+      const fs = require("fs");
+      fs.writeFileSync(keyPath, key, { mode: 0o600 });
+    } catch (error) {
+      console.warn("Failed to save encryption key to disk:", error);
+    }
+    
+    return key;
+  }
+
+  private encrypt(text: string): string {
+    if (!text) return text;
+    
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipherGCM('aes-256-gcm', this.encryptionKey, iv);
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    const authTag = cipher.getAuthTag();
+    
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+  }
+
+  private decrypt(encryptedText: string): string {
+    if (!encryptedText || encryptedText.split(':').length !== 3) return encryptedText;
+    
+    try {
+      const parts = encryptedText.split(':');
+      const iv = Buffer.from(parts[0], 'hex');
+      const authTag = Buffer.from(parts[1], 'hex');
+      const encrypted = parts[2];
+      
+      const decipher = crypto.createDecipherGCM('aes-256-gcm', this.encryptionKey, iv);
+      decipher.setAuthTag(authTag);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error("Failed to decrypt data:", error);
+      return encryptedText;
+    }
+  }
+
   private initializeTables(): void {
-    // Connections table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS connections (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +102,6 @@ export class StorageManager {
       )
     `);
 
-    // Query history table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS query_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +115,6 @@ export class StorageManager {
       )
     `);
 
-    // Settings table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
@@ -64,7 +122,6 @@ export class StorageManager {
       )
     `);
 
-    // Create indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_history_connection 
       ON query_history(connection_id);
@@ -74,15 +131,20 @@ export class StorageManager {
     `);
   }
 
-  // Connection management
   async getConnections(): Promise<DatabaseConnectionConfig[]> {
     const stmt = this.db.prepare("SELECT * FROM connections ORDER BY name");
-    return stmt.all() as DatabaseConnectionConfig[];
+    const connections = stmt.all() as DatabaseConnectionConfig[];
+    
+    return connections.map(conn => ({
+      ...conn,
+      password: conn.password ? this.decrypt(conn.password) : undefined
+    }));
   }
 
   async saveConnection(connection: DatabaseConnectionConfig): Promise<number> {
+    const encryptedPassword = connection.password ? this.encrypt(connection.password) : null;
+    
     if (connection.id) {
-      // Update existing
       const stmt = this.db.prepare(`
         UPDATE connections 
         SET name = ?, type = ?, host = ?, port = ?, 
@@ -98,14 +160,13 @@ export class StorageManager {
         connection.port,
         connection.database,
         connection.username,
-        connection.password || null,
+        encryptedPassword,
         connection.ssl ? 1 : 0,
         connection.id
       );
 
       return connection.id;
     } else {
-      // Insert new
       const stmt = this.db.prepare(`
         INSERT INTO connections (name, type, host, port, database, username, password, ssl)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -118,7 +179,7 @@ export class StorageManager {
         connection.port,
         connection.database,
         connection.username,
-        connection.password || null,
+        encryptedPassword,
         connection.ssl ? 1 : 0
       );
 
@@ -127,15 +188,12 @@ export class StorageManager {
   }
 
   async deleteConnection(id: number): Promise<void> {
-    // Delete related history first
     this.db
       .prepare("DELETE FROM query_history WHERE connection_id = ?")
       .run(id);
-    // Then delete connection
     this.db.prepare("DELETE FROM connections WHERE id = ?").run(id);
   }
 
-  // Query history management
   async addQueryHistory(entry: QueryHistoryEntry): Promise<void> {
     const stmt = this.db.prepare(`
       INSERT INTO query_history (connection_id, query, run_at, duration, row_count, success)
@@ -176,7 +234,6 @@ export class StorageManager {
     }));
   }
 
-  // Settings management
   async getSetting(key: string): Promise<string | null> {
     const stmt = this.db.prepare("SELECT value FROM settings WHERE key = ?");
     const result = stmt.get(key) as { value: string } | undefined;
@@ -190,20 +247,21 @@ export class StorageManager {
     stmt.run(key, value);
   }
 
-  // AI Configuration
   async saveAIConfig(config: { apiKey: string; model: string }): Promise<void> {
-    // Store API key securely (in a real app, consider using electron-store with encryption)
-    await this.setSetting("ai_api_key", config.apiKey);
+    const encryptedApiKey = this.encrypt(config.apiKey);
+    await this.setSetting("ai_api_key", encryptedApiKey);
     await this.setSetting("ai_model", config.model);
   }
 
   async getAIConfig(): Promise<{ apiKey: string; model: string } | null> {
-    const apiKey = await this.getSetting("ai_api_key");
+    const encryptedApiKey = await this.getSetting("ai_api_key");
     const model = await this.getSetting("ai_model");
 
-    if (!apiKey) {
+    if (!encryptedApiKey) {
       return null;
     }
+
+    const apiKey = this.decrypt(encryptedApiKey);
 
     return {
       apiKey,
