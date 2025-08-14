@@ -39,6 +39,7 @@ export interface IElectronAPI {
   aiExplainQuery: (sql: string) => Promise<any>;
   aiCreateQuery: (prompt: string) => Promise<any>;
   aiOptimizeQuery: (sql: string) => Promise<any>;
+  aiAnalyzeData: (prompt: string) => Promise<any>;
 
   // General storage
   storage: {

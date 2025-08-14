@@ -261,6 +261,32 @@ Return ONLY the optimized SQL query.`;
     return this.cleanSQLResponse(result);
   }
 
+  async analyzeData(prompt: string): Promise<string> {
+    if (!this.openai || !this.config) {
+      throw new Error("AI service not configured. Please set your API key.");
+    }
+
+    const systemPrompt = `You are an expert data analyst. Your role is to analyze query results and provide insights about the data.
+
+When analyzing data, you should:
+1. Identify patterns and trends in the data
+2. Highlight data quality issues (nulls, duplicates, outliers)
+3. Provide business insights and observations
+4. Suggest recommendations for further analysis
+5. Note any anomalies or interesting findings
+
+Return your response as valid JSON in the exact format requested, without any markdown formatting or additional text.`;
+
+    const result = await this.callOpenAI({
+      systemPrompt,
+      userPrompt: prompt,
+      temperature: 0.7,
+      maxTokens: 1000,
+    });
+
+    return result;
+  }
+
   private cleanSQLResponse(response: string): string {
     let cleaned = response.trim();
 

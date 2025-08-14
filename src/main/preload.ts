@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-create-query", prompt),
   aiOptimizeQuery: (sql: string) =>
     ipcRenderer.invoke("ai-optimize-query", sql),
+  aiAnalyzeData: (prompt: string) =>
+    ipcRenderer.invoke("ai-analyze-data", prompt),
 
   storage: {
     get: (key: string) => ipcRenderer.invoke("storage-get", key),

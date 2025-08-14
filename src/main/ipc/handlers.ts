@@ -282,6 +282,15 @@ export async function initializeIpcHandlers(
     }
   });
 
+  ipcMain.handle("ai-analyze-data", async (event, prompt: string) => {
+    try {
+      const result = await aiService.analyzeData(prompt);
+      return { success: true, result };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
   ipcMain.handle(
     "get-view-columns",
     async (event, schemaName: string, viewName: string) => {
@@ -616,6 +625,61 @@ export async function initializeIpcHandlers(
         filePath: result.filePath,
         count: connections.length
       };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("database:getForeignKeys", async (event, tableName: string, schemaName: string) => {
+    try {
+      if (!currentClient) {
+        throw new Error("Database not connected");
+      }
+
+      const query = `
+        SELECT 
+          kcu.column_name,
+          ccu.table_schema AS foreign_table_schema,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name
+        FROM 
+          information_schema.table_constraints AS tc 
+          JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+        WHERE 
+          tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_name = $1 
+          AND tc.table_schema = $2;
+      `;
+
+      const result = await currentClient.executeQuery(query);
+      const foreignKeys = result.rows.map(row => ({
+        columnName: row.column_name,
+        referencedSchema: row.foreign_table_schema,
+        referencedTable: row.foreign_table_name,
+        referencedColumn: row.foreign_column_name
+      }));
+
+      return { success: true, foreignKeys };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("database:getRelatedData", async (event, foreignKeyValue: any, referencedSchema: string, referencedTable: string, referencedColumn: string) => {
+    try {
+      if (!currentClient) {
+        throw new Error("Database not connected");
+      }
+
+      const query = `SELECT * FROM ${referencedSchema}.${referencedTable} WHERE ${referencedColumn} = $1 LIMIT 1`;
+      const result = await currentClient.executeQuery(query);
+
+      return { success: true, data: result.rows[0] || null };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }
