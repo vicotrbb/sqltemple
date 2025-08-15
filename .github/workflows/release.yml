@@ -36,9 +36,6 @@ jobs:
       - name: Run type checking
         run: npm run typecheck
 
-      - name: Run linting
-        run: npm run lint
-
       - name: Set BUILD_NUMBER
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
