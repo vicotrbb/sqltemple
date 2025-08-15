@@ -21,6 +21,7 @@ export interface MenuActionHandlers {
   onConnectDatabase?: () => void;
   onDisconnectDatabase?: () => void;
   onRefreshSchema?: () => void;
+  onSpotlightSearch?: () => void;
   onExecuteQuery?: () => void;
   onExecuteSelected?: () => void;
   onExplainQuery?: () => void;
@@ -59,6 +60,7 @@ export function useMenuActions(handlers: MenuActionHandlers) {
       "menu:connect-database": "onConnectDatabase",
       "menu:disconnect-database": "onDisconnectDatabase",
       "menu:refresh-schema": "onRefreshSchema",
+      "menu:spotlight-search": "onSpotlightSearch",
       "menu:execute-query": "onExecuteQuery",
       "menu:execute-selected": "onExecuteSelected",
       "menu:explain-query": "onExplainQuery",

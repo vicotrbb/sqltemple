@@ -15,6 +15,7 @@ import { AIResultDialog } from "./components/AIResultDialog";
 import { TableTopology } from "./components/TableTopology";
 import { AboutDialog } from "./components/AboutDialog";
 import { FunctionalPreferencesDialog } from "./components/FunctionalPreferencesDialog";
+import { SpotlightSearch } from "./components/SpotlightSearch";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useMenuActions, useMenuState } from "./hooks/useMenuActions";
 import {
@@ -22,6 +23,11 @@ import {
   ConnectIcon,
   HistoryIcon,
   ConnectedIcon,
+  SearchIcon,
+  SaveIcon,
+  FormatIcon,
+  PlusIcon,
+  BrainIcon,
 } from "./components/icons/IconLibrary";
 import {
   DatabaseConnectionConfig,
@@ -41,6 +47,7 @@ const AppContent: React.FC = () => {
   const [showTableTopology, setShowTableTopology] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showSpotlight, setShowSpotlight] = useState(false);
   const [rightSidebarView, setRightSidebarView] = useState<"topology" | null>(
     null
   );
@@ -75,6 +82,7 @@ const AppContent: React.FC = () => {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const [resultsPanelHeight, setResultsPanelHeight] = useState(256);
   const [isResizing, setIsResizing] = useState(false);
+  const [connections, setConnections] = useState<DatabaseConnectionConfig[]>([]);
   const { getShortcut } = useSettings();
   const { updateMenuState } = useMenuState();
   const theme = useTheme();
@@ -84,6 +92,31 @@ const AppContent: React.FC = () => {
       createNewTab();
     }
   }, [tabs.length]);
+
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
+  const loadConnections = async () => {
+    try {
+      const result = await window.api.getConnections();
+      if (result.success && result.connections) {
+        setConnections(result.connections);
+      }
+    } catch (error) {
+      console.error('Failed to load connections:', error);
+    }
+  };
+
+  const handleSpotlightAction = async (item: any) => {
+    const { executeAction } = await import('./components/SpotlightSearch/actionHandlers');
+    executeAction(item, {
+      onTableClick: handleTableClick,
+      onViewClick: handleViewClick,
+      onConnect: handleConnect,
+      editorInstance
+    });
+  };
 
 
   useEffect(() => {
@@ -174,6 +207,12 @@ const AppContent: React.FC = () => {
         if (isConnected) {
           refreshSchema();
         }
+      }
+      
+      // Spotlight search
+      else if (matchesShortcut('open-spotlight')) {
+        e.preventDefault();
+        setShowSpotlight(true);
       }
       
       // AI operations
@@ -319,7 +358,9 @@ const AppContent: React.FC = () => {
         setCurrentConnection(config);
         setIsConnected(true);
         setShowConnectionManager(false);
-
+        
+        // Refresh connections list
+        await loadConnections();
         await loadSchema();
       } else {
         const errorMessage = result.error || "Unknown connection error";
@@ -744,6 +785,7 @@ const AppContent: React.FC = () => {
     onConnectDatabase: () => setShowConnectionManager(true),
     onDisconnectDatabase: handleDisconnect,
     onRefreshSchema: loadSchema,
+    onSpotlightSearch: () => setShowSpotlight(true),
     onExecuteQuery: () => executeQuery(),
     onExecuteSelected: handleExecuteSelected,
     onExplainQuery: explainQuery,
@@ -889,6 +931,56 @@ const AppContent: React.FC = () => {
               )}
 
               <div className="flex items-center space-x-2">
+                {/* New Tab */}
+                <button
+                  onClick={createNewTab}
+                  className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
+                  title="New Tab (⌘+T)"
+                >
+                  <PlusIcon className="w-4 h-4 text-vscode-text-secondary" />
+                </button>
+
+                {/* Save Query */}
+                <button
+                  onClick={handleSaveQuery}
+                  disabled={!activeTab?.content?.trim()}
+                  className={`p-2 rounded transition-colors ${
+                    activeTab?.content?.trim()
+                      ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
+                      : "text-vscode-text-tertiary cursor-not-allowed"
+                  }`}
+                  title="Save Query (⌘+S)"
+                >
+                  <SaveIcon className="w-4 h-4" />
+                </button>
+
+                {/* Format Query */}
+                <button
+                  onClick={handleFormatQuery}
+                  disabled={!activeTab?.content?.trim()}
+                  className={`p-2 rounded transition-colors ${
+                    activeTab?.content?.trim()
+                      ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
+                      : "text-vscode-text-tertiary cursor-not-allowed"
+                  }`}
+                  title="Format Query (⇧⌥F)"
+                >
+                  <FormatIcon className="w-4 h-4" />
+                </button>
+
+                {/* Separator */}
+                <div className="w-px h-4 bg-vscode-border"></div>
+
+                {/* Spotlight Search */}
+                <button
+                  onClick={() => setShowSpotlight(true)}
+                  className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
+                  title="Search Database Objects (⌘+P)"
+                >
+                  <SearchIcon className="w-4 h-4 text-vscode-text-secondary" />
+                </button>
+
+                {/* Query History (only when connected) */}
                 {isConnected && (
                   <button
                     onClick={() => setShowQueryHistory(true)}
@@ -898,6 +990,15 @@ const AppContent: React.FC = () => {
                     <HistoryIcon className="w-4 h-4 text-vscode-text-secondary" />
                   </button>
                 )}
+
+                {/* AI Query */}
+                <button
+                  onClick={() => setShowAIQueryDialog(true)}
+                  className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
+                  title="Create Query with AI (⌘⇧N)"
+                >
+                  <BrainIcon className="w-4 h-4 text-vscode-text-secondary" />
+                </button>
               </div>
             </div>
           </div>
@@ -1035,6 +1136,17 @@ const AppContent: React.FC = () => {
 
         {showPreferences && (
           <FunctionalPreferencesDialog onClose={() => setShowPreferences(false)} />
+        )}
+
+        {showSpotlight && (
+          <SpotlightSearch
+            isOpen={showSpotlight}
+            onClose={() => setShowSpotlight(false)}
+            connections={connections}
+            currentConnection={currentConnection}
+            schema={schema}
+            onNavigate={handleSpotlightAction}
+          />
         )}
       </div>
     </div>

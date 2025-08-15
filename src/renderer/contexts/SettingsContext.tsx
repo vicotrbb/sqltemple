@@ -151,6 +151,12 @@ const defaultShortcuts: KeyboardShortcut[] = [
     name: 'Previous Tab',
     description: 'Switch to previous tab',
     defaultKeys: ['Cmd+Shift+Tab', 'Ctrl+Shift+Tab']
+  },
+  {
+    id: 'open-spotlight',
+    name: 'Open Spotlight Search',
+    description: 'Open universal search for database objects',
+    defaultKeys: ['Cmd+P', 'Ctrl+P']
   }
 ];
 

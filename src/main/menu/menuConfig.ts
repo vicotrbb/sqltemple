@@ -102,6 +102,12 @@ export const menuConfig: MenuConfig = {
     { id: "database:connect", label: "Connect to Database..." },
     { id: "database:disconnect", label: "Disconnect" },
     { type: "separator", id: "separator-1", label: "" },
+    { 
+      id: "database:spotlight-search", 
+      label: "Search Database Objects...", 
+      accelerator: "CmdOrCtrl+P" 
+    },
+    { type: "separator", id: "separator-1b", label: "" },
     {
       id: "database:refresh-schema",
       label: "Refresh Schema",
