@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        node-version: [20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules
+        run: npm run rebuild
+
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Set BUILD_NUMBER
+        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Build distributables
+        run: npm run make
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: List build outputs (macOS)
+        if: matrix.os == 'macos-latest'
+        run: ls -la out/make/
+
+      - name: List build outputs (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: ls -la out/make/
+
+      - name: List build outputs (Windows)
+        if: matrix.os == 'windows-latest'
+        run: dir out\make\
+
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: |
+            out/make/**/*.dmg
+            out/make/**/*.zip
+
+      - name: Upload Linux artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: |
+            out/make/**/*.deb
+            out/make/**/*.rpm
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            out/make/**/*.exe
+            out/make/**/*.msi
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: SQLTemple ${{ steps.version.outputs.version }}
+          body: |
+            ## SQLTemple ${{ steps.version.outputs.version }}
+            
+            ### Downloads
+            - **macOS**: Download the `.dmg` file
+            - **Windows**: Download the `.exe` installer
+            - **Linux**: Download the `.deb` (Ubuntu/Debian) or `.rpm` (RHEL/CentOS) package
+            
+            ### Changes
+            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}
+
+      - name: Upload macOS DMG
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg
+          asset_name: SQLTemple-${{ steps.version.outputs.version }}-macos.dmg
+          asset_content_type: application/octet-stream
+
+      - name: Upload macOS ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip
+          asset_name: SQLTemple-${{ steps.version.outputs.version }}-macos-arm64.zip
+          asset_content_type: application/zip
+
+      - name: Upload Windows EXE
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe
+          asset_name: SQLTemple-${{ steps.version.outputs.version }}-windows.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux DEB
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb
+          asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.deb
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux RPM
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm
+          asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.rpm
+          asset_content_type: application/octet-stream

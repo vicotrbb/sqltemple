@@ -1,3 +1,5 @@
+const packageJson = require('./package.json');
+
 module.exports = {
   packagerConfig: {
     asar: {
@@ -8,13 +10,26 @@ module.exports = {
     appCategoryType: "public.app-category.developer-tools",
     name: "SQLTemple",
     executableName: "SQLTemple",
+    appVersion: packageJson.version,
+    buildVersion: process.env.BUILD_NUMBER || Date.now().toString(),
+    extendInfo: {
+      CFBundleShortVersionString: packageJson.version,
+      CFBundleVersion: process.env.BUILD_NUMBER || Date.now().toString(),
+    },
+    win32metadata: {
+      FileVersion: packageJson.version,
+      ProductVersion: packageJson.version,
+      CompanyName: "SQLTemple",
+      FileDescription: "Modern SQL IDE",
+      ProductName: "SQLTemple",
+    },
   },
   rebuildConfig: {},
   makers: [
     {
       name: "@electron-forge/maker-dmg",
       config: {
-        name: "SQLTemple",
+        name: `SQLTemple-${packageJson.version}`,
         title: "SQLTemple",
         format: "ULFO",
         overwrite: true,
@@ -26,15 +41,37 @@ module.exports = {
     },
     {
       name: "@electron-forge/maker-squirrel",
-      config: {},
+      config: {
+        name: "SQLTemple",
+        setupExe: `SQLTemple-${packageJson.version}-Setup.exe`,
+        setupMsi: `SQLTemple-${packageJson.version}-Setup.msi`,
+      },
     },
     {
       name: "@electron-forge/maker-deb",
-      config: {},
+      config: {
+        options: {
+          name: "sqltemple",
+          productName: "SQLTemple",
+          version: packageJson.version,
+          description: "Modern SQL IDE",
+          maintainer: "SQLTemple Team",
+          homepage: "https://github.com/sqltemple/sqltemple",
+        },
+      },
     },
     {
       name: "@electron-forge/maker-rpm",
-      config: {},
+      config: {
+        options: {
+          name: "sqltemple",
+          productName: "SQLTemple",
+          version: packageJson.version,
+          description: "Modern SQL IDE",
+          maintainer: "SQLTemple Team",
+          homepage: "https://github.com/sqltemple/sqltemple",
+        },
+      },
     },
   ],
   plugins: [
