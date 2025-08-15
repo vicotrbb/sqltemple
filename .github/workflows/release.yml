@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -87,15 +89,24 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: always() && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Extract version
         id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            COMMIT_SHA=${GITHUB_SHA:0:7}
+            echo "version=${VERSION}-dev-${COMMIT_SHA}" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -111,10 +122,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ steps.version.outputs.is_tag == 'true' && github.ref || format('v{0}', steps.version.outputs.version) }}
           release_name: SQLTemple ${{ steps.version.outputs.version }}
           body: |
             ## SQLTemple ${{ steps.version.outputs.version }}
+            
+            ${{ steps.version.outputs.is_tag == 'false' && '🚧 **Development Build** - This is an automated build from the main branch.' || '' }}
             
             ### Downloads
             - **macOS**: Download the `.dmg` file
@@ -124,7 +137,7 @@ jobs:
             ### Changes
             See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
           draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}
+          prerelease: ${{ steps.version.outputs.is_tag == 'false' || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}
 
       - name: Upload macOS DMG
         uses: actions/upload-release-asset@v1
