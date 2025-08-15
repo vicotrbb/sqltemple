@@ -96,29 +96,54 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version changed
+        id: version_check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Check if this is a tag push
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "Tag push detected, will create release"
+          else
+            # For main branch, check if version changed in the last commit
+            PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version" 2>/dev/null || echo "")
+            echo "previous_version=${PREV_VERSION}" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            
+            if [ "$CURRENT_VERSION" != "$PREV_VERSION" ] && [ -n "$PREV_VERSION" ]; then
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "Version changed from ${PREV_VERSION} to ${CURRENT_VERSION}, will create release"
+            else
+              echo "should_release=false" >> $GITHUB_OUTPUT
+              echo "Version unchanged (${CURRENT_VERSION}), skipping release"
+            fi
+          fi
 
       - name: Extract version
         id: version
+        if: steps.version_check.outputs.should_release == 'true'
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-            echo "is_tag=true" >> $GITHUB_OUTPUT
-          else
-            VERSION=$(node -p "require('./package.json').version")
-            COMMIT_SHA=${GITHUB_SHA:0:7}
-            echo "version=${VERSION}-dev-${COMMIT_SHA}" >> $GITHUB_OUTPUT
-            echo "is_tag=false" >> $GITHUB_OUTPUT
-          fi
+          echo "version=${{ steps.version_check.outputs.current_version }}" >> $GITHUB_OUTPUT
+          echo "is_tag=${{ steps.version_check.outputs.is_tag }}" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
+        if: steps.version_check.outputs.should_release == 'true'
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: Display structure of downloaded files
+        if: steps.version_check.outputs.should_release == 'true'
         run: ls -R artifacts
 
       - name: Create Release
+        if: steps.version_check.outputs.should_release == 'true'
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -146,30 +171,49 @@ jobs:
           fi
 
       - name: Upload Release Assets
+        if: steps.version_check.outputs.should_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG_NAME="${{ steps.version.outputs.is_tag == 'true' && github.ref_name || format('v{0}', steps.version.outputs.version) }}"
           
-          # Upload macOS assets (required)
-          if [ -f "artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg" ]; then
-            gh release upload "$TAG_NAME" "artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg" --clobber
+          # Debug: Show all available files
+          echo "Available files in artifacts:"
+          find artifacts -type f -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" | head -20
+          
+          # Upload macOS assets (required) - use glob patterns to find files
+          DMG_FILE=$(find artifacts/macos-artifacts -name "*.dmg" | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            echo "Uploading DMG: $DMG_FILE"
+            gh release upload "$TAG_NAME" "$DMG_FILE" --clobber
+          else
+            echo "No DMG file found"
           fi
           
-          if [ -f "artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip" ]; then
-            gh release upload "$TAG_NAME" "artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip" --clobber
+          ZIP_FILE=$(find artifacts/macos-artifacts -name "*.zip" | head -1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Uploading ZIP: $ZIP_FILE"
+            gh release upload "$TAG_NAME" "$ZIP_FILE" --clobber
+          else
+            echo "No ZIP file found"
           fi
           
           # Upload Windows assets (optional)
-          if [ -f "artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe" ]; then
-            gh release upload "$TAG_NAME" "artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe" --clobber || true
+          EXE_FILE=$(find artifacts/windows-artifacts -name "*.exe" | head -1)
+          if [ -n "$EXE_FILE" ]; then
+            echo "Uploading EXE: $EXE_FILE"
+            gh release upload "$TAG_NAME" "$EXE_FILE" --clobber || true
           fi
           
           # Upload Linux assets (optional)
-          if [ -f "artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb" ]; then
-            gh release upload "$TAG_NAME" "artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb" --clobber || true
+          DEB_FILE=$(find artifacts/linux-artifacts -name "*.deb" | head -1)
+          if [ -n "$DEB_FILE" ]; then
+            echo "Uploading DEB: $DEB_FILE"
+            gh release upload "$TAG_NAME" "$DEB_FILE" --clobber || true
           fi
           
-          if [ -f "artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm" ]; then
-            gh release upload "$TAG_NAME" "artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm" --clobber || true
+          RPM_FILE=$(find artifacts/linux-artifacts -name "*.rpm" | head -1)
+          if [ -n "$RPM_FILE" ]; then
+            echo "Uploading RPM: $RPM_FILE"
+            gh release upload "$TAG_NAME" "$RPM_FILE" --clobber || true
           fi
