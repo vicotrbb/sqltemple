@@ -10,6 +10,7 @@ jobs:
   build:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os != 'macos-latest' }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -66,7 +67,7 @@ jobs:
             out/make/**/*.zip
 
       - name: Upload Linux artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && success()
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
@@ -75,7 +76,7 @@ jobs:
             out/make/**/*.rpm
 
       - name: Upload Windows artifacts
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && success()
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
@@ -146,6 +147,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Windows EXE
+        if: hashFiles('artifacts/windows-artifacts/**') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -154,8 +156,10 @@ jobs:
           asset_path: artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe
           asset_name: SQLTemple-${{ steps.version.outputs.version }}-windows.exe
           asset_content_type: application/octet-stream
+        continue-on-error: true
 
       - name: Upload Linux DEB
+        if: hashFiles('artifacts/linux-artifacts/**') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -164,8 +168,10 @@ jobs:
           asset_path: artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb
           asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.deb
           asset_content_type: application/octet-stream
+        continue-on-error: true
 
       - name: Upload Linux RPM
+        if: hashFiles('artifacts/linux-artifacts/**') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -174,3 +180,4 @@ jobs:
           asset_path: artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm
           asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.rpm
           asset_content_type: application/octet-stream
+        continue-on-error: true
