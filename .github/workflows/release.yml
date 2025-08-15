@@ -90,6 +90,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: always() && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -118,79 +120,56 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.version.outputs.is_tag == 'true' && github.ref || format('v{0}', steps.version.outputs.version) }}
-          release_name: SQLTemple ${{ steps.version.outputs.version }}
-          body: |
-            ## SQLTemple ${{ steps.version.outputs.version }}
-            
-            ${{ steps.version.outputs.is_tag == 'false' && '🚧 **Development Build** - This is an automated build from the main branch.' || '' }}
-            
-            ### Downloads
-            - **macOS**: Download the `.dmg` file
-            - **Windows**: Download the `.exe` installer
-            - **Linux**: Download the `.deb` (Ubuntu/Debian) or `.rpm` (RHEL/CentOS) package
-            
-            ### Changes
-            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
-          draft: false
-          prerelease: ${{ steps.version.outputs.is_tag == 'false' || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}
+        run: |
+          TAG_NAME="${{ steps.version.outputs.is_tag == 'true' && github.ref_name || format('v{0}', steps.version.outputs.version) }}"
+          RELEASE_NAME="SQLTemple ${{ steps.version.outputs.version }}"
+          IS_PRERELEASE="${{ steps.version.outputs.is_tag == 'false' || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}"
+          
+          BODY="## SQLTemple ${{ steps.version.outputs.version }}
 
-      - name: Upload macOS DMG
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg
-          asset_name: SQLTemple-${{ steps.version.outputs.version }}-macos.dmg
-          asset_content_type: application/octet-stream
+          ${{ steps.version.outputs.is_tag == 'false' && '🚧 **Development Build** - This is an automated build from the main branch.' || '' }}
 
-      - name: Upload macOS ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip
-          asset_name: SQLTemple-${{ steps.version.outputs.version }}-macos-arm64.zip
-          asset_content_type: application/zip
+          ### Downloads
+          - **macOS**: Download the \`.dmg\` file
+          - **Windows**: Download the \`.exe\` installer
+          - **Linux**: Download the \`.deb\` (Ubuntu/Debian) or \`.rpm\` (RHEL/CentOS) package
 
-      - name: Upload Windows EXE
-        if: hashFiles('artifacts/windows-artifacts/**') != ''
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe
-          asset_name: SQLTemple-${{ steps.version.outputs.version }}-windows.exe
-          asset_content_type: application/octet-stream
-        continue-on-error: true
+          ### Changes
+          See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes."
+          
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            gh release create "$TAG_NAME" --title "$RELEASE_NAME" --notes "$BODY" --prerelease
+          else
+            gh release create "$TAG_NAME" --title "$RELEASE_NAME" --notes "$BODY"
+          fi
 
-      - name: Upload Linux DEB
-        if: hashFiles('artifacts/linux-artifacts/**') != ''
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb
-          asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.deb
-          asset_content_type: application/octet-stream
-        continue-on-error: true
-
-      - name: Upload Linux RPM
-        if: hashFiles('artifacts/linux-artifacts/**') != ''
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm
-          asset_name: SQLTemple-${{ steps.version.outputs.version }}-linux.rpm
-          asset_content_type: application/octet-stream
-        continue-on-error: true
+        run: |
+          TAG_NAME="${{ steps.version.outputs.is_tag == 'true' && github.ref_name || format('v{0}', steps.version.outputs.version) }}"
+          
+          # Upload macOS assets (required)
+          if [ -f "artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg" ]; then
+            gh release upload "$TAG_NAME" "artifacts/macos-artifacts/dmg/SQLTemple-${{ steps.version.outputs.version }}.dmg" --clobber
+          fi
+          
+          if [ -f "artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip" ]; then
+            gh release upload "$TAG_NAME" "artifacts/macos-artifacts/zip/darwin/arm64/SQLTemple-darwin-arm64-${{ steps.version.outputs.version }}.zip" --clobber
+          fi
+          
+          # Upload Windows assets (optional)
+          if [ -f "artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe" ]; then
+            gh release upload "$TAG_NAME" "artifacts/windows-artifacts/squirrel.windows/x64/SQLTemple-${{ steps.version.outputs.version }}-Setup.exe" --clobber || true
+          fi
+          
+          # Upload Linux assets (optional)
+          if [ -f "artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb" ]; then
+            gh release upload "$TAG_NAME" "artifacts/linux-artifacts/deb/x64/sqltemple_${{ steps.version.outputs.version }}_amd64.deb" --clobber || true
+          fi
+          
+          if [ -f "artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm" ]; then
+            gh release upload "$TAG_NAME" "artifacts/linux-artifacts/rpm/x64/sqltemple-${{ steps.version.outputs.version }}-1.x86_64.rpm" --clobber || true
+          fi
