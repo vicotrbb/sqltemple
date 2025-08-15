@@ -12,31 +12,59 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 
 ## ✨ Features
 
-### 🚀 Core Features
+### 🚀 Core Database Features
 
-- **Modern SQL Editor**: Powered by Monaco Editor (VS Code's editor)
-- **Multi-tab Interface**: Work with multiple queries simultaneously
-- **Schema Explorer**: Browse databases, schemas, tables, and columns
-- **Query Execution**: Execute full queries or selected portions
-- **Results Grid**: View query results in a responsive data grid
-- **Query History**: Track and reuse previous queries
-- **Connection Management**: Save and manage multiple database connections
+- **Modern SQL Editor**: Powered by Monaco Editor (VS Code's editor) with syntax highlighting and auto-completion
+- **Multi-tab Interface**: Work with multiple queries simultaneously with tab management
+- **Advanced Schema Explorer**: Browse databases, schemas, tables, columns with unified explorer interface
+- **Query Execution**: Execute full queries or selected portions with real-time feedback
+- **Enhanced Results Grid**: View query results with virtualization for large datasets, column resizing, and adjustable row heights
+- **Query History**: Track and reuse previous queries with full history management
+- **Connection Management**: Save and manage multiple database connections with secure credential storage
+- **Export Capabilities**: Export query results to multiple formats (CSV, JSON, Excel, etc.)
 
-### 🤖 AI-Powered Features
+### 🤖 AI-Powered Intelligence
 
-- **Query Generation**: Generate SQL queries from natural language descriptions
-- **Query Explanation**: Get detailed explanations of complex SQL queries
-- **Query Optimization**: Optimize queries based on execution plans
-- **Plan Analysis**: AI-powered analysis of query execution plans
-- **Smart Completions**: Context-aware SQL completions
+- **Natural Language Query Generation**: Generate SQL queries from plain English descriptions
+- **Query Explanation**: Get detailed explanations of complex SQL queries with step-by-step breakdowns
+- **Query Optimization**: AI-powered query optimization based on execution plans and database schema
+- **Execution Plan Analysis**: Intelligent analysis of query performance with specific recommendations
+- **Data Analysis**: AI-powered insights and pattern recognition from query results
+- **Smart Completions**: Context-aware SQL completions based on your database schema
+- **Multiple AI Models**: Support for GPT-4, GPT-4o, GPT-3.5, and O1 models
 
-### 📊 Developer Features
+### 📊 Advanced Visualization & Analysis
 
-- **Execution Plan Visualization**: Interactive tree view of query plans
-- **Syntax Highlighting**: Full SQL syntax highlighting
-- **Auto-completion**: Table, column, and keyword suggestions
-- **Customizable Shortcuts**: Configure your own keyboard shortcuts
-- **Dark Theme**: Beautiful VS Code-inspired dark theme
+- **Execution Plan Visualizer**: Interactive tree view of query execution plans with performance metrics
+- **Table Topology Viewer**: Visual relationship mapping with Mermaid diagrams showing foreign key relationships
+- **Column Statistics**: Real-time statistics and data type information with hover tooltips
+- **Relationship Discovery**: Automatic detection and visualization of table relationships
+- **Results Analysis Modal**: Deep dive analysis of query results with AI insights
+- **Foreign Key Navigation**: Click-through navigation between related records
+
+### 🔍 Search & Navigation
+
+- **Spotlight Search**: Powerful fuzzy search across connections, tables, columns, and database objects
+- **Quick Navigation**: Jump to any database object with keyboard shortcuts
+- **Schema Browsing**: Expandable tree view with lazy loading for large schemas
+- **Object Filtering**: Filter and search within schema explorer
+
+### ⚡ Performance & Productivity
+
+- **Virtualized Data Grids**: Handle millions of rows with smooth scrolling performance
+- **Background Query Execution**: Non-blocking query execution with progress indicators
+- **Customizable Keyboard Shortcuts**: Fully configurable shortcuts with recording capability
+- **Resizable Panels**: Drag-to-resize interface components for optimal workflow
+- **Dark Theme**: Beautiful VS Code-inspired dark theme optimized for long coding sessions
+- **Query Limiting**: Automatic query result limiting to prevent browser crashes
+
+### 🛠️ Developer Experience
+
+- **TypeScript Architecture**: Fully typed codebase with comprehensive error handling
+- **Hot Reload Development**: Fast development cycle with webpack hot module replacement
+- **Secure Context Isolation**: Electron security best practices with IPC communication
+- **Local Storage**: SQLite-based local storage for connections, history, and settings
+- **Cross-Platform**: Built for macOS with Windows/Linux support planned
 
 ## 🖥️ Supported Databases
 
@@ -105,51 +133,151 @@ npm run make
 
 ## ⌨️ Keyboard Shortcuts
 
-### Query Operations
+### File Operations
 
 | Action | macOS | Windows/Linux |
 |--------|-------|---------------|
-| Execute Query | `Cmd+Enter` | `Ctrl+Enter` |
-| Explain Query | `Cmd+E` | `Ctrl+E` |
 | New Tab | `Cmd+T` | `Ctrl+T` |
-| Close Tab | `Cmd+W` | `Ctrl+W` |
-| Toggle History | `Cmd+H` | `Ctrl+H` |
+| Open Query | `Cmd+O` | `Ctrl+O` |
+| Save Query | `Cmd+S` | `Ctrl+S` |
+| Save Query As | `Cmd+Shift+S` | `Ctrl+Shift+S` |
+| Preferences | `Cmd+,` | `Ctrl+,` |
 
-### AI Features
+### Edit Operations
 
 | Action | macOS | Windows/Linux |
 |--------|-------|---------------|
-| Explain with AI | `Cmd+Shift+E` | `Ctrl+Shift+E` |
-| Optimize with AI | `Cmd+Shift+O` | `Ctrl+Shift+O` |
-| Create Query | `Cmd+Shift+N` | `Ctrl+Shift+N` |
+| Undo | `Cmd+Z` | `Ctrl+Z` |
+| Redo | `Cmd+Shift+Z` | `Ctrl+Y` |
+| Cut | `Cmd+X` | `Ctrl+X` |
+| Copy | `Cmd+C` | `Ctrl+C` |
+| Paste | `Cmd+V` | `Ctrl+V` |
+| Select All | `Cmd+A` | `Ctrl+A` |
+
+### View & Navigation
+
+| Action | macOS | Windows/Linux |
+|--------|-------|---------------|
+| Find | `Cmd+F` | `Ctrl+F` |
+| Find & Replace | `Cmd+Shift+F` | `Ctrl+Shift+F` |
+| Toggle History | `Cmd+H` | `Ctrl+H` |
+| Spotlight Search | `Cmd+K` | `Ctrl+K` |
+| Zoom In | `Cmd++` | `Ctrl++` |
+| Zoom Out | `Cmd+-` | `Ctrl+-` |
+| Reset Zoom | `Cmd+0` | `Ctrl+0` |
+
+### Tabs & Windows
+
+| Action | macOS | Windows/Linux |
+|--------|-------|---------------|
+| Switch to Tab 1 | `Cmd+1` | `Ctrl+1` |
+| Switch to Tab 2 | `Cmd+2` | `Ctrl+2` |
+| Switch to Tab 3 | `Cmd+3` | `Ctrl+3` |
+| Execute Query | `Cmd+Enter` | `Ctrl+Enter` |
 
 ## 🤖 AI Features Guide
 
+### Setup AI Features
+
+1. Click the "AI" button in the toolbar
+2. Enter your OpenAI API key
+3. Select your preferred model:
+   - **gpt-4o**: Latest and most capable model (recommended)
+   - **gpt-4o-mini**: Fast and cost-effective
+   - **o1-preview**: Advanced reasoning model
+   - **gpt-4-turbo**: High performance model
+   - **gpt-3.5-turbo**: Fast and economical
+
 ### Generate Query from Natural Language
 
-1. Click "Create Query" or press `Cmd+Shift+N`
-2. Describe what you want in plain English
-3. Click "Generate Query"
-4. The AI will create an optimized SQL query based on your schema
+1. Click "Create Query" in the AI dialog
+2. Describe what you want in plain English (e.g., "Show me all users who signed up last month")
+3. The AI will create an optimized SQL query based on your database schema
+4. Click "Apply to Editor" to use the generated query
 
 ### Explain Query
 
-1. Select a query (or portion of it)
+1. Select a query (or portion of it) in the editor
 2. Right-click and choose "Explain Query with AI"
-3. Get a detailed explanation of what the query does
+3. Get a comprehensive explanation including:
+   - What the query does (high-level summary)
+   - Step-by-step breakdown of operations
+   - Key concepts and techniques used
+   - Potential issues or improvements
 
-### Optimize Query
+### Optimize Query Performance
 
-1. Select a query
-2. Right-click and choose "Optimize Query with AI"
-3. The AI analyzes the execution plan and suggests optimizations
-4. Click "Apply to Editor" to use the optimized version
-
-### Analyze Execution Plan
-
-1. Run "Explain" on any query
+1. Execute your query to get the execution plan
 2. In the plan visualizer, click "Analyze with AI"
-3. Get insights about performance bottlenecks and optimization opportunities
+3. The AI analyzes performance bottlenecks and provides:
+   - Specific optimization recommendations
+   - Index suggestions
+   - Query rewriting opportunities
+   - Performance insights
+
+### Analyze Query Results
+
+1. After executing a query, click "AI Analysis" in the results toolbar
+2. Get intelligent insights about your data:
+   - Data patterns and trends
+   - Quality issues (nulls, duplicates, outliers)
+   - Business insights and observations
+   - Recommendations for further analysis
+
+### Table Relationship Discovery
+
+1. Use the Table Topology viewer to visualize relationships
+2. The AI can help explain complex relationship patterns
+3. Navigate foreign key relationships with visual feedback
+
+## 🔍 Advanced Features
+
+### Spotlight Search
+
+SQLTemple includes a powerful spotlight search feature similar to VS Code's Command Palette:
+
+1. Press `Cmd+K` (or `Ctrl+K` on Windows/Linux) to open Spotlight Search
+2. Search across:
+   - Database connections
+   - Tables and views
+   - Columns and their data types
+   - Database objects
+3. Use fuzzy matching to quickly find what you're looking for
+4. Navigate with arrow keys and press Enter to jump to any object
+
+### Table Topology Visualization
+
+Explore your database relationships with interactive topology diagrams:
+
+1. Right-click on any table in the schema explorer
+2. Select "View Topology" to see relationship diagrams
+3. Features include:
+   - Interactive Mermaid diagrams showing foreign key relationships
+   - Zoom and pan controls for large relationship trees
+   - Expandable nodes to explore deeper relationships
+   - Visual distinction between incoming and outgoing relationships
+   - Click to navigate between related tables
+
+### Enhanced Results Grid
+
+The results grid includes advanced features for data analysis:
+
+- **Virtualized Rendering**: Handle millions of rows with smooth performance
+- **Column Statistics**: Hover over column headers to see data distribution
+- **Relationship Tooltips**: Hover over foreign key values to see related data
+- **Export Options**: Export to CSV, JSON, Excel, and other formats
+- **Adjustable Row Heights**: Customize display for different data types
+- **Column Resizing**: Drag column borders to optimize view
+- **Data Type Awareness**: Smart formatting based on PostgreSQL data types
+
+### Query Performance Tools
+
+Built-in tools to help optimize your queries:
+
+- **Execution Plan Visualizer**: Interactive tree view of query execution plans
+- **Cost Analysis**: Visual representation of query costs and timing
+- **AI-Powered Optimization**: Get specific recommendations for query improvements
+- **Query Limiting**: Automatic safeguards to prevent runaway queries
 
 ## 🛠️ Development
 
@@ -187,18 +315,45 @@ npm run package
 ```text
 sqltemple/
 ├── src/
-│   ├── main/           # Electron main process
-│   │   ├── database/   # Database connection logic
-│   │   ├── ai/         # OpenAI integration
-│   │   ├── storage/    # Local storage (SQLite)
-│   │   └── ipc/        # IPC handlers
-│   └── renderer/       # React application
-│       ├── components/ # UI components
-│       ├── contexts/   # React contexts
-│       └── App.tsx     # Main app component
-├── forge.config.js     # Electron Forge configuration
-├── webpack.*.js        # Webpack configurations
-└── package.json        # Project dependencies
+│   ├── main/                    # Electron main process
+│   │   ├── database/           # Database connection logic
+│   │   │   ├── PostgresClient.ts
+│   │   │   └── interfaces.ts
+│   │   ├── ai/                 # OpenAI integration
+│   │   │   └── AIService.ts
+│   │   ├── storage/            # Local storage (SQLite)
+│   │   │   └── StorageManager.ts
+│   │   ├── menu/               # Application menu system
+│   │   │   ├── menuBuilder.ts
+│   │   │   └── menuConfig.ts
+│   │   ├── ipc/                # IPC handlers
+│   │   │   └── handlers.ts
+│   │   ├── main.ts             # Main process entry point
+│   │   └── preload.ts          # Secure preload script
+│   └── renderer/               # React application
+│       ├── components/         # UI components
+│       │   ├── ResultsGrid/    # Advanced data grid components
+│       │   ├── SpotlightSearch/ # Search functionality
+│       │   ├── icons/          # Icon library
+│       │   ├── SQLEditor.tsx   # Monaco editor wrapper
+│       │   ├── SchemaExplorer.tsx
+│       │   ├── TableTopology.tsx
+│       │   ├── EnhancedResultsGrid.tsx
+│       │   └── ...
+│       ├── contexts/           # React contexts
+│       │   ├── SettingsContext.tsx
+│       │   └── ConfigContext.tsx
+│       ├── hooks/              # Custom React hooks
+│       │   ├── useResultsExport.ts
+│       │   ├── useColumnResize.ts
+│       │   ├── useRowHeight.ts
+│       │   └── ...
+│       ├── types/              # TypeScript definitions
+│       └── App.tsx             # Main app component
+├── forge.config.js             # Electron Forge configuration
+├── webpack.*.js                # Webpack configurations
+├── CLAUDE.md                   # AI assistant instructions
+└── package.json                # Project dependencies
 ```
 
 ## 📦 Building for Distribution
