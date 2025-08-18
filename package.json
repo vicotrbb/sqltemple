@@ -28,6 +28,7 @@
     "@electron-forge/maker-zip": "^7.8.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
     "@electron-forge/plugin-webpack": "^7.8.1",
+    "@electron-forge/publisher-github": "^7.8.3",
     "@timfish/forge-externals-plugin": "^0.2.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.30",
@@ -57,6 +58,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "better-sqlite3": "^11.10.0",
+    "electron-updater": "^6.6.2",
     "mermaid": "^11.6.0",
     "monaco-editor": "^0.52.2",
     "openai": "^5.2.0",

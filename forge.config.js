@@ -76,6 +76,19 @@ module.exports = {
       },
     },
   ],
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "victorbona",
+          name: "sqltemple",
+        },
+        prerelease: false,
+        draft: true,
+      },
+    },
+  ],
   plugins: [
     {
       name: "@electron-forge/plugin-auto-unpack-natives",

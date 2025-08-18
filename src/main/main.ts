@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+import { autoUpdater } from "electron-updater";
 import { StorageManager } from "./storage/StorageManager";
 import { initializeIpcHandlers } from "./ipc/handlers";
 import { MenuBuilder } from "./menu/menuBuilder";
@@ -58,11 +59,64 @@ const createWindow = (): void => {
   });
 };
 
+// Configure auto-updater
+const configureAutoUpdater = () => {
+  // Only check for updates in production
+  if (!app.isPackaged) {
+    return;
+  }
+
+  // Configure GitHub releases as update source
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: "victorbona", // Replace with your GitHub username
+    repo: "sqltemple", // Replace with your repo name
+  });
+
+  // Check for updates on startup
+  autoUpdater.checkForUpdatesAndNotify();
+
+  // Set up automatic update checking every 24 hours
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 24 * 60 * 60 * 1000);
+
+  // Auto-updater event handlers
+  autoUpdater.on("checking-for-update", () => {
+    console.log("Checking for update...");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log("Update available:", info);
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log("Update not available:", info);
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.log("Error in auto-updater:", err);
+  });
+
+  autoUpdater.on("download-progress", (progressObj) => {
+    let log_message = "Download speed: " + progressObj.bytesPerSecond;
+    log_message = log_message + " - Downloaded " + progressObj.percent + "%";
+    log_message = log_message + " (" + progressObj.transferred + "/" + progressObj.total + ")";
+    console.log(log_message);
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log("Update downloaded:", info);
+    autoUpdater.quitAndInstall();
+  });
+};
+
 app.on("ready", async () => {
   storageManager = new StorageManager();
   await initializeIpcHandlers(storageManager);
 
   createWindow();
+  configureAutoUpdater();
 });
 
 app.on("window-all-closed", () => {

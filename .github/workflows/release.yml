@@ -47,6 +47,67 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
+      - name: Generate update manifests
+        if: matrix.os == 'macos-latest'
+        run: |
+          # Generate latest-mac.yml for electron-updater
+          mkdir -p out/make/update-manifests
+          cat > out/make/update-manifests/latest-mac.yml << EOF
+          version: $(node -p "require('./package.json').version")
+          files:
+            - url: SQLTemple-$(node -p "require('./package.json').version").dmg
+              sha512: $(shasum -a 512 out/make/**/*.dmg | cut -d ' ' -f 1 | base64)
+              size: $(stat -f%z out/make/**/*.dmg)
+            - url: SQLTemple-$(node -p "require('./package.json').version")-darwin-x64.zip
+              sha512: $(shasum -a 512 out/make/**/*.zip | cut -d ' ' -f 1 | base64)
+              size: $(stat -f%z out/make/**/*.zip)
+          path: SQLTemple-$(node -p "require('./package.json').version").dmg
+          sha512: $(shasum -a 512 out/make/**/*.dmg | cut -d ' ' -f 1 | base64)
+          releaseDate: $(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+          EOF
+
+      - name: Generate Windows update manifest
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Generate latest.yml for Windows electron-updater
+          mkdir -p out/make/update-manifests
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exeFile = Get-ChildItem out/make -Recurse -Filter "*.exe" | Select-Object -First 1
+          $hash = (Get-FileHash $exeFile.FullName -Algorithm SHA512).Hash
+          $size = $exeFile.Length
+          
+          @"
+          version: $version
+          files:
+            - url: SQLTemple-$version-Setup.exe
+              sha512: $([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($hash)))
+              size: $size
+          path: SQLTemple-$version-Setup.exe
+          sha512: $([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($hash)))
+          releaseDate: $((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+          "@ | Out-File -FilePath out/make/update-manifests/latest.yml -Encoding UTF8
+
+      - name: Generate Linux update manifest
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # Generate latest-linux.yml for electron-updater
+          mkdir -p out/make/update-manifests
+          VERSION=$(node -p "require('./package.json').version")
+          DEB_FILE=$(find out/make -name "*.deb" | head -1)
+          HASH=$(sha512sum "$DEB_FILE" | cut -d ' ' -f 1 | base64 -w 0)
+          SIZE=$(stat -c%s "$DEB_FILE")
+          
+          cat > out/make/update-manifests/latest-linux.yml << EOF
+          version: $VERSION
+          files:
+            - url: sqltemple_$VERSION_amd64.deb
+              sha512: $HASH
+              size: $SIZE
+          path: sqltemple_$VERSION_amd64.deb
+          sha512: $HASH
+          releaseDate: $(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+          EOF
+
       - name: List build outputs (macOS)
         if: matrix.os == 'macos-latest'
         run: ls -la out/make/
@@ -67,6 +128,7 @@ jobs:
           path: |
             out/make/**/*.dmg
             out/make/**/*.zip
+            out/make/update-manifests/latest-mac.yml
 
       - name: Upload Linux artifacts
         if: matrix.os == 'ubuntu-latest' && success()
@@ -76,6 +138,7 @@ jobs:
           path: |
             out/make/**/*.deb
             out/make/**/*.rpm
+            out/make/update-manifests/latest-linux.yml
 
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest' && success()
@@ -85,6 +148,7 @@ jobs:
           path: |
             out/make/**/*.exe
             out/make/**/*.msi
+            out/make/update-manifests/latest.yml
 
   release:
     needs: build
@@ -179,7 +243,7 @@ jobs:
           
           # Debug: Show all available files
           echo "Available files in artifacts:"
-          find artifacts -type f -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" | head -20
+          find artifacts -type f -name "*.dmg" -o -name "*.zip" -o -name "*.exe" -o -name "*.deb" -o -name "*.rpm" -o -name "*.yml" | head -20
           
           # Upload macOS assets (required) - use glob patterns to find files
           DMG_FILE=$(find artifacts/macos-artifacts -name "*.dmg" | head -1)
@@ -216,4 +280,23 @@ jobs:
           if [ -n "$RPM_FILE" ]; then
             echo "Uploading RPM: $RPM_FILE"
             gh release upload "$TAG_NAME" "$RPM_FILE" --clobber || true
+          fi
+          
+          # Upload update manifest files for electron-updater
+          MAC_MANIFEST=$(find artifacts/macos-artifacts -name "latest-mac.yml" | head -1)
+          if [ -n "$MAC_MANIFEST" ]; then
+            echo "Uploading macOS update manifest: $MAC_MANIFEST"
+            gh release upload "$TAG_NAME" "$MAC_MANIFEST" --clobber || true
+          fi
+          
+          WIN_MANIFEST=$(find artifacts/windows-artifacts -name "latest.yml" | head -1)
+          if [ -n "$WIN_MANIFEST" ]; then
+            echo "Uploading Windows update manifest: $WIN_MANIFEST"
+            gh release upload "$TAG_NAME" "$WIN_MANIFEST" --clobber || true
+          fi
+          
+          LINUX_MANIFEST=$(find artifacts/linux-artifacts -name "latest-linux.yml" | head -1)
+          if [ -n "$LINUX_MANIFEST" ]; then
+            echo "Uploading Linux update manifest: $LINUX_MANIFEST"
+            gh release upload "$TAG_NAME" "$LINUX_MANIFEST" --clobber || true
           fi
