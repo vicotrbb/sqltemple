@@ -27,7 +27,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const searchManager = useMemo(() => new SearchManager(), []);
 
-  // Reset state when opening
   useEffect(() => {
     if (isOpen) {
       setQuery('');
@@ -37,7 +36,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
     }
   }, [isOpen]);
 
-  // Debounced search
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
       if (query.trim().length < 2) {
@@ -53,7 +51,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           currentConnection,
           schema,
         });
-        setResults(searchResults.slice(0, 100)); // Limit results
+        setResults(searchResults.slice(0, 100));
         setSelectedIndex(0);
       } catch (error) {
         console.error('Search error:', error);
@@ -66,7 +64,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
     return () => clearTimeout(timeoutId);
   }, [query, connections, currentConnection, schema, searchManager]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -109,7 +106,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         className="bg-vscode-bg-secondary rounded-md shadow-2xl w-[600px] max-h-[500px] overflow-hidden border border-vscode-border"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center px-4 py-3 border-b border-vscode-border">
           <svg 
             className="w-5 h-5 mr-3 text-vscode-text-tertiary" 
@@ -134,7 +130,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           )}
         </div>
 
-        {/* Results */}
         <div className="max-h-[400px] overflow-y-auto">
           {results.length > 0 ? (
             results.map((item, index) => (
@@ -163,7 +158,6 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           ) : null}
         </div>
 
-        {/* Footer */}
         <div className="px-4 py-2 border-t border-vscode-border bg-vscode-bg-tertiary">
           <div className="flex items-center justify-between text-xs text-vscode-text-tertiary">
             <span>↑↓ Navigate</span>

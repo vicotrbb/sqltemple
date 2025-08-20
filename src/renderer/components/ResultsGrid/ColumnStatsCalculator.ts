@@ -2,18 +2,15 @@ export interface ColumnStatistics {
   count: number;
   nullCount: number;
   uniqueCount: number;
-  // Numeric columns
   sum?: number;
   avg?: number;
   min?: number;
   max?: number;
   median?: number;
   stdDev?: number;
-  // String columns
   avgLength?: number;
   minLength?: number;
   maxLength?: number;
-  // Date columns
   earliestDate?: Date;
   latestDate?: Date;
   dateRange?: string;

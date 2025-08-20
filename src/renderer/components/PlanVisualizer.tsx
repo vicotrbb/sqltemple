@@ -126,7 +126,6 @@ export const PlanVisualizer: React.FC<PlanVisualizerProps> = ({ plan, query, onC
               )}
             </div>
             
-            {/* Show additional details */}
             <div className="mt-1 text-xs text-vscode-text-tertiary">
               {Object.entries(node).map(([key, value]) => {
                 if (

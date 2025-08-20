@@ -496,7 +496,6 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   const importConfig = async (configData: string): Promise<boolean> => {
     try {
       const importedConfig = JSON.parse(configData);
-      // Validate config structure
       if (
         !importedConfig.general ||
         !importedConfig.appearance ||

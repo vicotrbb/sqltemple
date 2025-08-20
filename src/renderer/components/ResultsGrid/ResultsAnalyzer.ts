@@ -71,13 +71,10 @@ Return ONLY valid JSON without any markdown formatting.`;
 
   private static parseAnalysisResponse(response: string): AnalysisResponse {
     try {
-      // Clean up the response more thoroughly
       let cleaned = response.trim();
       
-      // Remove markdown code blocks
       cleaned = cleaned.replace(/```json\s*|\s*```|```\s*/g, '');
       
-      // Remove any leading/trailing text that might not be JSON
       const jsonStart = cleaned.indexOf('{');
       const jsonEnd = cleaned.lastIndexOf('}');
       
@@ -108,7 +105,6 @@ Return ONLY valid JSON without any markdown formatting.`;
     const totalCells = results.rowCount * results.columns.length;
     let nullCount = 0;
     
-    // Calculate basic stats
     for (const row of results.rows) {
       for (const column of results.columns) {
         if (row[column.name] === null || row[column.name] === undefined) {

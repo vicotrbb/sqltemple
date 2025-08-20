@@ -20,17 +20,14 @@ export class SearchManager {
   async search(query: string, options: SearchOptions): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
     
-    // Search connections
     const connectionResults = this.searchConnections(query, options.connections);
     results.push(...connectionResults);
     
-    // Search database objects if we have a schema
     if (options.schema) {
       const schemaResults = this.searchDatabaseObjects(query, options.schema);
       results.push(...schemaResults);
     }
     
-    // Sort by score (highest first)
     return results.sort((a, b) => b.score - a.score);
   }
 
@@ -51,7 +48,6 @@ export class SearchManager {
   private searchDatabaseObjects(query: string, schema: DatabaseSchema): SearchResult[] {
     const results: SearchResult[] = [];
 
-    // Search schemas
     schema.schemas.forEach(schemaInfo => {
       const schemaScore = this.calculateScore(schemaInfo.name, query);
       if (schemaScore > 0) {
@@ -66,7 +62,6 @@ export class SearchManager {
         });
       }
 
-      // Search tables
       schemaInfo.tables.forEach(table => {
         const tableScore = this.calculateScore(table.name, query);
         if (tableScore > 0) {
@@ -81,7 +76,6 @@ export class SearchManager {
           });
         }
 
-        // Search columns
         table.columns.forEach(column => {
           const columnScore = this.calculateScore(column.name, query);
           if (columnScore > 0) {
@@ -91,14 +85,13 @@ export class SearchManager {
               name: column.name,
               path: [schemaInfo.name, table.name],
               icon: 'column',
-              score: columnScore * 0.8, // Lower priority for columns
+              score: columnScore * 0.8,
               metadata: { schema: schemaInfo.name, table: table.name, column }
             });
           }
         });
       });
 
-      // Search views
       schemaInfo.views?.forEach(view => {
         const viewScore = this.calculateScore(view.name, query);
         if (viewScore > 0) {
@@ -114,7 +107,6 @@ export class SearchManager {
         }
       });
 
-      // Search functions
       schemaInfo.functions?.forEach(func => {
         const funcScore = this.calculateScore(func.name, query);
         if (funcScore > 0) {
@@ -130,7 +122,6 @@ export class SearchManager {
         }
       });
 
-      // Search procedures
       schemaInfo.procedures?.forEach(proc => {
         const procScore = this.calculateScore(proc.name, query);
         if (procScore > 0) {
@@ -154,21 +145,17 @@ export class SearchManager {
     const lowerText = text.toLowerCase();
     const lowerQuery = query.toLowerCase();
     
-    // Exact match
     if (lowerText === lowerQuery) return 100;
     
-    // Starts with query
     if (lowerText.startsWith(lowerQuery)) return 80;
     
-    // Contains query
     if (lowerText.includes(lowerQuery)) return 50;
     
-    // Fuzzy match (each character in order)
     let queryIndex = 0;
     let score = 0;
     for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
       if (lowerText[i] === lowerQuery[queryIndex]) {
-        score += 10 - (i * 0.1); // Penalty for distance
+        score += 10 - (i * 0.1);
         queryIndex++;
       }
     }

@@ -29,7 +29,6 @@ export const executeAction = (item: SearchResult, context: ActionHandlerContext)
       
     case 'column':
       if (context.editorInstance && item.metadata?.schema && item.metadata?.table) {
-        // Insert qualified column name at cursor
         const columnRef = `${item.metadata.schema}.${item.metadata.table}.${item.name}`;
         insertAtCursor(context.editorInstance, columnRef);
       }
@@ -37,7 +36,6 @@ export const executeAction = (item: SearchResult, context: ActionHandlerContext)
       
     case 'function':
       if (context.editorInstance) {
-        // Insert function call template
         const functionCall = `${item.name}()`;
         insertAtCursor(context.editorInstance, functionCall);
       }
@@ -45,14 +43,12 @@ export const executeAction = (item: SearchResult, context: ActionHandlerContext)
       
     case 'procedure':
       if (context.editorInstance) {
-        // Insert procedure call
         const procedureCall = `CALL ${item.name}()`;
         insertAtCursor(context.editorInstance, procedureCall);
       }
       break;
       
     case 'schema':
-      // For schema, we could focus the schema explorer or insert schema prefix
       if (context.editorInstance) {
         insertAtCursor(context.editorInstance, `${item.name}.`);
       }
@@ -80,6 +76,5 @@ const insertAtCursor = (editor: any, text: string) => {
     forceMoveMarkers: true
   }]);
   
-  // Focus editor after insertion
   editor.focus();
 };

@@ -1,7 +1,6 @@
 import { DatabaseConnectionConfig } from '../main/database/interfaces';
 
 export interface IElectronAPI {
-  // Database operations
   connectDatabase: (config: DatabaseConnectionConfig) => Promise<any>;
   disconnectDatabase: () => Promise<any>;
   executeQuery: (sql: string) => Promise<any>;
@@ -22,15 +21,12 @@ export interface IElectronAPI {
     depth?: number
   ) => Promise<any>;
 
-  // Connection profiles
   getConnections: () => Promise<any>;
   saveConnection: (connection: DatabaseConnectionConfig) => Promise<any>;
   deleteConnection: (id: number) => Promise<any>;
 
-  // Query history
   getQueryHistory: (connectionId?: number) => Promise<any>;
 
-  // AI operations
   aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
   aiValidateConfig: (config: { apiKey: string; model: string }) => Promise<{ success: boolean; errors?: string[] }>;
   aiGetConfig: () => Promise<any>;
@@ -41,20 +37,18 @@ export interface IElectronAPI {
   aiOptimizeQuery: (sql: string) => Promise<any>;
   aiAnalyzeData: (prompt: string) => Promise<any>;
 
-  // General storage
   storage: {
     get: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;
     set: (key: string, value: string) => Promise<{ success: boolean; error?: string }>;
   };
 
-  // File operations
   openQueryFile: () => Promise<{ success: boolean; content?: string; fileName?: string; filePath?: string; canceled?: boolean; error?: string }>;
   saveQueryFile: (content: string, currentFilePath?: string) => Promise<{ success: boolean; filePath?: string; fileName?: string; canceled?: boolean; error?: string }>;
   saveQueryFileAs: (content: string) => Promise<{ success: boolean; filePath?: string; fileName?: string; canceled?: boolean; error?: string }>;
   importConnections: () => Promise<{ success: boolean; connections?: any[]; canceled?: boolean; error?: string }>;
   exportConnections: () => Promise<{ success: boolean; filePath?: string; count?: number; canceled?: boolean; error?: string }>;
 
-  // Menu communication
+  
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => void;
     removeListener: (

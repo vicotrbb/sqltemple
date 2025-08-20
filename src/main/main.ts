@@ -59,29 +59,22 @@ const createWindow = (): void => {
   });
 };
 
-// Configure auto-updater
 const configureAutoUpdater = () => {
-  // Only check for updates in production
   if (!app.isPackaged) {
     return;
   }
 
-  // Configure GitHub releases as update source
   autoUpdater.setFeedURL({
     provider: "github",
-    owner: "victorbona", // Replace with your GitHub username
-    repo: "sqltemple", // Replace with your repo name
+    owner: "victorbona",
+    repo: "sqltemple",
   });
 
-  // Check for updates on startup
   autoUpdater.checkForUpdatesAndNotify();
 
-  // Set up automatic update checking every 24 hours
   setInterval(() => {
     autoUpdater.checkForUpdatesAndNotify();
   }, 24 * 60 * 60 * 1000);
-
-  // Auto-updater event handlers
   autoUpdater.on("checking-for-update", () => {
     console.log("Checking for update...");
   });

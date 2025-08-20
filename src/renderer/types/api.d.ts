@@ -14,7 +14,6 @@ import {
 import { QueryHistoryEntry } from "../../main/storage/StorageManager";
 
 export interface IElectronAPI {
-  // Database operations
   connectDatabase: (config: DatabaseConnectionConfig) => Promise<{
     success: boolean;
     connectionId?: number;
@@ -100,7 +99,6 @@ export interface IElectronAPI {
     error?: string;
   }>;
 
-  // Connection profiles
   getConnections: () => Promise<{
     success: boolean;
     connections?: DatabaseConnectionConfig[];
@@ -116,14 +114,12 @@ export interface IElectronAPI {
     error?: string;
   }>;
 
-  // Query history
   getQueryHistory: (connectionId?: number) => Promise<{
     success: boolean;
     history?: QueryHistoryEntry[];
     error?: string;
   }>;
 
-  // AI operations
   aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
   aiGetConfig: () => Promise<any>;
   aiGetModels: () => Promise<any>;

@@ -143,3 +143,10 @@ dist
 
 # Internal Documentation
 documentation/
+
+# Python
+.venv/
+
+# LLM models
+*.gguf
+*.safetensors

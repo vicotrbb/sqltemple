@@ -32,7 +32,7 @@ export async function initializeIpcHandlers(
       try {
         console.log("Attempting to connect to database:", config.host);
 
-            if (currentClient) {
+        if (currentClient) {
           await currentClient.disconnect();
         }
 

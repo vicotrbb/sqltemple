@@ -124,7 +124,6 @@ const AppContent: React.FC = () => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-      // Helper function to check if shortcut matches
       const matchesShortcut = (shortcutId: string) => {
         const shortcuts = getShortcut(shortcutId);
         return shortcuts.some(shortcut => {
@@ -134,7 +133,6 @@ const AppContent: React.FC = () => {
           const hasAlt = keys.includes('alt');
           const mainKey = keys.find(k => !['cmd', 'ctrl', 'shift', 'alt'].includes(k));
           
-          // Special handling for function keys
           if (mainKey?.startsWith('f') && mainKey.length <= 3) {
             return hasCmd === cmdOrCtrl && 
                    hasShift === e.shiftKey && 
@@ -149,7 +147,6 @@ const AppContent: React.FC = () => {
         });
       };
 
-      // Tab management
       if (matchesShortcut('new-tab')) {
         e.preventDefault();
         createNewTab();
@@ -175,23 +172,19 @@ const AppContent: React.FC = () => {
         navigateToPreviousTab();
       }
       
-      // Panel toggles
       else if (matchesShortcut('toggle-history')) {
         e.preventDefault();
         setShowQueryHistory(!showQueryHistory);
       }
       else if (matchesShortcut('toggle-connections')) {
         e.preventDefault();
-        // Toggle connections will now just refresh the explorer
         refreshSchema();
       }
       else if (matchesShortcut('toggle-schema')) {
         e.preventDefault();
-        // Toggle schema will now just refresh the explorer
         refreshSchema();
       }
       
-      // Connection management
       else if (matchesShortcut('connect-database')) {
         e.preventDefault();
         setShowConnectionManager(true);
@@ -209,13 +202,11 @@ const AppContent: React.FC = () => {
         }
       }
       
-      // Spotlight search
       else if (matchesShortcut('open-spotlight')) {
         e.preventDefault();
         setShowSpotlight(true);
       }
       
-      // AI operations
       else if (matchesShortcut('create-query-ai')) {
         e.preventDefault();
         setShowAIQueryDialog(true);
@@ -359,7 +350,6 @@ const AppContent: React.FC = () => {
         setIsConnected(true);
         setShowConnectionManager(false);
         
-        // Refresh connections list
         await loadConnections();
         await loadSchema();
       } else {
@@ -931,7 +921,6 @@ const AppContent: React.FC = () => {
               )}
 
               <div className="flex items-center space-x-2">
-                {/* New Tab */}
                 <button
                   onClick={createNewTab}
                   className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
@@ -940,7 +929,6 @@ const AppContent: React.FC = () => {
                   <PlusIcon className="w-4 h-4 text-vscode-text-secondary" />
                 </button>
 
-                {/* Save Query */}
                 <button
                   onClick={handleSaveQuery}
                   disabled={!activeTab?.content?.trim()}
@@ -954,7 +942,7 @@ const AppContent: React.FC = () => {
                   <SaveIcon className="w-4 h-4" />
                 </button>
 
-                {/* Format Query */}
+                
                 <button
                   onClick={handleFormatQuery}
                   disabled={!activeTab?.content?.trim()}
@@ -968,10 +956,8 @@ const AppContent: React.FC = () => {
                   <FormatIcon className="w-4 h-4" />
                 </button>
 
-                {/* Separator */}
                 <div className="w-px h-4 bg-vscode-border"></div>
 
-                {/* Spotlight Search */}
                 <button
                   onClick={() => setShowSpotlight(true)}
                   className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
@@ -980,7 +966,6 @@ const AppContent: React.FC = () => {
                   <SearchIcon className="w-4 h-4 text-vscode-text-secondary" />
                 </button>
 
-                {/* Query History (only when connected) */}
                 {isConnected && (
                   <button
                     onClick={() => setShowQueryHistory(true)}
@@ -991,7 +976,7 @@ const AppContent: React.FC = () => {
                   </button>
                 )}
 
-                {/* AI Query */}
+                
                 <button
                   onClick={() => setShowAIQueryDialog(true)}
                   className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
