@@ -80,7 +80,7 @@ export class PostgresClient implements IDatabaseClient {
       const result = await this.client.query(sql);
       const duration = Date.now() - startTime;
 
-      const columns: ColumnInfo[] = result.fields.map((field) => ({
+      const columns: ColumnInfo[] = (result.fields || []).map((field) => ({
         name: field.name,
         dataType: this.getDataTypeName(field.dataTypeID),
         nullable: true,
@@ -88,7 +88,7 @@ export class PostgresClient implements IDatabaseClient {
 
       return {
         columns,
-        rows: result.rows,
+        rows: result.rows || [],
         rowCount: result.rowCount || 0,
         duration,
       };

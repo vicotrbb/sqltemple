@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface AIResultDialogProps {
   title: string;
@@ -17,14 +17,33 @@ export const AIResultDialog: React.FC<AIResultDialogProps> = ({
   loading,
   error
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="bg-vscode-bg-secondary border border-vscode-border rounded-lg p-6 w-[800px] max-w-[90vw] max-h-[85vh] flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
             className="text-vscode-text-secondary hover:text-vscode-text transition-colors text-xl"
+            disabled={false}
           >
             ✕
           </button>
@@ -58,6 +77,7 @@ export const AIResultDialog: React.FC<AIResultDialogProps> = ({
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm bg-vscode-bg-tertiary hover:bg-vscode-bg-quaternary border border-vscode-border rounded transition-colors"
+            disabled={false}
           >
             Close
           </button>

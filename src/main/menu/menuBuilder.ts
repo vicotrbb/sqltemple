@@ -216,7 +216,7 @@ export class MenuBuilder {
     });
 
     this.registerAction("help:documentation", () => {
-      shell.openExternal("https://github.com/yourusername/sqltemple/wiki");
+      shell.openExternal("https://github.com/vicotrbb/sqltemple/wiki");
     });
 
     this.registerAction("help:keyboard-shortcuts", () => {
@@ -224,9 +224,7 @@ export class MenuBuilder {
     });
 
     this.registerAction("help:report-issue", () => {
-      shell.openExternal(
-        "https://github.com/yourusername/sqltemple/issues/new"
-      );
+      shell.openExternal("https://github.com/vicotrbb/sqltemple/issues/new");
     });
 
     this.registerAction("help:about", () => {

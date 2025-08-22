@@ -1,0 +1,39 @@
+# SQLTemple Model Manifest
+# Schema: ../../schemas/model-manifest.schema.yaml
+
+name: sqltemple-1.1b-alpha
+version: 1.1.0-alpha
+base_model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+
+training:
+  dataset: Spider
+  training_examples: 1000
+  eval_examples: 100
+  epochs: 1
+  lora_config:
+    r: 16
+    alpha: 32
+    target_modules:
+      - o_proj
+      - q_proj
+      - v_proj
+      - k_proj
+    dropout: 0.05
+  training_completed: "2025-08-20T20:51:12.558359"
+
+links:
+  huggingface: https://huggingface.co/victorbona/sqltemple-1.1b-alpha
+  gguf: https://huggingface.co/victorbona/sqltemple-1.1b-alpha/blob/main/sqltemple-1.1b-alpha.gguf
+
+metadata:
+  description: SQLTemple 1.1B parameter model for SQL query generation, fine-tuned on Spider dataset
+  tags:
+    - sql
+    - code-generation
+    - tinyllama
+    - spider-dataset
+  license: MIT
+  output_formats:
+    - HuggingFace
+  output_files:
+    huggingface: sqltemple-1.1b-alpha-hf/

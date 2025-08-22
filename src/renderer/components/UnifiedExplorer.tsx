@@ -377,6 +377,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
   };
 
   const renderColumns = (columns: ColumnInfo[]) => {
+    if (!columns) return null;
     return columns.map((column) => (
       <ExplorerNode
         key={column.name}
@@ -523,7 +524,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
                   )}
 
                   {/* Schemas Section */}
-                  {schema.schemas.map((schemaInfo: SchemaInfo) => (
+                  {schema.schemas && schema.schemas.map((schemaInfo: SchemaInfo) => (
                     <ExplorerNode
                       key={schemaInfo.name}
                       id={schemaInfo.name}
@@ -574,7 +575,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
                           >
                             {expandedSections.has(`${schemaInfo.name}.Tables`) && (
                               <div>
-                                {schemaInfo.tables.map((table: TableInfo) => {
+                                {schemaInfo.tables && schemaInfo.tables.map((table: TableInfo) => {
                                   const tableKey = `${schemaInfo.name}.${table.name}`;
                                   const columns = loadedTableColumns[tableKey] || table.columns;
                                   const isLoading = loadingObjects.has(tableKey);

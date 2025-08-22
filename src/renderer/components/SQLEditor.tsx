@@ -38,33 +38,36 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
 
   const parseKeybinding = (keys: string, monaco: Monaco): number | null => {
     const parts = keys.split('+').map(p => p.trim());
-    let result = 0;
+    let modifiers = 0;
+    let keyCode = 0;
 
     for (const part of parts) {
       const lowerPart = part.toLowerCase();
       switch (lowerPart) {
         case 'cmd':
         case 'ctrl':
-          result |= monaco.KeyMod.CtrlCmd;
+          modifiers |= monaco.KeyMod.CtrlCmd;
           break;
         case 'alt':
-          result |= monaco.KeyMod.Alt;
+          modifiers |= monaco.KeyMod.Alt;
           break;
         case 'shift':
-          result |= monaco.KeyMod.Shift;
+          modifiers |= monaco.KeyMod.Shift;
           break;
         case 'enter':
-          result |= monaco.KeyCode.Enter;
+          keyCode = monaco.KeyCode.Enter;
           break;
         default:
           if (part.length === 1) {
-            const keyCode = part.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0) + monaco.KeyCode.KeyA;
-            result |= keyCode;
+            const char = part.toUpperCase();
+            if (char >= 'A' && char <= 'Z') {
+              keyCode = char.charCodeAt(0) - 'A'.charCodeAt(0) + monaco.KeyCode.KeyA;
+            }
           }
       }
     }
 
-    return result !== 0 ? result : null;
+    return keyCode !== 0 ? modifiers | keyCode : null;
   };
 
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => {
@@ -76,12 +79,16 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
     }
 
     const executeKeys = getShortcut('execute-query');
-    const keybinding = executeKeys.length > 0 ? parseKeybinding(executeKeys[0], monaco) : null;
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = executeKeys.find(key => 
+      isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+    ) || executeKeys[0];
+    const keybinding = shortcut ? parseKeybinding(shortcut, monaco) : null;
     
     editor.addAction({
       id: 'execute-query',
       label: 'Execute Query',
-      keybindings: keybinding ? [keybinding] : [],
+      keybindings: keybinding ? [keybinding] : [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
       contextMenuGroupId: 'navigation',
       contextMenuOrder: 1.5,
       run: (ed) => {
@@ -95,7 +102,10 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
     });
 
     const executeSelectionKeys = getShortcut('execute-selection');
-    const executeSelectionKeybinding = executeSelectionKeys.length > 0 ? parseKeybinding(executeSelectionKeys[0], monaco) : null;
+    const selectionShortcut = executeSelectionKeys.find(key => 
+      isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+    ) || executeSelectionKeys[0];
+    const executeSelectionKeybinding = selectionShortcut ? parseKeybinding(selectionShortcut, monaco) : null;
     
     editor.addAction({
       id: 'execute-selection',
@@ -114,12 +124,17 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
 
     if (onExplainQuery) {
       const explainKeys = getShortcut('explain-query-ai');
+      const explainShortcut = explainKeys.find(key => 
+        isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+      ) || explainKeys[0];
+      const explainKeybinding = explainShortcut ? parseKeybinding(explainShortcut, monaco) : null;
+      
       editor.addAction({
         id: 'explain-query-ai',
         label: 'Explain Query with AI',
         contextMenuGroupId: '9_ai',
         contextMenuOrder: 1,
-        keybindings: explainKeys.length > 0 && parseKeybinding(explainKeys[0], monaco) ? [parseKeybinding(explainKeys[0], monaco)!] : [],
+        keybindings: explainKeybinding ? [explainKeybinding] : [],
         run: (ed) => {
           const selection = ed.getModel()?.getValueInRange(ed.getSelection()!);
           if (selection && selection.trim()) {
@@ -136,12 +151,17 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
 
     if (onOptimizeQuery) {
       const optimizeKeys = getShortcut('optimize-query-ai');
+      const optimizeShortcut = optimizeKeys.find(key => 
+        isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+      ) || optimizeKeys[0];
+      const optimizeKeybinding = optimizeShortcut ? parseKeybinding(optimizeShortcut, monaco) : null;
+      
       editor.addAction({
         id: 'optimize-query-ai',
         label: 'Optimize Query with AI',
         contextMenuGroupId: '9_ai',
         contextMenuOrder: 2,
-        keybindings: optimizeKeys.length > 0 && parseKeybinding(optimizeKeys[0], monaco) ? [parseKeybinding(optimizeKeys[0], monaco)!] : [],
+        keybindings: optimizeKeybinding ? [optimizeKeybinding] : [],
         run: (ed) => {
           const selection = ed.getModel()?.getValueInRange(ed.getSelection()!);
           if (selection && selection.trim()) {
@@ -158,7 +178,10 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
 
     // Clear editor shortcut
     const clearKeys = getShortcut('clear-editor');
-    const clearKeybinding = clearKeys.length > 0 ? parseKeybinding(clearKeys[0], monaco) : null;
+    const clearShortcut = clearKeys.find(key => 
+      isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+    ) || clearKeys[0];
+    const clearKeybinding = clearShortcut ? parseKeybinding(clearShortcut, monaco) : null;
     
     editor.addAction({
       id: 'clear-editor',
@@ -174,7 +197,10 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
 
     // Focus editor shortcut
     const focusKeys = getShortcut('focus-editor');
-    const focusKeybinding = focusKeys.length > 0 ? parseKeybinding(focusKeys[0], monaco) : null;
+    const focusShortcut = focusKeys.find(key => 
+      isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+    ) || focusKeys[0];
+    const focusKeybinding = focusShortcut ? parseKeybinding(focusShortcut, monaco) : null;
     
     editor.addAction({
       id: 'focus-editor',

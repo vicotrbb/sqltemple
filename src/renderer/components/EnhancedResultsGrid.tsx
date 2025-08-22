@@ -61,13 +61,14 @@ const VirtualizedTable: React.FC<{
   }, []);
 
   const visibleRange = useMemo(() => {
+    const rowsLength = result.rows?.length || 0;
     const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - BUFFER_SIZE);
     const endIndex = Math.min(
-      result.rows.length,
+      rowsLength,
       Math.ceil((scrollTop + containerHeight) / rowHeight) + BUFFER_SIZE
     );
     return { startIndex, endIndex };
-  }, [scrollTop, containerHeight, result.rows.length, rowHeight]);
+  }, [scrollTop, containerHeight, result.rows?.length, rowHeight]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
@@ -122,7 +123,7 @@ const VirtualizedTable: React.FC<{
     setRelationshipTooltip(prev => ({ ...prev, visible: false }));
   };
 
-  const totalHeight = result.rows.length * rowHeight;
+  const totalHeight = (result.rows?.length || 0) * rowHeight;
   const offsetY = visibleRange.startIndex * rowHeight;
 
   return (
@@ -140,7 +141,7 @@ const VirtualizedTable: React.FC<{
           style={{ height: HEADER_HEIGHT }}
         >
           <div className="flex">
-            {result.columns.map((column, index) => (
+            {(result.columns || []).map((column, index) => (
               <ColumnHeader
                 key={index}
                 column={column}
@@ -157,7 +158,7 @@ const VirtualizedTable: React.FC<{
           className="absolute top-0 left-0 right-0"
           style={{ transform: `translateY(${offsetY + HEADER_HEIGHT}px)` }}
         >
-          {result.rows.slice(visibleRange.startIndex, visibleRange.endIndex).map((row, rowIndex) => {
+          {(result.rows || []).slice(visibleRange.startIndex, visibleRange.endIndex).map((row, rowIndex) => {
             const actualRowIndex = visibleRange.startIndex + rowIndex;
             return (
               <div
@@ -165,7 +166,7 @@ const VirtualizedTable: React.FC<{
                 className="flex border-b border-vscode-border hover:bg-vscode-bg-tertiary"
                 style={{ height: rowHeight }}
               >
-                {result.columns.map((column, colIndex) => (
+                {(result.columns || []).map((column, colIndex) => (
                   <div
                     key={colIndex}
                     className="px-4 py-2 text-vscode-text border-r border-vscode-border last:border-r-0 overflow-hidden"
@@ -186,7 +187,7 @@ const VirtualizedTable: React.FC<{
 
       <StatisticsTooltip
         column={statsTooltip.column}
-        data={statsTooltip.column ? result.rows.map(row => row[statsTooltip.column.name]) : []}
+        data={statsTooltip.column ? (result.rows || []).map(row => row[statsTooltip.column.name]) : []}
         position={statsTooltip.position}
         visible={statsTooltip.visible}
       />
@@ -303,7 +304,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
     );
   }
 
-  const shouldVirtualize = result.rows.length > 100;
+  const shouldVirtualize = (result.rows?.length || 0) > 100;
 
   return (
     <div className="flex flex-col h-full">
@@ -387,7 +388,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
             >
               <thead className="bg-vscode-bg-quaternary sticky top-0">
                 <tr role="row">
-                  {result.columns.map((column, index) => (
+                  {(result.columns || []).map((column, index) => (
                     <th
                       key={index}
                       role="columnheader"
@@ -406,14 +407,14 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {result.rows.map((row, rowIndex) => (
+                {(result.rows || []).map((row, rowIndex) => (
                   <tr
                     key={rowIndex}
                     role="row"
                     className="border-b border-vscode-border hover:bg-vscode-bg-tertiary"
                     style={{ height: rowHeight }}
                   >
-                    {result.columns.map((column, colIndex) => (
+                    {(result.columns || []).map((column, colIndex) => (
                       <td
                         key={colIndex}
                         role="cell"

@@ -63,7 +63,7 @@ const AppContent: React.FC = () => {
   const [aiLoading, setAILoading] = useState(false);
   const [aiError, setAIError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('sidebarWidth');
+    const saved = localStorage.getItem("sidebarWidth");
     return saved ? parseInt(saved, 10) : 256;
   });
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
@@ -82,7 +82,9 @@ const AppContent: React.FC = () => {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const [resultsPanelHeight, setResultsPanelHeight] = useState(256);
   const [isResizing, setIsResizing] = useState(false);
-  const [connections, setConnections] = useState<DatabaseConnectionConfig[]>([]);
+  const [connections, setConnections] = useState<DatabaseConnectionConfig[]>(
+    []
+  );
   const { getShortcut } = useSettings();
   const { updateMenuState } = useMenuState();
   const theme = useTheme();
@@ -104,112 +106,118 @@ const AppContent: React.FC = () => {
         setConnections(result.connections);
       }
     } catch (error) {
-      console.error('Failed to load connections:', error);
+      console.error("Failed to load connections:", error);
     }
   };
 
   const handleSpotlightAction = async (item: any) => {
-    const { executeAction } = await import('./components/SpotlightSearch/actionHandlers');
+    const { executeAction } = await import(
+      "./components/SpotlightSearch/actionHandlers"
+    );
     executeAction(item, {
       onTableClick: handleTableClick,
       onViewClick: handleViewClick,
       onConnect: handleConnect,
-      editorInstance
+      editorInstance,
     });
   };
 
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isInputFocused =
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        (document.activeElement as HTMLElement)?.contentEditable === "true";
+
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
       const matchesShortcut = (shortcutId: string) => {
         const shortcuts = getShortcut(shortcutId);
-        return shortcuts.some(shortcut => {
-          const keys = shortcut.toLowerCase().split('+');
-          const hasCmd = keys.includes('cmd') || keys.includes('ctrl');
-          const hasShift = keys.includes('shift');
-          const hasAlt = keys.includes('alt');
-          const mainKey = keys.find(k => !['cmd', 'ctrl', 'shift', 'alt'].includes(k));
-          
-          if (mainKey?.startsWith('f') && mainKey.length <= 3) {
-            return hasCmd === cmdOrCtrl && 
-                   hasShift === e.shiftKey && 
-                   hasAlt === e.altKey &&
-                   mainKey === e.key.toLowerCase();
+        return shortcuts.some((shortcut) => {
+          const keys = shortcut.toLowerCase().split("+");
+          const hasCmd = keys.includes("cmd") || keys.includes("ctrl");
+          const hasShift = keys.includes("shift");
+          const hasAlt = keys.includes("alt");
+          const mainKey = keys.find(
+            (k) => !["cmd", "ctrl", "shift", "alt"].includes(k)
+          );
+
+          if (mainKey?.startsWith("f") && mainKey.length <= 3) {
+            return (
+              hasCmd === cmdOrCtrl &&
+              hasShift === e.shiftKey &&
+              hasAlt === e.altKey &&
+              mainKey === e.key.toLowerCase()
+            );
           }
-          
-          return hasCmd === cmdOrCtrl && 
-                 hasShift === e.shiftKey && 
-                 hasAlt === e.altKey &&
-                 mainKey === e.key.toLowerCase();
+
+          return (
+            hasCmd === cmdOrCtrl &&
+            hasShift === e.shiftKey &&
+            hasAlt === e.altKey &&
+            mainKey === e.key.toLowerCase()
+          );
         });
       };
 
-      if (matchesShortcut('new-tab')) {
+      if (matchesShortcut("open-spotlight")) {
+        e.preventDefault();
+        setShowSpotlight(true);
+        return;
+      }
+
+      if (matchesShortcut("create-query-ai")) {
+        e.preventDefault();
+        setShowAIQueryDialog(true);
+        return;
+      }
+
+      if (isInputFocused) {
+        return;
+      }
+
+      if (matchesShortcut("new-tab")) {
         e.preventDefault();
         createNewTab();
-      }
-      else if (matchesShortcut('close-tab')) {
+      } else if (matchesShortcut("close-tab")) {
         e.preventDefault();
         if (activeTabId) {
           closeTab(activeTabId);
         }
-      }
-      else if (matchesShortcut('duplicate-tab')) {
+      } else if (matchesShortcut("duplicate-tab")) {
         e.preventDefault();
         if (activeTabId) {
           duplicateTab(activeTabId);
         }
-      }
-      else if (matchesShortcut('next-tab')) {
+      } else if (matchesShortcut("next-tab")) {
         e.preventDefault();
         navigateToNextTab();
-      }
-      else if (matchesShortcut('previous-tab')) {
+      } else if (matchesShortcut("previous-tab")) {
         e.preventDefault();
         navigateToPreviousTab();
-      }
-      
-      else if (matchesShortcut('toggle-history')) {
+      } else if (matchesShortcut("toggle-history")) {
         e.preventDefault();
         setShowQueryHistory(!showQueryHistory);
-      }
-      else if (matchesShortcut('toggle-connections')) {
+      } else if (matchesShortcut("toggle-connections")) {
         e.preventDefault();
         refreshSchema();
-      }
-      else if (matchesShortcut('toggle-schema')) {
+      } else if (matchesShortcut("toggle-schema")) {
         e.preventDefault();
         refreshSchema();
-      }
-      
-      else if (matchesShortcut('connect-database')) {
+      } else if (matchesShortcut("connect-database")) {
         e.preventDefault();
         setShowConnectionManager(true);
-      }
-      else if (matchesShortcut('disconnect-database')) {
+      } else if (matchesShortcut("disconnect-database")) {
         e.preventDefault();
         if (isConnected) {
           handleDisconnect();
         }
-      }
-      else if (matchesShortcut('refresh-schema')) {
+      } else if (matchesShortcut("refresh-schema")) {
         e.preventDefault();
         if (isConnected) {
           refreshSchema();
         }
-      }
-      
-      else if (matchesShortcut('open-spotlight')) {
-        e.preventDefault();
-        setShowSpotlight(true);
-      }
-      
-      else if (matchesShortcut('create-query-ai')) {
-        e.preventDefault();
-        setShowAIQueryDialog(true);
       }
     };
 
@@ -239,7 +247,10 @@ const AppContent: React.FC = () => {
         const minWidth = 200;
         const maxWidth = 600;
 
-        const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+        const constrainedWidth = Math.min(
+          Math.max(newWidth, minWidth),
+          maxWidth
+        );
         setSidebarWidth(constrainedWidth);
       }
     };
@@ -254,7 +265,7 @@ const AppContent: React.FC = () => {
 
       if (isSidebarResizing) {
         setIsSidebarResizing(false);
-        localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+        localStorage.setItem("sidebarWidth", sidebarWidth.toString());
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         document.body.classList.remove("resizing");
@@ -308,32 +319,32 @@ const AppContent: React.FC = () => {
   };
 
   const duplicateTab = (tabId: string) => {
-    const tabToDuplicate = tabs.find(tab => tab.id === tabId);
+    const tabToDuplicate = tabs.find((tab) => tab.id === tabId);
     if (!tabToDuplicate) return;
-    
+
     const newTab: QueryTab = {
       id: Date.now().toString(),
       title: `${tabToDuplicate.title} (Copy)`,
       content: tabToDuplicate.content,
-      isDirty: false
+      isDirty: false,
     };
-    
+
     setTabs([...tabs, newTab]);
     setActiveTabId(newTab.id);
   };
 
   const navigateToNextTab = () => {
     if (tabs.length <= 1) return;
-    
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
+
+    const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
     const nextIndex = (currentIndex + 1) % tabs.length;
     setActiveTabId(tabs[nextIndex].id);
   };
 
   const navigateToPreviousTab = () => {
     if (tabs.length <= 1) return;
-    
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
+
+    const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
     const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
     setActiveTabId(tabs[prevIndex].id);
   };
@@ -349,25 +360,34 @@ const AppContent: React.FC = () => {
         setCurrentConnection(config);
         setIsConnected(true);
         setShowConnectionManager(false);
-        
+
         await loadConnections();
         await loadSchema();
       } else {
         const errorMessage = result.error || "Unknown connection error";
         let userMessage = "Connection failed";
-        
-        if (errorMessage.includes("ENOTFOUND") || errorMessage.includes("ECONNREFUSED")) {
-          userMessage = "Cannot reach the database server. Please check the host and port.";
+
+        if (
+          errorMessage.includes("ENOTFOUND") ||
+          errorMessage.includes("ECONNREFUSED")
+        ) {
+          userMessage =
+            "Cannot reach the database server. Please check the host and port.";
         } else if (errorMessage.includes("authentication failed")) {
-          userMessage = "Authentication failed. Please check your username and password.";
-        } else if (errorMessage.includes("database") && errorMessage.includes("does not exist")) {
+          userMessage =
+            "Authentication failed. Please check your username and password.";
+        } else if (
+          errorMessage.includes("database") &&
+          errorMessage.includes("does not exist")
+        ) {
           userMessage = "The specified database does not exist.";
         } else if (errorMessage.includes("timeout")) {
-          userMessage = "Connection timed out. The server may be slow or unreachable.";
+          userMessage =
+            "Connection timed out. The server may be slow or unreachable.";
         } else {
           userMessage = `Connection failed: ${errorMessage}`;
         }
-        
+
         alert(userMessage);
       }
     } catch (error) {
@@ -419,15 +439,23 @@ const AppContent: React.FC = () => {
         let userFriendlyError = errorMessage;
 
         if (errorMessage.includes("syntax error")) {
-          userFriendlyError = "SQL syntax error. Please check your query syntax.";
+          userFriendlyError =
+            "SQL syntax error. Please check your query syntax.";
         } else if (errorMessage.includes("permission denied")) {
-          userFriendlyError = "Permission denied. You don't have rights to perform this operation.";
-        } else if (errorMessage.includes("relation") && errorMessage.includes("does not exist")) {
-          userFriendlyError = "Table or column not found. Please check the table and column names.";
+          userFriendlyError =
+            "Permission denied. You don't have rights to perform this operation.";
+        } else if (
+          errorMessage.includes("relation") &&
+          errorMessage.includes("does not exist")
+        ) {
+          userFriendlyError =
+            "Table or column not found. Please check the table and column names.";
         } else if (errorMessage.includes("connection")) {
-          userFriendlyError = "Database connection lost. Please reconnect and try again.";
+          userFriendlyError =
+            "Database connection lost. Please reconnect and try again.";
         } else if (errorMessage.includes("timeout")) {
-          userFriendlyError = "Query execution timed out. The query may be too complex.";
+          userFriendlyError =
+            "Query execution timed out. The query may be too complex.";
         }
 
         setQueryResult({
@@ -578,11 +606,11 @@ const AppContent: React.FC = () => {
       const result = await window.api.openQueryFile();
       if (result.success && result.content && activeTabId) {
         updateTabContent(activeTabId, result.content);
-        
+
         if (result.fileName) {
-          setTabs(prevTabs => 
-            prevTabs.map(tab => 
-              tab.id === activeTabId 
+          setTabs((prevTabs) =>
+            prevTabs.map((tab) =>
+              tab.id === activeTabId
                 ? { ...tab, title: result.fileName!, isDirty: false }
                 : tab
             )
@@ -598,15 +626,15 @@ const AppContent: React.FC = () => {
   };
 
   const handleSaveQuery = async () => {
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (!activeTab?.content?.trim()) return;
-    
+
     try {
       const result = await window.api.saveQueryFile(activeTab.content);
       if (result.success && result.fileName) {
-        setTabs(prevTabs => 
-          prevTabs.map(tab => 
-            tab.id === activeTabId 
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) =>
+            tab.id === activeTabId
               ? { ...tab, title: result.fileName!, isDirty: false }
               : tab
           )
@@ -621,15 +649,15 @@ const AppContent: React.FC = () => {
   };
 
   const handleSaveQueryAs = async () => {
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
     if (!activeTab?.content?.trim()) return;
-    
+
     try {
       const result = await window.api.saveQueryFileAs(activeTab.content);
       if (result.success && result.fileName) {
-        setTabs(prevTabs => 
-          prevTabs.map(tab => 
-            tab.id === activeTabId 
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) =>
+            tab.id === activeTabId
               ? { ...tab, title: result.fileName!, isDirty: false }
               : tab
           )
@@ -653,10 +681,14 @@ const AppContent: React.FC = () => {
             await window.api.saveConnection(connection);
             importedCount++;
           } catch (error) {
-            console.warn("Failed to import connection:", connection.name, error);
+            console.warn(
+              "Failed to import connection:",
+              connection.name,
+              error
+            );
           }
         }
-        
+
         if (importedCount > 0) {
           alert(`Successfully imported ${importedCount} connection(s).`);
         } else {
@@ -675,31 +707,33 @@ const AppContent: React.FC = () => {
     try {
       const result = await window.api.exportConnections();
       if (result.success) {
-        alert(`Successfully exported ${result.count} connection(s) to ${result.filePath}`);
+        alert(
+          `Successfully exported ${result.count} connection(s) to ${result.filePath}`
+        );
       } else if (!result.canceled && result.error) {
         alert(`Failed to export connections: ${result.error}`);
       }
     } catch (error) {
-      console.error('Error exporting connections:', error);
-      alert('An unexpected error occurred while exporting connections.');
+      console.error("Error exporting connections:", error);
+      alert("An unexpected error occurred while exporting connections.");
     }
   };
 
   const handleFind = () => {
     if (editorInstance) {
-      editorInstance.getAction('actions.find')?.run();
+      editorInstance.getAction("actions.find")?.run();
     }
   };
 
   const handleReplace = () => {
     if (editorInstance) {
-      editorInstance.getAction('editor.action.startFindReplaceAction')?.run();
+      editorInstance.getAction("editor.action.startFindReplaceAction")?.run();
     }
   };
 
   const handleFormatQuery = () => {
     if (editorInstance) {
-      editorInstance.getAction('editor.action.formatDocument')?.run();
+      editorInstance.getAction("editor.action.formatDocument")?.run();
     }
   };
 
@@ -712,7 +746,9 @@ const AppContent: React.FC = () => {
     if (editorInstance) {
       const selection = editorInstance.getSelection();
       if (selection && !selection.isEmpty()) {
-        const selectedText = editorInstance.getModel()?.getValueInRange(selection);
+        const selectedText = editorInstance
+          .getModel()
+          ?.getValueInRange(selection);
         if (selectedText?.trim()) {
           executeQuery(selectedText);
         }
@@ -724,12 +760,14 @@ const AppContent: React.FC = () => {
     if (editorInstance) {
       const selection = editorInstance.getSelection();
       if (selection && !selection.isEmpty()) {
-        const selectedText = editorInstance.getModel()?.getValueInRange(selection);
+        const selectedText = editorInstance
+          .getModel()
+          ?.getValueInRange(selection);
         if (selectedText?.trim()) {
           handleExplainQuery(selectedText);
         }
       } else {
-        const activeTab = tabs.find(tab => tab.id === activeTabId);
+        const activeTab = tabs.find((tab) => tab.id === activeTabId);
         if (activeTab?.content?.trim()) {
           handleExplainQuery(activeTab.content);
         }
@@ -741,12 +779,14 @@ const AppContent: React.FC = () => {
     if (editorInstance) {
       const selection = editorInstance.getSelection();
       if (selection && !selection.isEmpty()) {
-        const selectedText = editorInstance.getModel()?.getValueInRange(selection);
+        const selectedText = editorInstance
+          .getModel()
+          ?.getValueInRange(selection);
         if (selectedText?.trim()) {
           handleOptimizeQuery(selectedText);
         }
       } else {
-        const activeTab = tabs.find(tab => tab.id === activeTabId);
+        const activeTab = tabs.find((tab) => tab.id === activeTabId);
         if (activeTab?.content?.trim()) {
           handleOptimizeQuery(activeTab.content);
         }
@@ -807,9 +847,11 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (editorInstance) {
-      const selectionListener = editorInstance.onDidChangeCursorSelection((e: any) => {
-        setHasSelectedText(!e.selection.isEmpty());
-      });
+      const selectionListener = editorInstance.onDidChangeCursorSelection(
+        (e: any) => {
+          setHasSelectedText(!e.selection.isEmpty());
+        }
+      );
 
       const modelListener = editorInstance.onDidChangeModelContent(() => {
         setCanUndo(editorInstance.getModel()?.canUndo() || false);
@@ -832,7 +874,15 @@ const AppContent: React.FC = () => {
       canUndo,
       canRedo,
     });
-  }, [isConnected, activeTabId, tabs, hasSelectedText, canUndo, canRedo, updateMenuState]);
+  }, [
+    isConnected,
+    activeTabId,
+    tabs,
+    hasSelectedText,
+    canUndo,
+    canRedo,
+    updateMenuState,
+  ]);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
@@ -844,7 +894,7 @@ const AppContent: React.FC = () => {
       />
 
       <div className="flex flex-1 min-h-0">
-        <div 
+        <div
           className="bg-vscode-bg-secondary border-r border-vscode-border flex-shrink-0 flex flex-col relative"
           style={{ width: `${sidebarWidth}px` }}
         >
@@ -863,7 +913,7 @@ const AppContent: React.FC = () => {
             onShowTopology={handleShowTopology}
             onShowConnectionManager={() => setShowConnectionManager(true)}
           />
-          
+
           <ResizeHandle
             direction="horizontal"
             className="absolute top-0 right-0 bottom-0"
@@ -942,7 +992,6 @@ const AppContent: React.FC = () => {
                   <SaveIcon className="w-4 h-4" />
                 </button>
 
-                
                 <button
                   onClick={handleFormatQuery}
                   disabled={!activeTab?.content?.trim()}
@@ -976,7 +1025,6 @@ const AppContent: React.FC = () => {
                   </button>
                 )}
 
-                
                 <button
                   onClick={() => setShowAIQueryDialog(true)}
                   className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
@@ -999,7 +1047,11 @@ const AppContent: React.FC = () => {
 
             <div
               className="flex-1 min-h-0 bg-vscode-bg"
-              style={{ marginBottom: showResultsPanel ? `${resultsPanelHeight}px` : '0px' }}
+              style={{
+                marginBottom: showResultsPanel
+                  ? `${resultsPanelHeight}px`
+                  : "0px",
+              }}
             >
               {activeTab && (
                 <SQLEditor
@@ -1120,7 +1172,9 @@ const AppContent: React.FC = () => {
         {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
 
         {showPreferences && (
-          <FunctionalPreferencesDialog onClose={() => setShowPreferences(false)} />
+          <FunctionalPreferencesDialog
+            onClose={() => setShowPreferences(false)}
+          />
         )}
 
         {showSpotlight && (
