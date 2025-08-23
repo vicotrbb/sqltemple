@@ -12,11 +12,12 @@ interface SQLEditorProps {
   onExecute: (selectedText?: string) => void;
   onExplainQuery?: (selectedText: string) => void;
   onOptimizeQuery?: (selectedText: string) => void;
+  onExplainQueryPlan?: (selectedText?: string) => void;
   onEditorMount?: (editor: any) => void;
   schema?: any;
 }
 
-export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute, onExplainQuery, onOptimizeQuery, onEditorMount, schema }) => {
+export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute, onExplainQuery, onOptimizeQuery, onExplainQueryPlan, onEditorMount, schema }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const completionProviderRef = useRef<monaco.IDisposable | null>(null);
@@ -194,6 +195,31 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, onExecute
         ed.focus();
       }
     });
+
+    // Explain Query Plan action
+    if (onExplainQueryPlan) {
+      const explainPlanKeys = getShortcut('explain-query');
+      const explainPlanShortcut = explainPlanKeys.find(key => 
+        isMac ? key.toLowerCase().includes('cmd') : key.toLowerCase().includes('ctrl')
+      ) || explainPlanKeys[0];
+      const explainPlanKeybinding = explainPlanShortcut ? parseKeybinding(explainPlanShortcut, monaco) : null;
+      
+      editor.addAction({
+        id: 'explain-query-plan',
+        label: 'Explain Query Plan',
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.7,
+        keybindings: explainPlanKeybinding ? [explainPlanKeybinding] : [],
+        run: (ed) => {
+          const selection = ed.getModel()?.getValueInRange(ed.getSelection()!);
+          if (selection && selection.trim()) {
+            onExplainQueryPlan(selection);
+          } else {
+            onExplainQueryPlan();
+          }
+        }
+      });
+    }
 
     // Focus editor shortcut
     const focusKeys = getShortcut('focus-editor');

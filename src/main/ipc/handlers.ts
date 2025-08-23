@@ -202,7 +202,7 @@ export async function initializeIpcHandlers(
           return { success: false, errors: validation.errors };
         }
 
-        const apiValidation = await aiService.validateApiKey(config.apiKey);
+        const apiValidation = await aiService.validateApiKey(config);
         if (!apiValidation.isValid) {
           return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
         }

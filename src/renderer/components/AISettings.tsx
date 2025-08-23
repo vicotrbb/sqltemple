@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { aiService } from '../services/AIService';
 
 interface AISettingsProps {
   onClose: () => void;
@@ -17,15 +18,15 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
 
   const loadSettings = async () => {
     try {
-      const modelsResult = await window.api.aiGetModels();
-      if (modelsResult.success && modelsResult.models) {
-        setModels(modelsResult.models);
+      const modelsResult = await aiService.getModels();
+      if (modelsResult.success && modelsResult.data) {
+        setModels(modelsResult.data);
       }
 
-      const configResult = await window.api.aiGetConfig();
-      if (configResult.success && configResult.config) {
-        setApiKey(configResult.config.apiKey);
-        setModel(configResult.config.model);
+      const configResult = await aiService.getConfig();
+      if (configResult.success && configResult.data) {
+        setApiKey(configResult.data.apiKey);
+        setModel(configResult.data.model);
       }
     } catch (err) {
       setError('Failed to load AI settings');
@@ -42,7 +43,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
     setError(null);
 
     try {
-      const result = await window.api.aiSetConfig({ apiKey, model });
+      const result = await aiService.setConfig({ apiKey, model });
       if (result.success) {
         onClose();
       } else {

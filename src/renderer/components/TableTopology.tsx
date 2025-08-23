@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import mermaid from "mermaid";
+import { topologyService, RelationshipNode, TableRelationship } from '../services/TopologyService';
 
 interface TableTopologyProps {
   schemaName: string;
@@ -8,25 +9,6 @@ interface TableTopologyProps {
   isModal?: boolean;
 }
 
-interface TableRelationship {
-  direction: "incoming" | "outgoing";
-  constraintName: string;
-  sourceSchema: string;
-  sourceTable: string;
-  sourceColumn: string;
-  targetSchema: string;
-  targetTable: string;
-  targetColumn: string;
-  hasMore: boolean;
-  children?: any;
-}
-
-interface RelationshipNode {
-  table: string;
-  schema: string;
-  name: string;
-  relationships: TableRelationship[];
-}
 
 let mermaidInitialized = false;
 
@@ -112,22 +94,13 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     setLoading(true);
     setError(null);
 
-    try {
-      const result = await window.api.getTableRelationships(
-        schemaName,
-        tableName,
-        3
-      );
-      if (result.success && result.relationships) {
-        setTopology(result.relationships);
-      } else {
-        setError(result.error || "Failed to load table relationships");
-      }
-    } catch (err) {
-      setError("Failed to load table relationships");
-    } finally {
-      setLoading(false);
+    const result = await topologyService.getTableRelationships(schemaName, tableName, 3);
+    if (result.success && result.data) {
+      setTopology(result.data);
+    } else {
+      setError(result.error || "Failed to load table relationships");
     }
+    setLoading(false);
   };
 
   const loadMoreRelationships = async (
@@ -138,24 +111,22 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     setLoadingNodes((prev) => new Set(prev).add(nodeKey));
 
     try {
-      const result = await window.api.getTableRelationships(
-        nodeSchema,
-        nodeName,
-        3
-      );
-      if (result.success && result.relationships) {
+      const result = await topologyService.getTableRelationships(nodeSchema, nodeName, 3);
+      if (result.success && result.data) {
         setTopology((prevTopology) => {
           if (!prevTopology) return prevTopology;
 
           const newTopology = JSON.parse(JSON.stringify(prevTopology));
-          updateNodeRelationships(newTopology, nodeKey, result.relationships);
+          updateNodeRelationships(newTopology, nodeKey, result.data);
           return newTopology;
         });
 
         setExpandedNodes((prev) => new Set(prev).add(nodeKey));
+      } else {
+        console.error('Failed to load more relationships:', result.error);
       }
     } catch (err) {
-      console.error("Failed to load more relationships:", err);
+      console.error('Failed to load more relationships:', err);
     } finally {
       setLoadingNodes((prev) => {
         const newSet = new Set(prev);

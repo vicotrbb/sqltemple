@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DatabaseConnectionConfig } from '../../main/database/interfaces';
+import { connectionService } from '../services/ConnectionService';
 
 interface ConnectionManagerProps {
   onConnect: (config: DatabaseConnectionConfig) => void;
@@ -35,9 +36,11 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect,
   }, [editingConnection]);
 
   const loadConnections = async () => {
-    const result = await window.api.getConnections();
-    if (result.success && result.connections) {
-      setConnections(result.connections);
+    const result = await connectionService.getConnections();
+    if (result.success && result.data) {
+      setConnections(result.data);
+    } else {
+      console.error('Failed to load connections:', result.error);
     }
   };
 
@@ -47,11 +50,13 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect,
       id: selectedConnectionId || undefined
     };
 
-    const result = await window.api.saveConnection(config);
+    const result = await connectionService.saveConnection(config);
     if (result.success) {
       await loadConnections();
       setIsNewConnection(false);
-      setSelectedConnectionId(result.id || null);
+      setSelectedConnectionId(result.data || null);
+    } else {
+      alert(`Failed to save connection: ${result.error}`);
     }
   };
 
@@ -74,10 +79,12 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ onConnect,
   const handleDelete = async () => {
     if (!selectedConnectionId) return;
     
-    const result = await window.api.deleteConnection(selectedConnectionId);
+    const result = await connectionService.deleteConnection(selectedConnectionId);
     if (result.success) {
       await loadConnections();
       setSelectedConnectionId(null);
+    } else {
+      alert(`Failed to delete connection: ${result.error}`);
     }
   };
 

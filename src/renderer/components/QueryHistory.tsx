@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QueryHistoryEntry } from '../../main/storage/StorageManager';
+import { queryHistoryService } from '../services/QueryHistoryService';
 
 interface QueryHistoryProps {
   connectionId?: number;
@@ -21,30 +22,13 @@ export const QueryHistory: React.FC<QueryHistoryProps> = ({
 
   const loadHistory = async () => {
     setLoading(true);
-    const result = await window.api.getQueryHistory(connectionId);
-    if (result.success && result.history) {
-      setHistory(result.history);
+    const result = await queryHistoryService.getQueryHistory(connectionId);
+    if (result.success && result.data) {
+      setHistory(result.data);
+    } else {
+      console.error('Failed to load query history:', result.error);
     }
     setLoading(false);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Invalid Date';
-    }
-    
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  const truncateQuery = (query: string, maxLength: number = 100) => {
-    if (query.length <= maxLength) return query;
-    return query.substring(0, maxLength) + '...';
   };
 
   return (
@@ -87,11 +71,11 @@ export const QueryHistory: React.FC<QueryHistoryProps> = ({
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <code className="text-sm text-vscode-blue font-mono group-hover:text-vscode-blue-light transition-colors">
-                        {truncateQuery(entry.query)}
+                        {queryHistoryService.truncateQuery(entry.query)}
                       </code>
                     </div>
                     <div className="ml-4 text-xs text-vscode-text-tertiary whitespace-nowrap">
-                      {formatDate(entry.runAt)}
+                      {queryHistoryService.formatDate(entry.runAt)}
                     </div>
                   </div>
                   
@@ -102,10 +86,10 @@ export const QueryHistory: React.FC<QueryHistoryProps> = ({
                       {entry.success ? '✓' : '✗'} {entry.success ? 'Success' : 'Failed'}
                     </span>
                     <span className="text-vscode-text-tertiary">
-                      {entry.duration}ms
+                      {queryHistoryService.formatDuration(entry.duration)}
                     </span>
                     <span className="text-vscode-text-tertiary">
-                      {entry.rowCount} row{entry.rowCount !== 1 ? 's' : ''}
+                      {queryHistoryService.formatRowCount(entry.rowCount)}
                     </span>
                   </div>
                 </div>

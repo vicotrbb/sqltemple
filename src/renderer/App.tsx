@@ -16,6 +16,7 @@ import { TableTopology } from "./components/TableTopology";
 import { AboutDialog } from "./components/AboutDialog";
 import { FunctionalPreferencesDialog } from "./components/FunctionalPreferencesDialog";
 import { SpotlightSearch } from "./components/SpotlightSearch";
+import { ErrorNotifications } from "./components/ErrorNotifications";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useMenuActions, useMenuState } from "./hooks/useMenuActions";
 import {
@@ -36,6 +37,9 @@ import {
 } from "../main/database/interfaces";
 import { ConfigProvider, useSettings } from "./contexts/ConfigContext";
 import { useTheme } from "./hooks/useTheme";
+import { appService } from "./services/AppService";
+import { aiService } from "./services/AIService";
+import { errorService } from "./services/ErrorService";
 
 const AppContent: React.FC = () => {
   const [showConnectionManager, setShowConnectionManager] = useState(false);
@@ -89,25 +93,53 @@ const AppContent: React.FC = () => {
   const { updateMenuState } = useMenuState();
   const theme = useTheme();
 
+  // Initialize app service with callbacks
   useEffect(() => {
-    if (tabs.length === 0) {
-      createNewTab();
-    }
-  }, [tabs.length]);
+    appService.setCallbacks({
+      onConnectionChange: (connection, connected) => {
+        setCurrentConnection(connection);
+        setIsConnected(connected);
+      },
+      onSchemaChange: (newSchema) => {
+        setSchema(newSchema);
+      },
+      onQueryResult: (result) => {
+        setQueryResult(result);
+        setIsExecuting(false);
+      },
+      onQueryPlan: (plan, query) => {
+        setQueryPlan(plan);
+        setPlanQuery(query);
+        setShowPlanVisualizer(true);
+        setIsExecuting(false);
+      },
+      onError: (error) => {
+        alert(error);
+        setIsExecuting(false);
+      },
+      onSuccess: (message) => {
+        alert(message);
+      },
+      onTabsChange: (newTabs, newActiveTabId) => {
+        setTabs(newTabs);
+        setActiveTabId(newActiveTabId);
+      },
+      onActiveTabChange: (tabId) => {
+        setActiveTabId(tabId);
+      },
+    });
+
+    appService.initialize();
+  }, []);
+
 
   useEffect(() => {
     loadConnections();
   }, []);
 
   const loadConnections = async () => {
-    try {
-      const result = await window.api.getConnections();
-      if (result.success && result.connections) {
-        setConnections(result.connections);
-      }
-    } catch (error) {
-      console.error("Failed to load connections:", error);
-    }
+    const connections = await appService.loadConnections();
+    setConnections(connections);
   };
 
   const handleSpotlightAction = async (item: any) => {
@@ -287,245 +319,70 @@ const AppContent: React.FC = () => {
   }, [isResizing, isSidebarResizing, sidebarWidth]);
 
   const createNewTab = () => {
-    setTabs((prevTabs) => {
-      const newTab: QueryTab = {
-        id: `tab-${Date.now()}`,
-        title: `Query ${prevTabs.length + 1}`,
-        content: "",
-        isDirty: false,
-      };
-      setActiveTabId(newTab.id);
-      return [...prevTabs, newTab];
-    });
+    appService.createNewTab();
   };
 
-  const updateTabContent = (tabId: string, content: string) => {
-    setTabs(
-      tabs.map((tab) =>
-        tab.id === tabId ? { ...tab, content, isDirty: true } : tab
-      )
-    );
-  };
 
   const closeTab = (tabId: string) => {
-    const newTabs = tabs.filter((tab) => tab.id !== tabId);
-    setTabs(newTabs);
-
-    if (activeTabId === tabId && newTabs.length > 0) {
-      setActiveTabId(newTabs[newTabs.length - 1].id);
-    } else if (newTabs.length === 0) {
-      createNewTab();
-    }
+    appService.closeTab(tabId);
   };
 
   const duplicateTab = (tabId: string) => {
-    const tabToDuplicate = tabs.find((tab) => tab.id === tabId);
-    if (!tabToDuplicate) return;
-
-    const newTab: QueryTab = {
-      id: Date.now().toString(),
-      title: `${tabToDuplicate.title} (Copy)`,
-      content: tabToDuplicate.content,
-      isDirty: false,
-    };
-
-    setTabs([...tabs, newTab]);
-    setActiveTabId(newTab.id);
+    appService.duplicateTab(tabId);
   };
 
   const navigateToNextTab = () => {
-    if (tabs.length <= 1) return;
-
-    const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-    const nextIndex = (currentIndex + 1) % tabs.length;
-    setActiveTabId(tabs[nextIndex].id);
+    appService.navigateToNextTab();
   };
 
   const navigateToPreviousTab = () => {
-    if (tabs.length <= 1) return;
-
-    const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-    const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
-    setActiveTabId(tabs[prevIndex].id);
+    appService.navigateToPreviousTab();
   };
 
   const refreshSchema = async () => {
-    await loadSchema();
+    await appService.loadSchema();
   };
 
   const handleConnect = async (config: DatabaseConnectionConfig) => {
-    try {
-      const result = await window.api.connectDatabase(config);
-      if (result.success) {
-        setCurrentConnection(config);
-        setIsConnected(true);
-        setShowConnectionManager(false);
-
-        await loadConnections();
-        await loadSchema();
-      } else {
-        const errorMessage = result.error || "Unknown connection error";
-        let userMessage = "Connection failed";
-
-        if (
-          errorMessage.includes("ENOTFOUND") ||
-          errorMessage.includes("ECONNREFUSED")
-        ) {
-          userMessage =
-            "Cannot reach the database server. Please check the host and port.";
-        } else if (errorMessage.includes("authentication failed")) {
-          userMessage =
-            "Authentication failed. Please check your username and password.";
-        } else if (
-          errorMessage.includes("database") &&
-          errorMessage.includes("does not exist")
-        ) {
-          userMessage = "The specified database does not exist.";
-        } else if (errorMessage.includes("timeout")) {
-          userMessage =
-            "Connection timed out. The server may be slow or unreachable.";
-        } else {
-          userMessage = `Connection failed: ${errorMessage}`;
-        }
-
-        alert(userMessage);
-      }
-    } catch (error) {
-      console.error("Connection error:", error);
-      alert("An unexpected error occurred while connecting to the database.");
+    const success = await appService.connectToDatabase(config);
+    if (success) {
+      setShowConnectionManager(false);
+      await loadConnections();
     }
   };
 
   const handleDisconnect = async () => {
-    const result = await window.api.disconnectDatabase();
-    if (result.success) {
-      setIsConnected(false);
-      setCurrentConnection(null);
-      setSchema(null);
-      setQueryResult(null);
-    }
-  };
-
-  const loadSchema = async () => {
-    const result = await window.api.getSchemaInfo();
-    if (result.success && result.schema) {
-      setSchema(result.schema);
-    }
+    await appService.disconnectFromDatabase();
   };
 
   const executeQuery = async (selectedText?: string) => {
     if (isExecuting) return;
-
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (!activeTab) {
-      console.error("No active tab found");
-      return;
-    }
-
-    const queryToExecute = selectedText || activeTab.content;
-    if (!queryToExecute.trim()) {
-      console.log("No query to execute");
-      return;
-    }
-
-    try {
-      setIsExecuting(true);
-      const result = await window.api.executeQuery(queryToExecute);
-
-      if (result.success && result.result) {
-        setQueryResult(result.result);
-      } else {
-        const errorMessage = result.error || "Unknown error";
-        let userFriendlyError = errorMessage;
-
-        if (errorMessage.includes("syntax error")) {
-          userFriendlyError =
-            "SQL syntax error. Please check your query syntax.";
-        } else if (errorMessage.includes("permission denied")) {
-          userFriendlyError =
-            "Permission denied. You don't have rights to perform this operation.";
-        } else if (
-          errorMessage.includes("relation") &&
-          errorMessage.includes("does not exist")
-        ) {
-          userFriendlyError =
-            "Table or column not found. Please check the table and column names.";
-        } else if (errorMessage.includes("connection")) {
-          userFriendlyError =
-            "Database connection lost. Please reconnect and try again.";
-        } else if (errorMessage.includes("timeout")) {
-          userFriendlyError =
-            "Query execution timed out. The query may be too complex.";
-        }
-
-        setQueryResult({
-          columns: [],
-          rows: [],
-          rowCount: 0,
-          duration: 0,
-          error: userFriendlyError,
-        });
-      }
-    } catch (error) {
-      console.error("Error executing query:", error);
-      setQueryResult({
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        duration: 0,
-        error: "An unexpected error occurred while executing the query",
-      });
-    } finally {
-      setIsExecuting(false);
-    }
+    
+    setIsExecuting(true);
+    await appService.executeQuery(selectedText);
   };
 
   const handleTableClick = (tableName: string, schemaName: string) => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (activeTab) {
-      const newContent =
-        activeTab.content +
-        (activeTab.content && !activeTab.content.endsWith("\n") ? "\n" : "") +
-        `SELECT * FROM ${schemaName}.${tableName} LIMIT 100;`;
-      updateTabContent(activeTab.id, newContent);
-    }
+    const query = `SELECT * FROM ${schemaName}.${tableName} LIMIT 100;`;
+    appService.addQueryToActiveTab(query);
   };
 
   const handleViewClick = (viewName: string, schemaName: string) => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (activeTab) {
-      const newContent =
-        activeTab.content +
-        (activeTab.content && !activeTab.content.endsWith("\n") ? "\n" : "") +
-        `SELECT * FROM ${schemaName}.${viewName} LIMIT 100;`;
-      updateTabContent(activeTab.id, newContent);
-    }
+    const query = `SELECT * FROM ${schemaName}.${viewName} LIMIT 100;`;
+    appService.addQueryToActiveTab(query);
   };
 
   const handleQuerySelect = (query: string) => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+    const activeTab = appService.getActiveTab();
     if (activeTab) {
-      updateTabContent(activeTab.id, query);
+      appService.updateTabContent(activeTab.id, query);
     }
     setShowQueryHistory(false);
   };
 
   const explainQuery = async () => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (!activeTab || !activeTab.content.trim()) return;
-
     setIsExecuting(true);
-    const result = await window.api.getQueryPlan(activeTab.content);
-
-    if (result.success && result.plan) {
-      setQueryPlan(result.plan);
-      setPlanQuery(activeTab.content);
-      setShowPlanVisualizer(true);
-    } else {
-      alert(`Failed to get query plan: ${result.error}`);
-    }
-
-    setIsExecuting(false);
+    await appService.explainQuery();
   };
 
   const handleExplainQuery = async (selectedText: string) => {
@@ -533,18 +390,13 @@ const AppContent: React.FC = () => {
     setAIError(null);
     setAIResult(null);
 
-    try {
-      const result = await window.api.aiExplainQuery(selectedText);
-      if (result.success && result.result) {
-        setAIResult({ type: "explain", content: result.result });
-      } else {
-        setAIError(result.error || "Failed to explain query");
-      }
-    } catch (err) {
+    const result = await appService.explainQueryWithAI(selectedText);
+    if (result) {
+      setAIResult({ type: "explain", content: result });
+    } else {
       setAIError("Failed to explain query");
-    } finally {
-      setAILoading(false);
     }
+    setAILoading(false);
   };
 
   const handleOptimizeQuery = async (selectedText: string) => {
@@ -552,45 +404,26 @@ const AppContent: React.FC = () => {
     setAIError(null);
     setAIResult(null);
 
-    try {
-      const result = await window.api.aiOptimizeQuery(selectedText);
-      if (result.success && result.result) {
-        setAIResult({
-          type: "optimize",
-          content: result.result,
-          query: selectedText,
-        });
-      } else {
-        setAIError(result.error || "Failed to optimize query");
-      }
-    } catch (err) {
+    const result = await appService.optimizeQueryWithAI(selectedText);
+    if (result) {
+      setAIResult({
+        type: "optimize",
+        content: result.optimizedQuery,
+        query: result.originalQuery,
+      });
+    } else {
       setAIError("Failed to optimize query");
-    } finally {
-      setAILoading(false);
     }
+    setAILoading(false);
   };
 
   const handleAIQueryGenerated = (query: string) => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (activeTab) {
-      const newContent =
-        activeTab.content +
-        (activeTab.content && !activeTab.content.endsWith("\n") ? "\n\n" : "") +
-        query;
-      updateTabContent(activeTab.id, newContent);
-    }
+    appService.addQueryToActiveTabWithNewlines(query);
   };
 
   const handleApplyOptimizedQuery = (optimizedQuery: string) => {
     if (aiResult?.query) {
-      const activeTab = tabs.find((tab) => tab.id === activeTabId);
-      if (activeTab) {
-        const newContent = activeTab.content.replace(
-          aiResult.query,
-          optimizedQuery
-        );
-        updateTabContent(activeTab.id, newContent);
-      }
+      appService.replaceQueryInActiveTab(aiResult.query, optimizedQuery);
     }
     setAIResult(null);
   };
@@ -602,121 +435,23 @@ const AppContent: React.FC = () => {
   };
 
   const handleOpenQuery = async () => {
-    try {
-      const result = await window.api.openQueryFile();
-      if (result.success && result.content && activeTabId) {
-        updateTabContent(activeTabId, result.content);
-
-        if (result.fileName) {
-          setTabs((prevTabs) =>
-            prevTabs.map((tab) =>
-              tab.id === activeTabId
-                ? { ...tab, title: result.fileName!, isDirty: false }
-                : tab
-            )
-          );
-        }
-      } else if (!result.canceled && result.error) {
-        alert(`Failed to open file: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error opening file:", error);
-      alert("An unexpected error occurred while opening the file.");
-    }
+    await appService.openQueryFile();
   };
 
   const handleSaveQuery = async () => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (!activeTab?.content?.trim()) return;
-
-    try {
-      const result = await window.api.saveQueryFile(activeTab.content);
-      if (result.success && result.fileName) {
-        setTabs((prevTabs) =>
-          prevTabs.map((tab) =>
-            tab.id === activeTabId
-              ? { ...tab, title: result.fileName!, isDirty: false }
-              : tab
-          )
-        );
-      } else if (!result.canceled && result.error) {
-        alert(`Failed to save file: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error saving file:", error);
-      alert("An unexpected error occurred while saving the file.");
-    }
+    await appService.saveQueryFile();
   };
 
   const handleSaveQueryAs = async () => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    if (!activeTab?.content?.trim()) return;
-
-    try {
-      const result = await window.api.saveQueryFileAs(activeTab.content);
-      if (result.success && result.fileName) {
-        setTabs((prevTabs) =>
-          prevTabs.map((tab) =>
-            tab.id === activeTabId
-              ? { ...tab, title: result.fileName!, isDirty: false }
-              : tab
-          )
-        );
-      } else if (!result.canceled && result.error) {
-        alert(`Failed to save file: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error saving file:", error);
-      alert("An unexpected error occurred while saving the file.");
-    }
+    await appService.saveQueryFileAs();
   };
 
   const handleImportConnections = async () => {
-    try {
-      const result = await window.api.importConnections();
-      if (result.success && result.connections) {
-        let importedCount = 0;
-        for (const connection of result.connections) {
-          try {
-            await window.api.saveConnection(connection);
-            importedCount++;
-          } catch (error) {
-            console.warn(
-              "Failed to import connection:",
-              connection.name,
-              error
-            );
-          }
-        }
-
-        if (importedCount > 0) {
-          alert(`Successfully imported ${importedCount} connection(s).`);
-        } else {
-          alert("No connections were imported. Please check the file format.");
-        }
-      } else if (!result.canceled && result.error) {
-        alert(`Failed to import connections: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error importing connections:", error);
-      alert("An unexpected error occurred while importing connections.");
-    }
+    await appService.importConnections();
   };
 
   const handleExportConnections = async () => {
-    try {
-      const result = await window.api.exportConnections();
-      if (result.success) {
-        alert(
-          `Successfully exported ${result.count} connection(s) to ${result.filePath}`
-        );
-      } else if (!result.canceled && result.error) {
-        alert(`Failed to export connections: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error exporting connections:", error);
-      alert("An unexpected error occurred while exporting connections.");
-    }
+    await appService.exportConnections();
   };
 
   const handleFind = () => {
@@ -767,7 +502,7 @@ const AppContent: React.FC = () => {
           handleExplainQuery(selectedText);
         }
       } else {
-        const activeTab = tabs.find((tab) => tab.id === activeTabId);
+        const activeTab = appService.getActiveTab();
         if (activeTab?.content?.trim()) {
           handleExplainQuery(activeTab.content);
         }
@@ -786,7 +521,7 @@ const AppContent: React.FC = () => {
           handleOptimizeQuery(selectedText);
         }
       } else {
-        const activeTab = tabs.find((tab) => tab.id === activeTabId);
+        const activeTab = appService.getActiveTab();
         if (activeTab?.content?.trim()) {
           handleOptimizeQuery(activeTab.content);
         }
@@ -814,7 +549,7 @@ const AppContent: React.FC = () => {
 
     onConnectDatabase: () => setShowConnectionManager(true),
     onDisconnectDatabase: handleDisconnect,
-    onRefreshSchema: loadSchema,
+    onRefreshSchema: () => appService.loadSchema(),
     onSpotlightSearch: () => setShowSpotlight(true),
     onExecuteQuery: () => executeQuery(),
     onExecuteSelected: handleExecuteSelected,
@@ -825,17 +560,9 @@ const AppContent: React.FC = () => {
     onAIOptimizeQuery: handleAIOptimizeQuery,
     onAISettings: () => setShowPreferences(true),
 
-    onCloseTab: () => activeTabId && closeTab(activeTabId),
-    onNextTab: () => {
-      const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-      const nextIndex = (currentIndex + 1) % tabs.length;
-      if (tabs[nextIndex]) setActiveTabId(tabs[nextIndex].id);
-    },
-    onPreviousTab: () => {
-      const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
-      const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
-      if (tabs[prevIndex]) setActiveTabId(tabs[prevIndex].id);
-    },
+    onCloseTab: () => activeTabId && appService.closeTab(activeTabId),
+    onNextTab: () => appService.navigateToNextTab(),
+    onPreviousTab: () => appService.navigateToPreviousTab(),
 
     onShowKeyboardShortcuts: () => setShowKeyboardShortcuts(true),
     onShowAbout: () => setShowAbout(true),
@@ -866,7 +593,7 @@ const AppContent: React.FC = () => {
   }, [editorInstance]);
 
   useEffect(() => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+    const activeTab = appService.getActiveTab();
     updateMenuState({
       isConnected,
       hasActiveQuery: Boolean(activeTab?.content?.trim()),
@@ -884,7 +611,7 @@ const AppContent: React.FC = () => {
     updateMenuState,
   ]);
 
-  const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  const activeTab = appService.getActiveTab();
 
   return (
     <div className="flex flex-col h-screen bg-vscode-bg text-vscode-text font-sans text-base">
@@ -907,7 +634,7 @@ const AppContent: React.FC = () => {
               setEditingConnection(config);
               setShowConnectionManager(true);
             }}
-            onRefresh={loadSchema}
+            onRefresh={() => appService.loadSchema()}
             onTableClick={handleTableClick}
             onViewClick={handleViewClick}
             onShowTopology={handleShowTopology}
@@ -1040,9 +767,9 @@ const AppContent: React.FC = () => {
             <TabManager
               tabs={tabs}
               activeTabId={activeTabId}
-              onTabClick={setActiveTabId}
-              onTabClose={closeTab}
-              onNewTab={createNewTab}
+              onTabClick={(tabId) => appService.setActiveTab(tabId)}
+              onTabClose={(tabId) => appService.closeTab(tabId)}
+              onNewTab={() => appService.createNewTab()}
             />
 
             <div
@@ -1057,11 +784,12 @@ const AppContent: React.FC = () => {
                 <SQLEditor
                   value={activeTab.content}
                   onChange={(content) =>
-                    updateTabContent(activeTab.id, content)
+                    appService.updateTabContent(activeTab.id, content)
                   }
                   onExecute={executeQuery}
                   onExplainQuery={handleExplainQuery}
                   onOptimizeQuery={handleOptimizeQuery}
+                  onExplainQueryPlan={explainQuery}
                   onEditorMount={setEditorInstance}
                   schema={schema}
                 />
@@ -1187,6 +915,8 @@ const AppContent: React.FC = () => {
             onNavigate={handleSpotlightAction}
           />
         )}
+
+        <ErrorNotifications />
       </div>
     </div>
   );

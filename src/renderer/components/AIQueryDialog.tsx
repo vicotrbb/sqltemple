@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { aiService } from '../services/AIService';
 
 interface AIQueryDialogProps {
   onClose: () => void;
@@ -19,19 +20,14 @@ export const AIQueryDialog: React.FC<AIQueryDialogProps> = ({ onClose, onQueryGe
     setLoading(true);
     setError(null);
 
-    try {
-      const result = await window.api.aiCreateQuery(prompt);
-      if (result.success && result.result) {
-        onQueryGenerated(result.result);
-        onClose();
-      } else {
-        setError(result.error || 'Failed to generate query');
-      }
-    } catch (err) {
-      setError('Failed to generate query');
-    } finally {
-      setLoading(false);
+    const result = await aiService.createQuery(prompt);
+    if (result.success && result.data) {
+      onQueryGenerated(result.data);
+      onClose();
+    } else {
+      setError(result.error || 'Failed to generate query');
     }
+    setLoading(false);
   };
 
   return (

@@ -1,71 +1,50 @@
-import OpenAI from "openai";
+import { aiProviderRegistry } from "./AIProviderRegistry";
+import { AIConfig, AIPrompt, AIProvider } from "./providers/AIProvider";
 
-export interface AIConfig {
-  apiKey: string;
-  model: string;
-}
-
-export interface AIPrompt {
-  systemPrompt: string;
-  userPrompt: string;
-  temperature?: number;
-  maxTokens?: number;
-}
+export { AIConfig, AIPrompt } from "./providers/AIProvider";
 
 export class AIService {
-  private openai: any | null = null;
   private config: AIConfig | null = null;
+  private provider: AIProvider | null = null;
+  private providerName: string = "openai";
 
   constructor() {
+    this.provider = aiProviderRegistry.getDefaultProvider();
+  }
+
+  setProvider(providerName: string): boolean {
+    const provider = aiProviderRegistry.getProvider(providerName);
+    if (provider) {
+      this.provider = provider;
+      this.providerName = providerName;
+      return true;
+    }
+    return false;
+  }
+
+  getProviderName(): string {
+    return this.providerName;
+  }
+
+  getAvailableProviders(): Array<{name: string, displayName: string}> {
+    return aiProviderRegistry.getAllProviders().map(p => ({
+      name: p.name,
+      displayName: p.displayName
+    }));
   }
 
   validateConfig(config: AIConfig): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!config.apiKey || typeof config.apiKey !== 'string') {
-      errors.push('API key is required');
-    } else if (config.apiKey.trim().length === 0) {
-      errors.push('API key cannot be empty');
-    } else if (!config.apiKey.startsWith('sk-')) {
-      errors.push('API key must start with "sk-"');
-    } else if (config.apiKey.length < 20) {
-      errors.push('API key appears to be too short');
+    if (!this.provider) {
+      return { isValid: false, errors: ['No AI provider configured'] };
     }
-
-    if (!config.model || typeof config.model !== 'string') {
-      errors.push('Model selection is required');
-    } else if (!this.getAvailableModels().includes(config.model)) {
-      errors.push(`Invalid model "${config.model}". Must be one of: ${this.getAvailableModels().join(', ')}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+    return this.provider.validateConfig(config);
   }
 
-  async validateApiKey(apiKey: string): Promise<{ isValid: boolean; error?: string }> {
-    try {
-      const testOpenAI = new OpenAI({ apiKey });
-      
-      await testOpenAI.models.list();
-      
-      return { isValid: true };
-    } catch (error: any) {
-      let errorMessage = 'API key validation failed';
-      
-      if (error.status === 401) {
-        errorMessage = 'Invalid API key. Please check your OpenAI API key.';
-      } else if (error.status === 429) {
-        errorMessage = 'API rate limit exceeded. Please try again later.';
-      } else if (error.status === 403) {
-        errorMessage = 'API key does not have sufficient permissions.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      return { isValid: false, error: errorMessage };
+  async validateApiKey(config: AIConfig): Promise<{ isValid: boolean; error?: string }> {
+    if (!this.provider) {
+      return { isValid: false, error: 'No AI provider configured' };
     }
+    return this.provider.validateApiKey(config);
   }
 
   async setConfig(config: AIConfig): Promise<{ success: boolean; errors?: string[] }> {
@@ -75,16 +54,12 @@ export class AIService {
     }
 
     try {
-      const apiValidation = await this.validateApiKey(config.apiKey);
+      const apiValidation = await this.validateApiKey(config);
       if (!apiValidation.isValid) {
         return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
       }
 
       this.config = config;
-      this.openai = new OpenAI({
-        apiKey: config.apiKey,
-      });
-
       return { success: true };
     } catch (error: any) {
       return { success: false, errors: [`Failed to configure AI service: ${error.message}`] };
@@ -98,27 +73,17 @@ export class AIService {
     }
 
     this.config = config;
-    this.openai = new OpenAI({
-      apiKey: config.apiKey,
-    });
   }
 
   getAvailableModels(): string[] {
-    return [
-      "gpt-4o",
-      "gpt-4o-mini",
-      "o1-preview",
-      "o1-mini",
-      "gpt-4-turbo",
-      "gpt-4-turbo-preview",
-      "gpt-4",
-      "gpt-3.5-turbo",
-      "gpt-3.5-turbo-16k",
-    ];
+    if (!this.provider) {
+      return [];
+    }
+    return this.provider.getAvailableModels();
   }
 
   async analyzeQueryPlan(query: string, plan: any): Promise<string> {
-    if (!this.openai || !this.config) {
+    if (!this.provider || !this.config) {
       throw new Error("AI service not configured. Please set your API key.");
     }
 
@@ -151,11 +116,12 @@ ${JSON.stringify(plan, null, 2)}
 
 Provide a detailed analysis with specific optimization recommendations.`;
 
-    return this.callOpenAI({ systemPrompt, userPrompt });
+    const response = await this.provider.complete({ systemPrompt, userPrompt }, this.config);
+    return response.content;
   }
 
   async explainQuery(query: string, schema?: any): Promise<string> {
-    if (!this.openai || !this.config) {
+    if (!this.provider || !this.config) {
       throw new Error("AI service not configured. Please set your API key.");
     }
 
@@ -185,11 +151,12 @@ ${JSON.stringify(schema, null, 2)}`
 
 Provide a comprehensive explanation that helps understand what this query does and how it works.`;
 
-    return this.callOpenAI({ systemPrompt, userPrompt });
+    const response = await this.provider.complete({ systemPrompt, userPrompt }, this.config);
+    return response.content;
   }
 
   async createQuery(userRequest: string, schema: any): Promise<string> {
-    if (!this.openai || !this.config) {
+    if (!this.provider || !this.config) {
       throw new Error("AI service not configured. Please set your API key.");
     }
 
@@ -214,16 +181,16 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the SQL query without any explanations or markdown formatting.`;
 
-    const result = await this.callOpenAI({
+    const response = await this.provider.complete({
       systemPrompt,
       userPrompt,
       temperature: 0.3,
-    });
-    return this.cleanSQLResponse(result);
+    }, this.config);
+    return this.cleanSQLResponse(response.content);
   }
 
   async optimizeQuery(query: string, plan: any, schema: any): Promise<string> {
-    if (!this.openai || !this.config) {
+    if (!this.provider || !this.config) {
       throw new Error("AI service not configured. Please set your API key.");
     }
 
@@ -253,16 +220,16 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the optimized SQL query.`;
 
-    const result = await this.callOpenAI({
+    const response = await this.provider.complete({
       systemPrompt,
       userPrompt,
       temperature: 0.2,
-    });
-    return this.cleanSQLResponse(result);
+    }, this.config);
+    return this.cleanSQLResponse(response.content);
   }
 
   async analyzeData(prompt: string): Promise<string> {
-    if (!this.openai || !this.config) {
+    if (!this.provider || !this.config) {
       throw new Error("AI service not configured. Please set your API key.");
     }
 
@@ -277,14 +244,14 @@ When analyzing data, you should:
 
 Return your response as valid JSON in the exact format requested, without any markdown formatting or additional text.`;
 
-    const result = await this.callOpenAI({
+    const response = await this.provider.complete({
       systemPrompt,
       userPrompt: prompt,
       temperature: 0.7,
       maxTokens: 1000,
-    });
+    }, this.config);
 
-    return result;
+    return response.content;
   }
 
   private cleanSQLResponse(response: string): string {
@@ -296,44 +263,4 @@ Return your response as valid JSON in the exact format requested, without any ma
     return cleaned.trim();
   }
 
-  private async callOpenAI(prompt: AIPrompt): Promise<string> {
-    if (!this.openai || !this.config) {
-      throw new Error("AI service not configured");
-    }
-
-    try {
-      const isO1Model = this.config.model.startsWith("o1-");
-
-      const params: any = {
-        model: this.config.model,
-        messages: [
-          { role: "system", content: prompt.systemPrompt },
-          { role: "user", content: prompt.userPrompt },
-        ],
-      };
-
-      if (!isO1Model) {
-        params.temperature = prompt.temperature ?? 0.7;
-        params.max_tokens = prompt.maxTokens ?? 2000;
-      } else {
-        params.max_completion_tokens = prompt.maxTokens ?? 2000;
-      }
-
-      const response = await this.openai.chat.completions.create(params);
-
-      return response.choices[0]?.message?.content || "No response from AI";
-    } catch (error: any) {
-      if (error.status === 401) {
-        throw new Error("Invalid API key. Please check your OpenAI API key.");
-      } else if (error.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-      } else if (error.status === 404) {
-        throw new Error(
-          `Model "${this.config.model}" not found. Please select a different model.`
-        );
-      } else {
-        throw new Error(`AI request failed: ${error.message}`);
-      }
-    }
-  }
 }
