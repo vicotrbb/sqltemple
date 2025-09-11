@@ -27,15 +27,29 @@ export interface IElectronAPI {
 
   getQueryHistory: (connectionId?: number) => Promise<any>;
 
-  aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
-  aiValidateConfig: (config: { apiKey: string; model: string }) => Promise<{ success: boolean; errors?: string[] }>;
+  aiSetConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<any>;
+  aiValidateConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<{ success: boolean; errors?: string[] }>;
   aiGetConfig: () => Promise<any>;
-  aiGetModels: () => Promise<any>;
+  aiGetModels: (providerName?: string, config?: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<any>;
+  aiGetProviders: () => Promise<any>;
   aiAnalyzePlan: (query: string, plan: any) => Promise<any>;
   aiExplainQuery: (sql: string) => Promise<any>;
   aiCreateQuery: (prompt: string) => Promise<any>;
   aiOptimizeQuery: (sql: string) => Promise<any>;
   aiAnalyzeData: (prompt: string) => Promise<any>;
+
+  localModel: {
+    list: () => Promise<any>;
+    status: (modelName: string) => Promise<any>;
+    download: (modelName: string) => Promise<any>;
+    cancelDownload: (modelName: string) => Promise<any>;
+    load: (modelName: string) => Promise<any>;
+    unload: () => Promise<any>;
+    delete: (modelName: string) => Promise<any>;
+    getSystemResources: () => Promise<any>;
+    getRecommendation: (modelName: string) => Promise<any>;
+    getCurrentModel: () => Promise<any>;
+  };
 
   storage: {
     get: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;

@@ -1,5 +1,8 @@
 import { AIProvider } from "./providers/AIProvider";
 import { OpenAIProvider } from "./providers/OpenAIProvider";
+import { ClaudeProvider } from "./providers/ClaudeProvider";
+import { OllamaProvider } from "./providers/OllamaProvider";
+import { LMStudioProvider } from "./providers/LMStudioProvider";
 
 export class AIProviderRegistry {
   private providers: Map<string, AIProvider> = new Map();
@@ -11,6 +14,9 @@ export class AIProviderRegistry {
 
   private registerDefaultProviders(): void {
     this.registerProvider(new OpenAIProvider());
+    this.registerProvider(new ClaudeProvider());
+    this.registerProvider(new OllamaProvider());
+    this.registerProvider(new LMStudioProvider());
   }
 
   registerProvider(provider: AIProvider): void {

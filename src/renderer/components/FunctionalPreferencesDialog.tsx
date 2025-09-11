@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useConfig } from "../contexts/ConfigContext";
+import { AISettings } from "./AISettings";
 import {
   SettingsIcon,
   EyeIcon,
@@ -77,6 +78,7 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
       
       if (localConfig.ai.apiKey && localConfig.ai.apiKey.trim()) {
         const aiValidation = await window.api.aiValidateConfig({
+          provider: 'openai', // Default to OpenAI for backward compatibility
           apiKey: localConfig.ai.apiKey,
           model: localConfig.ai.model
         });
@@ -473,124 +475,7 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
       case "ai":
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-vscode-text mb-4">
-                AI Assistant Settings
-              </h3>
-              <button
-                onClick={handleResetSection}
-                className="text-xs text-vscode-text-secondary hover:text-vscode-text transition-colors"
-              >
-                Reset to defaults
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-vscode-text block mb-2">
-                  API Key
-                </label>
-                <input
-                  type="password"
-                  value={localConfig.ai.apiKey}
-                  onChange={(e) =>
-                    setLocalConfig(prev => ({
-                      ...prev,
-                      ai: { ...prev.ai, apiKey: e.target.value }
-                    }))
-                  }
-                  placeholder="Enter your OpenAI API key"
-                  className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-vscode-text block mb-2">
-                  Model
-                </label>
-                <select
-                  value={localConfig.ai.model}
-                  onChange={(e) =>
-                    setLocalConfig(prev => ({
-                      ...prev,
-                      ai: { ...prev.ai, model: e.target.value as any }
-                    }))
-                  }
-                  className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm"
-                >
-                  <option value="gpt-4">GPT-4</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-vscode-text block mb-2">
-                  Temperature: {localConfig.ai.temperature}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={localConfig.ai.temperature}
-                  onChange={(e) =>
-                    setLocalConfig(prev => ({
-                      ...prev,
-                      ai: { ...prev.ai, temperature: parseFloat(e.target.value) }
-                    }))
-                  }
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-vscode-text-secondary">
-                  <span>Conservative</span>
-                  <span>Creative</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-vscode-text">
-                    Enable AI suggestions
-                  </label>
-                  <p className="text-xs text-vscode-text-secondary">
-                    Show AI-powered query suggestions
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="toggle"
-                  checked={localConfig.ai.enableSuggestions}
-                  onChange={(e) =>
-                    setLocalConfig(prev => ({
-                      ...prev,
-                      ai: { ...prev.ai, enableSuggestions: e.target.checked }
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-vscode-text">
-                    Include schema context
-                  </label>
-                  <p className="text-xs text-vscode-text-secondary">
-                    Send database schema to AI for better results
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="toggle"
-                  checked={localConfig.ai.includeSchema}
-                  onChange={(e) =>
-                    setLocalConfig(prev => ({
-                      ...prev,
-                      ai: { ...prev.ai, includeSchema: e.target.checked }
-                    }))
-                  }
-                />
-              </div>
-            </div>
+            <AISettings onClose={() => {}} embedded={true} />
           </div>
         );
 

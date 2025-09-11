@@ -74,7 +74,7 @@ export class AIService {
     }
   }
 
-  async getConfig(): Promise<AIServiceResult<{ apiKey: string; model: string }>> {
+  async getConfig(): Promise<AIServiceResult<{ provider: string; apiKey?: string; model: string; baseUrl?: string }>> {
     try {
       const result = await window.api.aiGetConfig();
       if (result.success && result.config) {
@@ -91,7 +91,7 @@ export class AIService {
     }
   }
 
-  async setConfig(config: { apiKey: string; model: string }): Promise<AIServiceResult<void>> {
+  async setConfig(config: { provider: string; apiKey?: string; model: string; baseUrl?: string }): Promise<AIServiceResult<void>> {
     try {
       const result = await window.api.aiSetConfig(config);
       if (result.success) {
@@ -108,7 +108,7 @@ export class AIService {
     }
   }
 
-  async validateConfig(config: { apiKey: string; model: string }): Promise<AIServiceResult<boolean>> {
+  async validateConfig(config: { provider: string; apiKey?: string; model: string; baseUrl?: string }): Promise<AIServiceResult<boolean>> {
     try {
       const result = await window.api.aiValidateConfig(config);
       if (result.success) {
@@ -125,9 +125,9 @@ export class AIService {
     }
   }
 
-  async getModels(): Promise<AIServiceResult<string[]>> {
+  async getModels(providerName?: string, config?: { provider: string; apiKey?: string; model: string; baseUrl?: string }): Promise<AIServiceResult<string[]>> {
     try {
-      const result = await window.api.aiGetModels();
+      const result = await window.api.aiGetModels(providerName, config);
       if (result.success && result.models) {
         return { success: true, data: result.models };
       } else {
@@ -139,6 +139,23 @@ export class AIService {
         error instanceof Error ? error.message : String(error)
       );
       return { success: false, error: "Failed to get AI models" };
+    }
+  }
+
+  async getProviders(): Promise<AIServiceResult<Array<{name: string, displayName: string, isLocal?: boolean, requiresApiKey?: boolean}>>> {
+    try {
+      const result = await window.api.aiGetProviders();
+      if (result.success && result.providers) {
+        return { success: true, data: result.providers };
+      } else {
+        return { success: false, error: result.error || "Failed to get AI providers" };
+      }
+    } catch (error) {
+      const errorId = errorService.logAIError(
+        "Failed to get AI providers list", 
+        error instanceof Error ? error.message : String(error)
+      );
+      return { success: false, error: "Failed to get AI providers" };
     }
   }
 

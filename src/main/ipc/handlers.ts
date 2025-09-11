@@ -178,11 +178,23 @@ export async function initializeIpcHandlers(
 
   ipcMain.handle(
     "ai-set-config",
-    async (event, config: { apiKey: string; model: string }) => {
+    async (
+      event,
+      config: {
+        provider: string;
+        apiKey?: string;
+        model: string;
+        baseUrl?: string;
+      }
+    ) => {
       try {
         const result = await aiService.setConfig(config);
         if (!result.success) {
-          return { success: false, error: result.errors?.join('; ') || 'Configuration validation failed' };
+          return {
+            success: false,
+            error:
+              result.errors?.join("; ") || "Configuration validation failed",
+          };
         }
 
         await storageManager.saveAIConfig(config);
@@ -195,7 +207,15 @@ export async function initializeIpcHandlers(
 
   ipcMain.handle(
     "ai-validate-config",
-    async (event, config: { apiKey: string; model: string }) => {
+    async (
+      event,
+      config: {
+        provider: string;
+        apiKey?: string;
+        model: string;
+        baseUrl?: string;
+      }
+    ) => {
       try {
         const validation = aiService.validateConfig(config);
         if (!validation.isValid) {
@@ -204,7 +224,10 @@ export async function initializeIpcHandlers(
 
         const apiValidation = await aiService.validateApiKey(config);
         if (!apiValidation.isValid) {
-          return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
+          return {
+            success: false,
+            errors: [apiValidation.error || "API key validation failed"],
+          };
         }
 
         return { success: true };
@@ -223,10 +246,31 @@ export async function initializeIpcHandlers(
     }
   });
 
-  ipcMain.handle("ai-get-models", async () => {
+  ipcMain.handle(
+    "ai-get-models",
+    async (
+      event,
+      providerName?: string,
+      config?: {
+        provider: string;
+        apiKey?: string;
+        model: string;
+        baseUrl?: string;
+      }
+    ) => {
+      try {
+        const models = await aiService.getAvailableModels(providerName, config);
+        return { success: true, models };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
+  ipcMain.handle("ai-get-providers", async () => {
     try {
-      const models = aiService.getAvailableModels();
-      return { success: true, models };
+      const providers = aiService.getAvailableProviders();
+      return { success: true, providers };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }
@@ -455,9 +499,9 @@ export async function initializeIpcHandlers(
         filters: [
           { name: "SQL Files", extensions: ["sql", "SQL"] },
           { name: "Text Files", extensions: ["txt"] },
-          { name: "All Files", extensions: ["*"] }
+          { name: "All Files", extensions: ["*"] },
         ],
-        properties: ["openFile"]
+        properties: ["openFile"],
       });
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -472,52 +516,55 @@ export async function initializeIpcHandlers(
         success: true,
         content,
         fileName,
-        filePath
+        filePath,
       };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }
   });
 
-  ipcMain.handle("file:save-query", async (event, content: string, currentFilePath?: string) => {
-    try {
-      const mainWindow = BrowserWindow.fromWebContents(event.sender);
-      if (!mainWindow) {
-        throw new Error("No window found");
-      }
-
-      let filePath = currentFilePath;
-
-      if (!filePath) {
-        const result = await dialog.showSaveDialog(mainWindow, {
-          title: "Save SQL Query",
-          defaultPath: "query.sql",
-          filters: [
-            { name: "SQL Files", extensions: ["sql"] },
-            { name: "Text Files", extensions: ["txt"] },
-            { name: "All Files", extensions: ["*"] }
-          ]
-        });
-
-        if (result.canceled || !result.filePath) {
-          return { success: false, canceled: true };
+  ipcMain.handle(
+    "file:save-query",
+    async (event, content: string, currentFilePath?: string) => {
+      try {
+        const mainWindow = BrowserWindow.fromWebContents(event.sender);
+        if (!mainWindow) {
+          throw new Error("No window found");
         }
 
-        filePath = result.filePath;
+        let filePath = currentFilePath;
+
+        if (!filePath) {
+          const result = await dialog.showSaveDialog(mainWindow, {
+            title: "Save SQL Query",
+            defaultPath: "query.sql",
+            filters: [
+              { name: "SQL Files", extensions: ["sql"] },
+              { name: "Text Files", extensions: ["txt"] },
+              { name: "All Files", extensions: ["*"] },
+            ],
+          });
+
+          if (result.canceled || !result.filePath) {
+            return { success: false, canceled: true };
+          }
+
+          filePath = result.filePath;
+        }
+
+        await fs.writeFile(filePath, content, "utf-8");
+        const fileName = path.basename(filePath, path.extname(filePath));
+
+        return {
+          success: true,
+          filePath,
+          fileName,
+        };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
       }
-
-      await fs.writeFile(filePath, content, "utf-8");
-      const fileName = path.basename(filePath, path.extname(filePath));
-
-      return {
-        success: true,
-        filePath,
-        fileName
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
     }
-  });
+  );
 
   ipcMain.handle("file:save-query-as", async (event, content: string) => {
     try {
@@ -532,8 +579,8 @@ export async function initializeIpcHandlers(
         filters: [
           { name: "SQL Files", extensions: ["sql"] },
           { name: "Text Files", extensions: ["txt"] },
-          { name: "All Files", extensions: ["*"] }
-        ]
+          { name: "All Files", extensions: ["*"] },
+        ],
       });
 
       if (result.canceled || !result.filePath) {
@@ -541,12 +588,15 @@ export async function initializeIpcHandlers(
       }
 
       await fs.writeFile(result.filePath, content, "utf-8");
-      const fileName = path.basename(result.filePath, path.extname(result.filePath));
+      const fileName = path.basename(
+        result.filePath,
+        path.extname(result.filePath)
+      );
 
       return {
         success: true,
         filePath: result.filePath,
-        fileName
+        fileName,
       };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
@@ -564,9 +614,9 @@ export async function initializeIpcHandlers(
         title: "Import Connections",
         filters: [
           { name: "JSON Files", extensions: ["json"] },
-          { name: "All Files", extensions: ["*"] }
+          { name: "All Files", extensions: ["*"] },
         ],
-        properties: ["openFile"]
+        properties: ["openFile"],
       });
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -583,7 +633,7 @@ export async function initializeIpcHandlers(
 
       return {
         success: true,
-        connections
+        connections,
       };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
@@ -604,39 +654,45 @@ export async function initializeIpcHandlers(
         defaultPath: "sqltemple-connections.json",
         filters: [
           { name: "JSON Files", extensions: ["json"] },
-          { name: "All Files", extensions: ["*"] }
-        ]
+          { name: "All Files", extensions: ["*"] },
+        ],
       });
 
       if (result.canceled || !result.filePath) {
         return { success: false, canceled: true };
       }
 
-      const exportableConnections = connections.map(conn => ({
+      const exportableConnections = connections.map((conn) => ({
         ...conn,
         password: undefined,
-        id: undefined
+        id: undefined,
       }));
 
-      await fs.writeFile(result.filePath, JSON.stringify(exportableConnections, null, 2), "utf-8");
+      await fs.writeFile(
+        result.filePath,
+        JSON.stringify(exportableConnections, null, 2),
+        "utf-8"
+      );
 
       return {
         success: true,
         filePath: result.filePath,
-        count: connections.length
+        count: connections.length,
       };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }
   });
 
-  ipcMain.handle("database:getForeignKeys", async (event, tableName: string, schemaName: string) => {
-    try {
-      if (!currentClient) {
-        throw new Error("Database not connected");
-      }
+  ipcMain.handle(
+    "database:getForeignKeys",
+    async (event, tableName: string, schemaName: string) => {
+      try {
+        if (!currentClient) {
+          throw new Error("Database not connected");
+        }
 
-      const query = `
+        const query = `
         SELECT 
           kcu.column_name,
           ccu.table_schema AS foreign_table_schema,
@@ -656,32 +712,42 @@ export async function initializeIpcHandlers(
           AND tc.table_schema = $2;
       `;
 
-      const result = await currentClient.executeQuery(query);
-      const foreignKeys = result.rows.map(row => ({
-        columnName: row.column_name,
-        referencedSchema: row.foreign_table_schema,
-        referencedTable: row.foreign_table_name,
-        referencedColumn: row.foreign_column_name
-      }));
+        const result = await currentClient.executeQuery(query);
+        const foreignKeys = result.rows.map((row) => ({
+          columnName: row.column_name,
+          referencedSchema: row.foreign_table_schema,
+          referencedTable: row.foreign_table_name,
+          referencedColumn: row.foreign_column_name,
+        }));
 
-      return { success: true, foreignKeys };
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
-    }
-  });
-
-  ipcMain.handle("database:getRelatedData", async (event, foreignKeyValue: any, referencedSchema: string, referencedTable: string, referencedColumn: string) => {
-    try {
-      if (!currentClient) {
-        throw new Error("Database not connected");
+        return { success: true, foreignKeys };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
       }
-
-      const query = `SELECT * FROM ${referencedSchema}.${referencedTable} WHERE ${referencedColumn} = $1 LIMIT 1`;
-      const result = await currentClient.executeQuery(query);
-
-      return { success: true, data: result.rows[0] || null };
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
     }
-  });
+  );
+
+  ipcMain.handle(
+    "database:getRelatedData",
+    async (
+      event,
+      foreignKeyValue: any,
+      referencedSchema: string,
+      referencedTable: string,
+      referencedColumn: string
+    ) => {
+      try {
+        if (!currentClient) {
+          throw new Error("Database not connected");
+        }
+
+        const query = `SELECT * FROM ${referencedSchema}.${referencedTable} WHERE ${referencedColumn} = $1 LIMIT 1`;
+        const result = await currentClient.executeQuery(query);
+
+        return { success: true, data: result.rows[0] || null };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
 }

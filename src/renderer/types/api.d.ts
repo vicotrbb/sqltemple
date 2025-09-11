@@ -120,9 +120,11 @@ export interface IElectronAPI {
     error?: string;
   }>;
 
-  aiSetConfig: (config: { apiKey: string; model: string }) => Promise<any>;
+  aiSetConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<any>;
+  aiValidateConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<{ success: boolean; errors?: string[] }>;
   aiGetConfig: () => Promise<any>;
-  aiGetModels: () => Promise<any>;
+  aiGetModels: (providerName?: string, config?: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => Promise<any>;
+  aiGetProviders: () => Promise<any>;
   aiAnalyzePlan: (query: string, plan: any) => Promise<any>;
   aiExplainQuery: (sql: string) => Promise<any>;
   aiCreateQuery: (prompt: string) => Promise<any>;

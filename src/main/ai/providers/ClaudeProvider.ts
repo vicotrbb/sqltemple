@@ -1,11 +1,11 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { BaseAIProvider, AIConfig, AIPrompt, AIResponse, AIValidationResult } from "./AIProvider";
 
-export class OpenAIProvider extends BaseAIProvider {
-  readonly name = "openai";
-  readonly displayName = "OpenAI";
+export class ClaudeProvider extends BaseAIProvider {
+  readonly name = "claude";
+  readonly displayName = "Claude (Anthropic)";
   readonly isLocal = false;
-  
+
   requiresApiKey(): boolean {
     return true;
   }
@@ -17,9 +17,9 @@ export class OpenAIProvider extends BaseAIProvider {
       errors.push('API key is required');
     } else if (config.apiKey.trim().length === 0) {
       errors.push('API key cannot be empty');
-    } else if (!config.apiKey.startsWith('sk-')) {
-      errors.push('API key must start with "sk-"');
-    } else if (config.apiKey.length < 20) {
+    } else if (!config.apiKey.startsWith('sk-ant-')) {
+      errors.push('API key must start with "sk-ant-"');
+    } else if (config.apiKey.length < 30) {
       errors.push('API key appears to be too short');
     }
 
@@ -32,17 +32,24 @@ export class OpenAIProvider extends BaseAIProvider {
       errors
     };
   }
-  
+
   async validateApiKey(config: AIConfig): Promise<{ isValid: boolean; error?: string }> {
     try {
-      const testOpenAI = new OpenAI({ apiKey: config.apiKey });
-      await testOpenAI.models.list();
+      const anthropic = new Anthropic({ apiKey: config.apiKey });
+      
+      // Test the API key by making a simple completion request
+      await anthropic.messages.create({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 10,
+        messages: [{ role: "user", content: "Test" }],
+      });
+      
       return { isValid: true };
     } catch (error: any) {
       let errorMessage = 'API key validation failed';
       
       if (error.status === 401) {
-        errorMessage = 'Invalid API key. Please check your OpenAI API key.';
+        errorMessage = 'Invalid API key. Please check your Anthropic API key.';
       } else if (error.status === 429) {
         errorMessage = 'API rate limit exceeded. Please try again later.';
       } else if (error.status === 403) {
@@ -54,65 +61,57 @@ export class OpenAIProvider extends BaseAIProvider {
       return { isValid: false, error: errorMessage };
     }
   }
-  
+
   async getAvailableModels(config?: AIConfig): Promise<string[]> {
     return [
-      "gpt-4o",
-      "gpt-4o-mini",
-      "o1-preview",
-      "o1-mini",
-      "gpt-4-turbo",
-      "gpt-4-turbo-preview",
-      "gpt-4",
-      "gpt-3.5-turbo",
-      "gpt-3.5-turbo-16k",
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-sonnet-20240620",
+      "claude-3-opus-20240229",
+      "claude-3-sonnet-20240229",
+      "claude-3-haiku-20240307",
     ];
   }
-  
+
   async complete(prompt: AIPrompt, config: AIConfig): Promise<AIResponse> {
-    const openai = new OpenAI({ apiKey: config.apiKey });
-    
+    const anthropic = new Anthropic({ apiKey: config.apiKey });
+
     try {
-      const isO1Model = config.model.startsWith("o1-");
-
-      const params: any = {
+      const response = await anthropic.messages.create({
         model: config.model,
+        max_tokens: prompt.maxTokens ?? 2000,
+        temperature: prompt.temperature ?? 0.7,
+        system: prompt.systemPrompt,
         messages: [
-          { role: "system", content: prompt.systemPrompt },
-          { role: "user", content: prompt.userPrompt },
+          { role: "user", content: prompt.userPrompt }
         ],
-      };
+      });
 
-      if (!isO1Model) {
-        params.temperature = prompt.temperature ?? 0.7;
-        params.max_tokens = prompt.maxTokens ?? 2000;
-      } else {
-        params.max_completion_tokens = prompt.maxTokens ?? 2000;
-      }
-
-      const response = await openai.chat.completions.create(params);
+      // Extract content from Claude's response format
+      const content = response.content
+        .map(block => block.type === 'text' ? block.text : '')
+        .join('');
 
       return {
-        content: response.choices[0]?.message?.content || "No response from AI",
+        content: content || "No response from Claude",
         usage: {
-          promptTokens: response.usage?.prompt_tokens,
-          completionTokens: response.usage?.completion_tokens,
-          totalTokens: response.usage?.total_tokens,
+          promptTokens: response.usage.input_tokens,
+          completionTokens: response.usage.output_tokens,
+          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
         }
       };
     } catch (error: any) {
       this.handleError(error);
     }
   }
-  
+
   supportsStreaming(): boolean {
     return true;
   }
-  
+
   supportsVision(): boolean {
     return true;
   }
-  
+
   supportsToolCalling(): boolean {
     return true;
   }

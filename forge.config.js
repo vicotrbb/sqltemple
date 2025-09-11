@@ -1,4 +1,4 @@
-const packageJson = require('./package.json');
+const packageJson = require("./package.json");
 
 module.exports = {
   packagerConfig: {
@@ -81,7 +81,7 @@ module.exports = {
       name: "@electron-forge/publisher-github",
       config: {
         repository: {
-          owner: "victorbona",
+          owner: "vicotrbb",
           name: "sqltemple",
         },
         prerelease: false,

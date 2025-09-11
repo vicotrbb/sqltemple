@@ -23,9 +23,12 @@ module.exports = {
   },
   resolve: {
     extensions: [".ts", ".js"],
+    preferRelative: false,
     fallback: {
       "cloudflare:sockets": false,
     },
+    mainFields: ["module", "main"],
+    conditionNames: ["node", "require"],
   },
   plugins: [
     new webpack.IgnorePlugin({

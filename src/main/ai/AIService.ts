@@ -26,10 +26,12 @@ export class AIService {
     return this.providerName;
   }
 
-  getAvailableProviders(): Array<{name: string, displayName: string}> {
+  getAvailableProviders(): Array<{name: string, displayName: string, isLocal: boolean, requiresApiKey: boolean}> {
     return aiProviderRegistry.getAllProviders().map(p => ({
       name: p.name,
-      displayName: p.displayName
+      displayName: p.displayName,
+      isLocal: p.isLocal,
+      requiresApiKey: p.requiresApiKey()
     }));
   }
 
@@ -48,6 +50,11 @@ export class AIService {
   }
 
   async setConfig(config: AIConfig): Promise<{ success: boolean; errors?: string[] }> {
+    // Switch to the specified provider
+    if (!this.setProvider(config.provider)) {
+      return { success: false, errors: [`Unknown provider: ${config.provider}`] };
+    }
+
     const validation = this.validateConfig(config);
     if (!validation.isValid) {
       return { success: false, errors: validation.errors };
@@ -67,6 +74,11 @@ export class AIService {
   }
 
   setConfigSync(config: AIConfig) {
+    // Switch to the specified provider
+    if (!this.setProvider(config.provider)) {
+      throw new Error(`Unknown provider: ${config.provider}`);
+    }
+
     const validation = this.validateConfig(config);
     if (!validation.isValid) {
       throw new Error(`Invalid AI configuration: ${validation.errors.join(', ')}`);
@@ -75,11 +87,19 @@ export class AIService {
     this.config = config;
   }
 
-  getAvailableModels(): string[] {
-    if (!this.provider) {
+  async getAvailableModels(providerName?: string, config?: AIConfig): Promise<string[]> {
+    let provider = this.provider;
+    
+    // If a specific provider is requested, get it
+    if (providerName) {
+      provider = aiProviderRegistry.getProvider(providerName);
+    }
+    
+    if (!provider) {
       return [];
     }
-    return this.provider.getAvailableModels();
+    
+    return await provider.getAvailableModels(config);
   }
 
   async analyzeQueryPlan(query: string, plan: any): Promise<string> {

@@ -1,49 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { aiService } from '../services/AIService';
 
-interface AISettingsProps {
-  onClose: () => void;
+interface AIProvider {
+  name: string;
+  displayName: string;
+  isLocal?: boolean;
+  requiresApiKey?: boolean;
 }
 
-export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
+interface AISettingsProps {
+  onClose: () => void;
+  embedded?: boolean;
+}
+
+export const AISettings: React.FC<AISettingsProps> = ({ onClose, embedded = false }) => {
+  const [provider, setProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gpt-4o-mini');
+  const [model, setModel] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
   const [models, setModels] = useState<string[]>([]);
+  const [providers, setProviders] = useState<AIProvider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   useEffect(() => {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    loadModels();
+  }, [provider, apiKey, baseUrl]);
+
   const loadSettings = async () => {
     try {
-      const modelsResult = await aiService.getModels();
-      if (modelsResult.success && modelsResult.data) {
-        setModels(modelsResult.data);
+      const providersResult = await aiService.getProviders();
+      if (providersResult.success && providersResult.data) {
+        setProviders(providersResult.data);
       }
-
       const configResult = await aiService.getConfig();
       if (configResult.success && configResult.data) {
-        setApiKey(configResult.data.apiKey);
-        setModel(configResult.data.model);
+        setProvider(configResult.data.provider || 'openai');
+        setApiKey(configResult.data.apiKey || '');
+        setModel(configResult.data.model || '');
+        setBaseUrl(configResult.data.baseUrl || '');
       }
     } catch (err) {
       setError('Failed to load AI settings');
     }
   };
 
+  const loadModels = async () => {
+    try {
+      const config = {
+        provider,
+        apiKey,
+        model: '',
+        baseUrl: baseUrl || undefined
+      };
+      
+      const modelsResult = await aiService.getModels(provider, config);
+      if (modelsResult.success && modelsResult.data) {
+        setModels(modelsResult.data);
+        
+        if (!model && modelsResult.data.length > 0) {
+          if (provider === 'openai') {
+            setModel('gpt-4o-mini');
+          } else if (provider === 'claude') {
+            setModel('claude-3-5-sonnet-20241022');
+          } else {
+            setModel(modelsResult.data[0]);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load models:', err);
+      setModels([]);
+    }
+  };
+
+  const getCurrentProvider = (): AIProvider | undefined => {
+    return providers.find(p => p.name === provider);
+  };
+
+  const getDefaultBaseUrl = (): string => {
+    const currentProvider = getCurrentProvider();
+    if (provider === 'ollama') return 'http://localhost:11434';
+    if (provider === 'lmstudio') return 'http://localhost:1234';
+    return '';
+  };
+
+  const isApiKeyRequired = (): boolean => {
+    const currentProvider = getCurrentProvider();
+    return currentProvider?.requiresApiKey !== false && !currentProvider?.isLocal;
+  };
+
+  const isLocalProvider = (): boolean => {
+    const currentProvider = getCurrentProvider();
+    return currentProvider?.isLocal === true;
+  };
+
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider);
+    setApiKey('');
+    setModel('');
+    setBaseUrl(getDefaultBaseUrl());
+    setError(null);
+  };
+
+  const testConnection = async () => {
+    setTestingConnection(true);
+    setError(null);
+
+    const config = {
+      provider,
+      apiKey: apiKey || undefined,
+      model: model || 'test-model',
+      baseUrl: baseUrl || undefined
+    };
+
+    try {
+      const result = await aiService.validateConfig(config);
+      if (result.success) {
+        setError(null);
+        alert('Connection test successful!');
+      } else {
+        setError(result.error || 'Connection test failed');
+      }
+    } catch (err) {
+      setError('Connection test failed');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!apiKey.trim()) {
-      setError('API key is required');
+    if (isApiKeyRequired() && !apiKey.trim()) {
+      setError('API key is required for this provider');
+      return;
+    }
+
+    if (!model.trim()) {
+      setError('Model selection is required');
       return;
     }
 
     setLoading(true);
     setError(null);
 
+    const config = {
+      provider,
+      apiKey: apiKey || undefined,
+      model,
+      baseUrl: baseUrl || undefined
+    };
+
     try {
-      const result = await aiService.setConfig({ apiKey, model });
+      const result = await aiService.setConfig(config);
       if (result.success) {
         onClose();
       } else {
@@ -56,25 +169,66 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-vscode-bg-secondary border border-vscode-border rounded-lg p-6 w-[500px] max-w-[90vw]">
-        <h2 className="text-lg font-semibold mb-4">AI Settings</h2>
+  const settingsContent = (
+    <div className={embedded ? '' : 'bg-vscode-bg-secondary border border-vscode-border rounded-lg p-6 w-[600px] max-w-[90vw] max-h-[90vh] overflow-y-auto'}>
+      {!embedded && <h2 className="text-lg font-semibold mb-4">AI Settings</h2>}
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">OpenAI API Key</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+            <label className="block text-sm font-medium mb-1">AI Provider</label>
+            <select
+              value={provider}
+              onChange={(e) => handleProviderChange(e.target.value)}
               className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm focus:outline-none focus:border-vscode-blue"
-              placeholder="sk-..."
-            />
+            >
+              {providers.map((p) => (
+                <option key={p.name} value={p.name}>
+                  {p.displayName} {p.isLocal ? '(Local)' : ''}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-vscode-text-tertiary mt-1">
-              Your API key is stored locally and never sent to our servers
+              Choose your preferred AI provider. Local providers run on your machine.
             </p>
           </div>
+
+          {isLocalProvider() && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Server URL</label>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm focus:outline-none focus:border-vscode-blue"
+                placeholder={getDefaultBaseUrl()}
+              />
+              <p className="text-xs text-vscode-text-tertiary mt-1">
+                The URL where your {getCurrentProvider()?.displayName} server is running
+              </p>
+            </div>
+          )}
+
+          {isApiKeyRequired() && (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {getCurrentProvider()?.displayName} API Key
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm focus:outline-none focus:border-vscode-blue"
+                placeholder={
+                  provider === 'openai' ? 'sk-...' : 
+                  provider === 'claude' ? 'sk-ant-...' : 
+                  'Enter your API key'
+                }
+              />
+              <p className="text-xs text-vscode-text-tertiary mt-1">
+                Your API key is stored locally and encrypted
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Model</label>
@@ -82,38 +236,65 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
               value={model}
               onChange={(e) => setModel(e.target.value)}
               className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm focus:outline-none focus:border-vscode-blue"
+              disabled={models.length === 0}
             >
+              {models.length === 0 && (
+                <option value="">
+                  {isLocalProvider() ? 'No models available (check server connection)' : 'Loading models...'}
+                </option>
+              )}
               {models.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
             <p className="text-xs text-vscode-text-tertiary mt-1">
-              Different models have different capabilities and costs. GPT-4o and o1 models are more capable but more expensive.
+              {provider === 'openai' && 'Different models have different capabilities and costs. GPT-4o and o1 models are more capable but more expensive.'}
+              {provider === 'claude' && 'Claude models offer different speeds and capabilities. Sonnet provides the best balance of speed and quality.'}
+              {isLocalProvider() && 'Available models from your local server. Make sure the server is running and accessible.'}
             </p>
           </div>
+
+          {(isLocalProvider() || (isApiKeyRequired() && apiKey)) && (
+            <div>
+              <button
+                onClick={testConnection}
+                className="px-4 py-2 text-sm bg-vscode-bg-tertiary hover:bg-vscode-bg-quaternary border border-vscode-border rounded transition-colors"
+                disabled={testingConnection}
+              >
+                {testingConnection ? 'Testing...' : 'Test Connection'}
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="text-vscode-red text-sm">{error}</div>
           )}
 
-          <div className="flex justify-end gap-2 pt-4">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm bg-vscode-bg-tertiary hover:bg-vscode-bg-quaternary border border-vscode-border rounded transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 text-sm bg-vscode-blue hover:bg-vscode-blue-hover text-white rounded transition-colors"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+          {!embedded && (
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm bg-vscode-bg-tertiary hover:bg-vscode-bg-quaternary border border-vscode-border rounded transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 text-sm bg-vscode-blue hover:bg-vscode-blue-hover text-white rounded transition-colors"
+                disabled={loading || models.length === 0}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+    </div>
+  );
+
+  return embedded ? settingsContent : (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {settingsContent}
     </div>
   );
 };

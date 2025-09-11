@@ -118,12 +118,14 @@ export class StorageManager {
       )
     `);
 
+
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_history_connection 
       ON query_history(connection_id);
       
       CREATE INDEX IF NOT EXISTS idx_history_run_at 
       ON query_history(run_at DESC);
+
     `);
   }
 
@@ -243,29 +245,50 @@ export class StorageManager {
     stmt.run(key, value);
   }
 
-  async saveAIConfig(config: { apiKey: string; model: string }): Promise<void> {
-    const encryptedApiKey = this.encrypt(config.apiKey);
-    await this.setSetting("ai_api_key", encryptedApiKey);
+  async saveAIConfig(config: { provider: string; apiKey?: string; model: string; baseUrl?: string }): Promise<void> {
+    await this.setSetting("ai_provider", config.provider);
     await this.setSetting("ai_model", config.model);
+    
+    if (config.apiKey) {
+      const encryptedApiKey = this.encrypt(config.apiKey);
+      await this.setSetting("ai_api_key", encryptedApiKey);
+    } else {
+      await this.setSetting("ai_api_key", "");
+    }
+    
+    if (config.baseUrl) {
+      await this.setSetting("ai_base_url", config.baseUrl);
+    } else {
+      await this.setSetting("ai_base_url", "");
+    }
   }
-
-  async getAIConfig(): Promise<{ apiKey: string; model: string } | null> {
-    const encryptedApiKey = await this.getSetting("ai_api_key");
+  
+  async getAIConfig(): Promise<{ provider: string; apiKey?: string; model: string; baseUrl?: string } | null> {
+    const provider = await this.getSetting("ai_provider");
     const model = await this.getSetting("ai_model");
-
-    if (!encryptedApiKey) {
+    const encryptedApiKey = await this.getSetting("ai_api_key");
+    const baseUrl = await this.getSetting("ai_base_url");
+    
+    // If no provider is set, default to OpenAI for backward compatibility
+    if (!provider) {
       return null;
     }
-
-    const apiKey = this.decrypt(encryptedApiKey);
-
+    
+    let apiKey: string | undefined;
+    if (encryptedApiKey && encryptedApiKey.trim() !== "") {
+      apiKey = this.decrypt(encryptedApiKey);
+    }
+    
     return {
+      provider,
       apiKey,
       model: model || "gpt-4o-mini",
+      baseUrl: baseUrl && baseUrl.trim() !== "" ? baseUrl : undefined,
     };
   }
 
   close(): void {
     this.db.close();
   }
+
 }

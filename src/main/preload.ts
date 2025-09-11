@@ -39,12 +39,14 @@ contextBridge.exposeInMainWorld("api", {
   getQueryHistory: (connectionId?: number) =>
     ipcRenderer.invoke("get-query-history", connectionId),
 
-  aiSetConfig: (config: { apiKey: string; model: string }) =>
+  aiSetConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) =>
     ipcRenderer.invoke("ai-set-config", config),
-  aiValidateConfig: (config: { apiKey: string; model: string }) =>
+  aiValidateConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) =>
     ipcRenderer.invoke("ai-validate-config", config),
   aiGetConfig: () => ipcRenderer.invoke("ai-get-config"),
-  aiGetModels: () => ipcRenderer.invoke("ai-get-models"),
+  aiGetModels: (providerName?: string, config?: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => 
+    ipcRenderer.invoke("ai-get-models", providerName, config),
+  aiGetProviders: () => ipcRenderer.invoke("ai-get-providers"),
   aiAnalyzePlan: (query: string, plan: any) =>
     ipcRenderer.invoke("ai-analyze-plan", query, plan),
   aiExplainQuery: (sql: string) => ipcRenderer.invoke("ai-explain-query", sql),
@@ -54,6 +56,19 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("ai-optimize-query", sql),
   aiAnalyzeData: (prompt: string) =>
     ipcRenderer.invoke("ai-analyze-data", prompt),
+
+  localModel: {
+    list: () => ipcRenderer.invoke("localModel:list"),
+    status: (modelName: string) => ipcRenderer.invoke("localModel:status", modelName),
+    download: (modelName: string) => ipcRenderer.invoke("localModel:download", modelName),
+    cancelDownload: (modelName: string) => ipcRenderer.invoke("localModel:cancelDownload", modelName),
+    load: (modelName: string) => ipcRenderer.invoke("localModel:load", modelName),
+    unload: () => ipcRenderer.invoke("localModel:unload"),
+    delete: (modelName: string) => ipcRenderer.invoke("localModel:delete", modelName),
+    getSystemResources: () => ipcRenderer.invoke("localModel:getSystemResources"),
+    getRecommendation: (modelName: string) => ipcRenderer.invoke("localModel:getRecommendation", modelName),
+    getCurrentModel: () => ipcRenderer.invoke("localModel:getCurrentModel"),
+  },
 
   storage: {
     get: (key: string) => ipcRenderer.invoke("storage-get", key),
