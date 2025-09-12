@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+.webpack/
+
+# Config files
+*.config.js
+webpack.*.js
+
+# Generated files
+*.d.ts
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Documentation
+documentation/
+
+# Models
+*.gguf
+*.safetensors

@@ -85,7 +85,7 @@ module.exports = {
           name: "sqltemple",
         },
         prerelease: false,
-        draft: true,
+        draft: false,
       },
     },
   ],

@@ -11,12 +11,16 @@
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "prepare": "husky"
   },
   "config": {
     "forge": "./forge.config.js"
   },
   "keywords": [],
+  "repository": {
+    "url": "https://github.com/vicotrbb/sqltemple"
+  },
   "author": {
     "name": "Victor Bona",
     "email": "victor.bona@hotmail.com",
@@ -50,10 +54,13 @@
     "electron-squirrel-startup": "^1.0.1",
     "events": "^3.3.0",
     "html-webpack-plugin": "^5.6.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "mini-css-extract-plugin": "^2.9.2",
     "monaco-editor-webpack-plugin": "^7.1.0",
     "postcss": "^8.5.4",
     "postcss-loader": "^8.1.1",
+    "prettier": "^3.6.2",
     "process": "^0.11.10",
     "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.0",
@@ -72,5 +79,13 @@
     "pg": "^8.16.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ],
+    "*.{js,jsx,ts,tsx,json,md}": [
+      "prettier --write"
+    ]
   }
 }

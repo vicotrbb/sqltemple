@@ -34,11 +34,5 @@ module.exports = {
     node: true,
     es6: true,
   },
-  ignorePatterns: [
-    "dist/",
-    "out/",
-    "node_modules/",
-    "*.js",
-    "webpack.*.js",
-  ],
+  ignorePatterns: ["dist/", "out/", "node_modules/", "*.js", "webpack.*.js"],
 };

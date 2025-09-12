@@ -29,14 +29,14 @@ export class StorageManager {
 
   private getOrCreateEncryptionKey(): Buffer {
     const keyPath = path.join(app.getPath("userData"), ".encryption-key");
-    
+
     try {
       const fs = require("fs");
+
       if (fs.existsSync(keyPath)) {
         return fs.readFileSync(keyPath);
       }
-    } catch (error) {
-    }
+    } catch (error) {}
 
     const key = crypto.randomBytes(32);
     try {
@@ -45,35 +45,40 @@ export class StorageManager {
     } catch (error) {
       console.warn("Failed to save encryption key to disk:", error);
     }
-    
+
     return key;
   }
 
   private encrypt(text: string): string {
     if (!text) return text;
-    
+
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
-    
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
-    return iv.toString('hex') + ':' + encrypted;
+    const cipher = crypto.createCipheriv("aes-256-cbc", this.encryptionKey, iv);
+
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+
+    return iv.toString("hex") + ":" + encrypted;
   }
 
   private decrypt(encryptedText: string): string {
-    if (!encryptedText || encryptedText.split(':').length !== 2) return encryptedText;
-    
+    if (!encryptedText || encryptedText.split(":").length !== 2)
+      return encryptedText;
+
     try {
-      const parts = encryptedText.split(':');
-      const iv = Buffer.from(parts[0], 'hex');
+      const parts = encryptedText.split(":");
+      const iv = Buffer.from(parts[0], "hex");
       const encrypted = parts[1];
-      
-      const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);
-      
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      
+
+      const decipher = crypto.createDecipheriv(
+        "aes-256-cbc",
+        this.encryptionKey,
+        iv
+      );
+
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+
       return decrypted;
     } catch (error) {
       console.error("Failed to decrypt data:", error);
@@ -118,7 +123,6 @@ export class StorageManager {
       )
     `);
 
-
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_history_connection 
       ON query_history(connection_id);
@@ -132,16 +136,18 @@ export class StorageManager {
   async getConnections(): Promise<DatabaseConnectionConfig[]> {
     const stmt = this.db.prepare("SELECT * FROM connections ORDER BY name");
     const connections = stmt.all() as DatabaseConnectionConfig[];
-    
-    return connections.map(conn => ({
+
+    return connections.map((conn) => ({
       ...conn,
-      password: conn.password ? this.decrypt(conn.password) : undefined
+      password: conn.password ? this.decrypt(conn.password) : undefined,
     }));
   }
 
   async saveConnection(connection: DatabaseConnectionConfig): Promise<number> {
-    const encryptedPassword = connection.password ? this.encrypt(connection.password) : null;
-    
+    const encryptedPassword = connection.password
+      ? this.encrypt(connection.password)
+      : null;
+
     if (connection.id) {
       const stmt = this.db.prepare(`
         UPDATE connections 
@@ -245,40 +251,50 @@ export class StorageManager {
     stmt.run(key, value);
   }
 
-  async saveAIConfig(config: { provider: string; apiKey?: string; model: string; baseUrl?: string }): Promise<void> {
+  async saveAIConfig(config: {
+    provider: string;
+    apiKey?: string;
+    model: string;
+    baseUrl?: string;
+  }): Promise<void> {
     await this.setSetting("ai_provider", config.provider);
     await this.setSetting("ai_model", config.model);
-    
+
     if (config.apiKey) {
       const encryptedApiKey = this.encrypt(config.apiKey);
       await this.setSetting("ai_api_key", encryptedApiKey);
     } else {
       await this.setSetting("ai_api_key", "");
     }
-    
+
     if (config.baseUrl) {
       await this.setSetting("ai_base_url", config.baseUrl);
     } else {
       await this.setSetting("ai_base_url", "");
     }
   }
-  
-  async getAIConfig(): Promise<{ provider: string; apiKey?: string; model: string; baseUrl?: string } | null> {
+
+  async getAIConfig(): Promise<{
+    provider: string;
+    apiKey?: string;
+    model: string;
+    baseUrl?: string;
+  } | null> {
     const provider = await this.getSetting("ai_provider");
     const model = await this.getSetting("ai_model");
     const encryptedApiKey = await this.getSetting("ai_api_key");
     const baseUrl = await this.getSetting("ai_base_url");
-    
+
     // If no provider is set, default to OpenAI for backward compatibility
     if (!provider) {
       return null;
     }
-    
+
     let apiKey: string | undefined;
     if (encryptedApiKey && encryptedApiKey.trim() !== "") {
       apiKey = this.decrypt(encryptedApiKey);
     }
-    
+
     return {
       provider,
       apiKey,
@@ -290,5 +306,4 @@ export class StorageManager {
   close(): void {
     this.db.close();
   }
-
 }
