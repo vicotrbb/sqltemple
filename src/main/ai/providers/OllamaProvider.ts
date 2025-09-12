@@ -1,4 +1,10 @@
-import { BaseAIProvider, AIConfig, AIPrompt, AIResponse, AIValidationResult } from "./AIProvider";
+import {
+  BaseAIProvider,
+  AIConfig,
+  AIPrompt,
+  AIResponse,
+  AIValidationResult,
+} from "./AIProvider";
 
 export class OllamaProvider extends BaseAIProvider {
   readonly name = "ollama";
@@ -13,89 +19,92 @@ export class OllamaProvider extends BaseAIProvider {
   validateConfig(config: AIConfig): AIValidationResult {
     const errors: string[] = [];
 
-    if (!config.model || typeof config.model !== 'string') {
-      errors.push('Model selection is required');
+    if (!config.model || typeof config.model !== "string") {
+      errors.push("Model selection is required");
     } else if (config.model.trim().length === 0) {
-      errors.push('Model name cannot be empty');
+      errors.push("Model name cannot be empty");
     }
 
     const baseUrl = config.baseUrl || this.defaultBaseUrl;
     if (!baseUrl) {
-      errors.push('Base URL is required');
+      errors.push("Base URL is required");
     } else {
       try {
         new URL(baseUrl);
       } catch {
-        errors.push('Invalid base URL format');
+        errors.push("Invalid base URL format");
       }
     }
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
-  async validateApiKey(config: AIConfig): Promise<{ isValid: boolean; error?: string }> {
+  async validateApiKey(
+    config: AIConfig
+  ): Promise<{ isValid: boolean; error?: string }> {
     try {
       const baseUrl = config.baseUrl || this.defaultBaseUrl;
       const response = await fetch(`${baseUrl}/api/tags`);
-      
+
       if (!response.ok) {
-        return { 
-          isValid: false, 
-          error: `Failed to connect to Ollama server: ${response.status} ${response.statusText}` 
+        return {
+          isValid: false,
+          error: `Failed to connect to Ollama server: ${response.status} ${response.statusText}`,
         };
       }
-      
+
       const data = await response.json();
       if (!data.models || !Array.isArray(data.models)) {
-        return { 
-          isValid: false, 
-          error: 'Invalid response from Ollama server' 
+        return {
+          isValid: false,
+          error: "Invalid response from Ollama server",
         };
       }
-      
+
       return { isValid: true };
     } catch (error: any) {
-      let errorMessage = 'Failed to connect to Ollama server';
-      
-      if (error.code === 'ECONNREFUSED') {
-        errorMessage = 'Cannot connect to Ollama. Make sure Ollama is running and accessible.';
+      let errorMessage = "Failed to connect to Ollama server";
+
+      if (error.code === "ECONNREFUSED") {
+        errorMessage =
+          "Cannot connect to Ollama. Make sure Ollama is running and accessible.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       return { isValid: false, error: errorMessage };
     }
   }
 
   async getAvailableModels(config?: AIConfig): Promise<string[]> {
     try {
-      const baseUrl = (config?.baseUrl) || this.defaultBaseUrl;
+      const baseUrl = config?.baseUrl || this.defaultBaseUrl;
       const response = await fetch(`${baseUrl}/api/tags`);
-      
+
       if (!response.ok) {
-        console.warn('Failed to fetch Ollama models, returning empty list');
+        console.warn("Failed to fetch Ollama models, returning empty list");
         return [];
       }
-      
+
       const data = await response.json();
       return data.models?.map((model: any) => model.name) || [];
     } catch (error) {
-      console.warn('Error fetching Ollama models:', error);
+      console.warn("Error fetching Ollama models:", error);
       return [];
     }
   }
 
   async complete(prompt: AIPrompt, config: AIConfig): Promise<AIResponse> {
     const baseUrl = config.baseUrl || this.defaultBaseUrl;
-    
+
     try {
       const response = await fetch(`${baseUrl}/api/generate`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: config.model,
@@ -104,7 +113,7 @@ export class OllamaProvider extends BaseAIProvider {
           options: {
             temperature: prompt.temperature ?? 0.7,
             num_predict: prompt.maxTokens ?? 2000,
-          }
+          },
         }),
       });
 
@@ -113,15 +122,14 @@ export class OllamaProvider extends BaseAIProvider {
       }
 
       const data = await response.json();
-      
+
       return {
         content: data.response || "No response from Ollama",
         usage: {
-          // Ollama doesn't provide detailed token usage
           promptTokens: undefined,
           completionTokens: undefined,
           totalTokens: undefined,
-        }
+        },
       };
     } catch (error: any) {
       this.handleError(error);
@@ -133,10 +141,10 @@ export class OllamaProvider extends BaseAIProvider {
   }
 
   supportsVision(): boolean {
-    return false; // Most Ollama models don't support vision
+    return false;
   }
 
   supportsToolCalling(): boolean {
-    return false; // Most Ollama models don't support tool calling
+    return false;
   }
 }

@@ -133,7 +133,6 @@ export const setMockModelsResponse = (
   });
 };
 
-// Common mock responses
 export const mockResponses = {
   queryGeneration: createMockCompletion("SELECT * FROM users WHERE id = 1;"),
   queryExplanation: createMockCompletion(

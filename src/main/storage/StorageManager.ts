@@ -285,7 +285,6 @@ export class StorageManager {
     const encryptedApiKey = await this.getSetting("ai_api_key");
     const baseUrl = await this.getSetting("ai_base_url");
 
-    // If no provider is set, default to OpenAI for backward compatibility
     if (!provider) {
       return null;
     }

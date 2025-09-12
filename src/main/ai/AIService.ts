@@ -26,33 +26,44 @@ export class AIService {
     return this.providerName;
   }
 
-  getAvailableProviders(): Array<{name: string, displayName: string, isLocal: boolean, requiresApiKey: boolean}> {
-    return aiProviderRegistry.getAllProviders().map(p => ({
+  getAvailableProviders(): Array<{
+    name: string;
+    displayName: string;
+    isLocal: boolean;
+    requiresApiKey: boolean;
+  }> {
+    return aiProviderRegistry.getAllProviders().map((p) => ({
       name: p.name,
       displayName: p.displayName,
       isLocal: p.isLocal,
-      requiresApiKey: p.requiresApiKey()
+      requiresApiKey: p.requiresApiKey(),
     }));
   }
 
   validateConfig(config: AIConfig): { isValid: boolean; errors: string[] } {
     if (!this.provider) {
-      return { isValid: false, errors: ['No AI provider configured'] };
+      return { isValid: false, errors: ["No AI provider configured"] };
     }
     return this.provider.validateConfig(config);
   }
 
-  async validateApiKey(config: AIConfig): Promise<{ isValid: boolean; error?: string }> {
+  async validateApiKey(
+    config: AIConfig
+  ): Promise<{ isValid: boolean; error?: string }> {
     if (!this.provider) {
-      return { isValid: false, error: 'No AI provider configured' };
+      return { isValid: false, error: "No AI provider configured" };
     }
     return this.provider.validateApiKey(config);
   }
 
-  async setConfig(config: AIConfig): Promise<{ success: boolean; errors?: string[] }> {
-    // Switch to the specified provider
+  async setConfig(
+    config: AIConfig
+  ): Promise<{ success: boolean; errors?: string[] }> {
     if (!this.setProvider(config.provider)) {
-      return { success: false, errors: [`Unknown provider: ${config.provider}`] };
+      return {
+        success: false,
+        errors: [`Unknown provider: ${config.provider}`],
+      };
     }
 
     const validation = this.validateConfig(config);
@@ -63,42 +74,51 @@ export class AIService {
     try {
       const apiValidation = await this.validateApiKey(config);
       if (!apiValidation.isValid) {
-        return { success: false, errors: [apiValidation.error || 'API key validation failed'] };
+        return {
+          success: false,
+          errors: [apiValidation.error || "API key validation failed"],
+        };
       }
 
       this.config = config;
       return { success: true };
     } catch (error: any) {
-      return { success: false, errors: [`Failed to configure AI service: ${error.message}`] };
+      return {
+        success: false,
+        errors: [`Failed to configure AI service: ${error.message}`],
+      };
     }
   }
 
   setConfigSync(config: AIConfig) {
-    // Switch to the specified provider
     if (!this.setProvider(config.provider)) {
       throw new Error(`Unknown provider: ${config.provider}`);
     }
 
     const validation = this.validateConfig(config);
     if (!validation.isValid) {
-      throw new Error(`Invalid AI configuration: ${validation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid AI configuration: ${validation.errors.join(", ")}`
+      );
     }
 
     this.config = config;
   }
 
-  async getAvailableModels(providerName?: string, config?: AIConfig): Promise<string[]> {
+  async getAvailableModels(
+    providerName?: string,
+    config?: AIConfig
+  ): Promise<string[]> {
     let provider = this.provider;
-    
-    // If a specific provider is requested, get it
+
     if (providerName) {
       provider = aiProviderRegistry.getProvider(providerName);
     }
-    
+
     if (!provider) {
       return [];
     }
-    
+
     return await provider.getAvailableModels(config);
   }
 
@@ -136,7 +156,10 @@ ${JSON.stringify(plan, null, 2)}
 
 Provide a detailed analysis with specific optimization recommendations.`;
 
-    const response = await this.provider.complete({ systemPrompt, userPrompt }, this.config);
+    const response = await this.provider.complete(
+      { systemPrompt, userPrompt },
+      this.config
+    );
     return response.content;
   }
 
@@ -171,7 +194,10 @@ ${JSON.stringify(schema, null, 2)}`
 
 Provide a comprehensive explanation that helps understand what this query does and how it works.`;
 
-    const response = await this.provider.complete({ systemPrompt, userPrompt }, this.config);
+    const response = await this.provider.complete(
+      { systemPrompt, userPrompt },
+      this.config
+    );
     return response.content;
   }
 
@@ -201,11 +227,14 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the SQL query without any explanations or markdown formatting.`;
 
-    const response = await this.provider.complete({
-      systemPrompt,
-      userPrompt,
-      temperature: 0.3,
-    }, this.config);
+    const response = await this.provider.complete(
+      {
+        systemPrompt,
+        userPrompt,
+        temperature: 0.3,
+      },
+      this.config
+    );
     return this.cleanSQLResponse(response.content);
   }
 
@@ -240,11 +269,14 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the optimized SQL query.`;
 
-    const response = await this.provider.complete({
-      systemPrompt,
-      userPrompt,
-      temperature: 0.2,
-    }, this.config);
+    const response = await this.provider.complete(
+      {
+        systemPrompt,
+        userPrompt,
+        temperature: 0.2,
+      },
+      this.config
+    );
     return this.cleanSQLResponse(response.content);
   }
 
@@ -264,12 +296,15 @@ When analyzing data, you should:
 
 Return your response as valid JSON in the exact format requested, without any markdown formatting or additional text.`;
 
-    const response = await this.provider.complete({
-      systemPrompt,
-      userPrompt: prompt,
-      temperature: 0.7,
-      maxTokens: 1000,
-    }, this.config);
+    const response = await this.provider.complete(
+      {
+        systemPrompt,
+        userPrompt: prompt,
+        temperature: 0.7,
+        maxTokens: 1000,
+      },
+      this.config
+    );
 
     return response.content;
   }
@@ -282,5 +317,4 @@ Return your response as valid JSON in the exact format requested, without any ma
 
     return cleaned.trim();
   }
-
 }

@@ -1,9 +1,9 @@
 export interface AIConfig {
   provider: string;
-  apiKey?: string; // Optional for local providers
+  apiKey?: string;
   model: string;
-  baseUrl?: string; // For local providers like Ollama, LM Studio
-  [key: string]: any; // Allow for provider-specific config
+  baseUrl?: string;
+  [key: string]: any;
 }
 
 export interface AIPrompt {
@@ -30,24 +30,21 @@ export interface AIValidationResult {
 export interface AIProvider {
   readonly name: string;
   readonly displayName: string;
-  readonly isLocal: boolean; // Whether this provider runs locally
-  readonly defaultBaseUrl?: string; // Default URL for local providers
+  readonly isLocal: boolean;
+  readonly defaultBaseUrl?: string;
 
-  // Configuration
   validateConfig(config: AIConfig): AIValidationResult;
   validateApiKey(
     config: AIConfig
   ): Promise<{ isValid: boolean; error?: string }>;
-  getAvailableModels(config?: AIConfig): Promise<string[]>; // Made async to support dynamic fetching
+  getAvailableModels(config?: AIConfig): Promise<string[]>;
 
-  // AI Operations
   complete(prompt: AIPrompt, config: AIConfig): Promise<AIResponse>;
 
-  // Provider-specific features
   supportsStreaming(): boolean;
   supportsVision(): boolean;
   supportsToolCalling(): boolean;
-  requiresApiKey(): boolean; // Whether API key is required
+  requiresApiKey(): boolean;
 }
 
 export abstract class BaseAIProvider implements AIProvider {

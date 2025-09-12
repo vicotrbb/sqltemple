@@ -30,10 +30,8 @@ const createMockClient = (): MockClient => ({
   removeListener: jest.fn(),
 });
 
-// Store mock clients for different connection configs
 export const mockClients = new Map<string, MockClient>();
 
-// Mock Client constructor - this is what gets imported from 'pg'
 export const Client = jest.fn((config?: any) => {
   const clientKey = config ? JSON.stringify(config) : "default";
 
@@ -44,12 +42,10 @@ export const Client = jest.fn((config?: any) => {
   return mockClients.get(clientKey);
 });
 
-// Default export that mocks the entire 'pg' module
 export default {
   Client,
 };
 
-// Helper functions for tests
 export const getMockClient = (config?: any): MockClient => {
   const clientKey = config ? JSON.stringify(config) : "default";
   return mockClients.get(clientKey) || createMockClient();
@@ -77,7 +73,6 @@ export const setMockConnectionError = (error: Error, config?: any): void => {
   client.connect.mockRejectedValue(error);
 };
 
-// Mock some common PostgreSQL data types for field mapping
 export const mockFields = {
   textField: { name: "text_col", dataTypeID: 25 },
   integerField: { name: "int_col", dataTypeID: 23 },
@@ -87,7 +82,6 @@ export const mockFields = {
   numericField: { name: "num_col", dataTypeID: 1700 },
 };
 
-// Common mock responses
 export const mockResponses = {
   emptyResult: { rows: [], fields: [], rowCount: 0 },
   singleRow: {

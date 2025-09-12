@@ -1,26 +1,19 @@
-/** @type {import('jest').Config} */
 module.exports = {
-  // Use ts-jest preset for TypeScript support
   preset: 'ts-jest',
   
-  // Test environment
   testEnvironment: 'node',
   
-  // Setup files
   setupFilesAfterEnv: ['<rootDir>/src/main/__tests__/setup.ts'],
   
-  // Test file patterns
   testMatch: [
     '<rootDir>/src/main/__tests__/**/*.test.ts',
     '<rootDir>/src/main/__tests__/**/*.spec.ts'
   ],
   
-  // Module name mapping for path aliases
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   
-  // Ignore patterns
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
@@ -28,15 +21,13 @@ module.exports = {
     '/coverage/'
   ],
   
-  // Coverage collection
   collectCoverageFrom: [
     'src/main/**/*.ts',
     '!src/main/**/*.d.ts',
     '!src/main/__tests__/**',
-    '!src/main/main.ts' // Exclude main entry point as it's hard to test
+    '!src/main/main.ts'
   ],
   
-  // Coverage thresholds
   coverageThreshold: {
     global: {
       statements: 80,
@@ -58,19 +49,15 @@ module.exports = {
     }
   },
   
-  // Coverage output
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html', 'lcov'],
   
-  // Clear mocks between tests
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
   
-  // Verbose output for better debugging
   verbose: true,
   
-  // Transform configuration
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: {
@@ -82,13 +69,10 @@ module.exports = {
     }]
   },
   
-  // Module file extensions
   moduleFileExtensions: ['ts', 'js', 'json'],
   
-  // Timeout for tests (30 seconds)
   testTimeout: 30000,
   
-  // Global setup/teardown
   globalSetup: '<rootDir>/src/main/__tests__/globalSetup.ts',
   globalTeardown: '<rootDir>/src/main/__tests__/globalTeardown.ts'
 };

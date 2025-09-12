@@ -5,7 +5,6 @@ import {
   createTestDatabaseSchema,
 } from "../../utils/testFactories";
 
-// Create a simplified mock for AIService testing - similar approach to other tests
 const mockAIService = {
   setProvider: jest.fn() as jest.MockedFunction<any>,
   getProviderName: jest.fn() as jest.MockedFunction<any>,
@@ -23,7 +22,6 @@ const mockAIService = {
 describe("AIService", () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset our mock functions
     Object.values(mockAIService).forEach((mockFn) => {
       if (jest.isMockFunction(mockFn)) {
         mockFn.mockReset();

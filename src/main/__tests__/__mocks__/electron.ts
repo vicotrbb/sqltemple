@@ -82,7 +82,6 @@ export const dialog = mockDialog;
 export const ipcMain = mockIpcMain;
 export const Menu = mockMenu;
 
-// Additional Electron APIs that might be used
 export const shell = {
   openExternal: jest.fn(),
   showItemInFolder: jest.fn(),

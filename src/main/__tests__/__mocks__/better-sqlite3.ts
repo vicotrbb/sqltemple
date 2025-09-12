@@ -37,7 +37,6 @@ const createMockDatabase = (): MockDatabase => {
   };
 };
 
-// Mock database instances for different test scenarios
 export const mockDatabases = new Map<string, MockDatabase>();
 
 const Database = jest.fn((path?: string) => {
@@ -50,7 +49,6 @@ const Database = jest.fn((path?: string) => {
   return mockDatabases.get(dbPath);
 });
 
-// Helper functions for tests
 export const getMockDatabase = (path: string = ":memory:"): MockDatabase => {
   return mockDatabases.get(path) || createMockDatabase();
 };

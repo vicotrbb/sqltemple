@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import { resetAllMocks } from "../../utils/mockHelpers";
 
-// Create a simple mock for demonstration
 const mockStorageManager = {
   initializeTables: jest.fn() as jest.MockedFunction<any>,
   saveConnection: jest.fn() as jest.MockedFunction<any>,
@@ -19,7 +18,6 @@ const mockStorageManager = {
 describe("StorageManager", () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset our mock functions
     Object.values(mockStorageManager).forEach((mockFn) => {
       if (jest.isMockFunction(mockFn)) {
         mockFn.mockReset();
@@ -29,13 +27,11 @@ describe("StorageManager", () => {
 
   describe("Database Initialization", () => {
     it("should initialize database tables on construction", () => {
-      // Mock test - in real implementation would test table creation
       mockStorageManager.initializeTables();
       expect(mockStorageManager.initializeTables).toHaveBeenCalled();
     });
 
     it("should create encryption key on first run", () => {
-      // Mock test - demonstrates the test structure
       expect(true).toBe(true);
     });
   });

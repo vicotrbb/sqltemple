@@ -1,5 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { BaseAIProvider, AIConfig, AIPrompt, AIResponse, AIValidationResult } from "./AIProvider";
+import {
+  BaseAIProvider,
+  AIConfig,
+  AIPrompt,
+  AIResponse,
+  AIValidationResult,
+} from "./AIProvider";
 
 export class ClaudeProvider extends BaseAIProvider {
   readonly name = "claude";
@@ -13,51 +19,52 @@ export class ClaudeProvider extends BaseAIProvider {
   validateConfig(config: AIConfig): AIValidationResult {
     const errors: string[] = [];
 
-    if (!config.apiKey || typeof config.apiKey !== 'string') {
-      errors.push('API key is required');
+    if (!config.apiKey || typeof config.apiKey !== "string") {
+      errors.push("API key is required");
     } else if (config.apiKey.trim().length === 0) {
-      errors.push('API key cannot be empty');
-    } else if (!config.apiKey.startsWith('sk-ant-')) {
+      errors.push("API key cannot be empty");
+    } else if (!config.apiKey.startsWith("sk-ant-")) {
       errors.push('API key must start with "sk-ant-"');
     } else if (config.apiKey.length < 30) {
-      errors.push('API key appears to be too short');
+      errors.push("API key appears to be too short");
     }
 
-    if (!config.model || typeof config.model !== 'string') {
-      errors.push('Model selection is required');
+    if (!config.model || typeof config.model !== "string") {
+      errors.push("Model selection is required");
     }
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
-  async validateApiKey(config: AIConfig): Promise<{ isValid: boolean; error?: string }> {
+  async validateApiKey(
+    config: AIConfig
+  ): Promise<{ isValid: boolean; error?: string }> {
     try {
       const anthropic = new Anthropic({ apiKey: config.apiKey });
-      
-      // Test the API key by making a simple completion request
+
       await anthropic.messages.create({
         model: "claude-3-haiku-20240307",
         max_tokens: 10,
         messages: [{ role: "user", content: "Test" }],
       });
-      
+
       return { isValid: true };
     } catch (error: any) {
-      let errorMessage = 'API key validation failed';
-      
+      let errorMessage = "API key validation failed";
+
       if (error.status === 401) {
-        errorMessage = 'Invalid API key. Please check your Anthropic API key.';
+        errorMessage = "Invalid API key. Please check your Anthropic API key.";
       } else if (error.status === 429) {
-        errorMessage = 'API rate limit exceeded. Please try again later.';
+        errorMessage = "API rate limit exceeded. Please try again later.";
       } else if (error.status === 403) {
-        errorMessage = 'API key does not have sufficient permissions.';
+        errorMessage = "API key does not have sufficient permissions.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       return { isValid: false, error: errorMessage };
     }
   }
@@ -81,23 +88,21 @@ export class ClaudeProvider extends BaseAIProvider {
         max_tokens: prompt.maxTokens ?? 2000,
         temperature: prompt.temperature ?? 0.7,
         system: prompt.systemPrompt,
-        messages: [
-          { role: "user", content: prompt.userPrompt }
-        ],
+        messages: [{ role: "user", content: prompt.userPrompt }],
       });
 
-      // Extract content from Claude's response format
       const content = response.content
-        .map(block => block.type === 'text' ? block.text : '')
-        .join('');
+        .map((block) => (block.type === "text" ? block.text : ""))
+        .join("");
 
       return {
         content: content || "No response from Claude",
         usage: {
           promptTokens: response.usage.input_tokens,
           completionTokens: response.usage.output_tokens,
-          totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-        }
+          totalTokens:
+            response.usage.input_tokens + response.usage.output_tokens,
+        },
       };
     } catch (error: any) {
       this.handleError(error);

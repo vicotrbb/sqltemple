@@ -6,7 +6,6 @@ import {
   createTestDatabaseSchema,
 } from "../../utils/testFactories";
 
-// Create a simplified mock for PostgresClient testing
 const mockPostgresClient = {
   connect: jest.fn() as jest.MockedFunction<any>,
   disconnect: jest.fn() as jest.MockedFunction<any>,
@@ -19,7 +18,6 @@ const mockPostgresClient = {
 describe("PostgresClient", () => {
   beforeEach(() => {
     resetAllMocks();
-    // Reset our mock functions
     Object.values(mockPostgresClient).forEach((mockFn) => {
       if (jest.isMockFunction(mockFn)) {
         mockFn.mockReset();
