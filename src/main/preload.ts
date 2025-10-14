@@ -39,13 +39,28 @@ contextBridge.exposeInMainWorld("api", {
   getQueryHistory: (connectionId?: number) =>
     ipcRenderer.invoke("get-query-history", connectionId),
 
-  aiSetConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) =>
-    ipcRenderer.invoke("ai-set-config", config),
-  aiValidateConfig: (config: { provider: string; apiKey?: string; model: string; baseUrl?: string }) =>
-    ipcRenderer.invoke("ai-validate-config", config),
+  aiSetConfig: (config: {
+    provider: string;
+    apiKey?: string;
+    model: string;
+    baseUrl?: string;
+  }) => ipcRenderer.invoke("ai-set-config", config),
+  aiValidateConfig: (config: {
+    provider: string;
+    apiKey?: string;
+    model: string;
+    baseUrl?: string;
+  }) => ipcRenderer.invoke("ai-validate-config", config),
   aiGetConfig: () => ipcRenderer.invoke("ai-get-config"),
-  aiGetModels: (providerName?: string, config?: { provider: string; apiKey?: string; model: string; baseUrl?: string }) => 
-    ipcRenderer.invoke("ai-get-models", providerName, config),
+  aiGetModels: (
+    providerName?: string,
+    config?: {
+      provider: string;
+      apiKey?: string;
+      model: string;
+      baseUrl?: string;
+    }
+  ) => ipcRenderer.invoke("ai-get-models", providerName, config),
   aiGetProviders: () => ipcRenderer.invoke("ai-get-providers"),
   aiAnalyzePlan: (query: string, plan: any) =>
     ipcRenderer.invoke("ai-analyze-plan", query, plan),
@@ -59,29 +74,43 @@ contextBridge.exposeInMainWorld("api", {
 
   localModel: {
     list: () => ipcRenderer.invoke("localModel:list"),
-    status: (modelName: string) => ipcRenderer.invoke("localModel:status", modelName),
-    download: (modelName: string) => ipcRenderer.invoke("localModel:download", modelName),
-    cancelDownload: (modelName: string) => ipcRenderer.invoke("localModel:cancelDownload", modelName),
-    load: (modelName: string) => ipcRenderer.invoke("localModel:load", modelName),
+    status: (modelName: string) =>
+      ipcRenderer.invoke("localModel:status", modelName),
+    download: (modelName: string) =>
+      ipcRenderer.invoke("localModel:download", modelName),
+    cancelDownload: (modelName: string) =>
+      ipcRenderer.invoke("localModel:cancelDownload", modelName),
+    load: (modelName: string) =>
+      ipcRenderer.invoke("localModel:load", modelName),
     unload: () => ipcRenderer.invoke("localModel:unload"),
-    delete: (modelName: string) => ipcRenderer.invoke("localModel:delete", modelName),
-    getSystemResources: () => ipcRenderer.invoke("localModel:getSystemResources"),
-    getRecommendation: (modelName: string) => ipcRenderer.invoke("localModel:getRecommendation", modelName),
+    delete: (modelName: string) =>
+      ipcRenderer.invoke("localModel:delete", modelName),
+    getSystemResources: () =>
+      ipcRenderer.invoke("localModel:getSystemResources"),
+    getRecommendation: (modelName: string) =>
+      ipcRenderer.invoke("localModel:getRecommendation", modelName),
     getCurrentModel: () => ipcRenderer.invoke("localModel:getCurrentModel"),
   },
 
   storage: {
     get: (key: string) => ipcRenderer.invoke("storage-get", key),
-    set: (key: string, value: string) => ipcRenderer.invoke("storage-set", key, value),
+    set: (key: string, value: string) =>
+      ipcRenderer.invoke("storage-set", key, value),
   },
 
   openQueryFile: () => ipcRenderer.invoke("file:open-query"),
-  saveQueryFile: (content: string, currentFilePath?: string) => 
+  saveQueryFile: (content: string, currentFilePath?: string) =>
     ipcRenderer.invoke("file:save-query", content, currentFilePath),
-  saveQueryFileAs: (content: string) => 
+  saveQueryFileAs: (content: string) =>
     ipcRenderer.invoke("file:save-query-as", content),
   importConnections: () => ipcRenderer.invoke("file:import-connections"),
   exportConnections: () => ipcRenderer.invoke("file:export-connections"),
+
+  update: {
+    check: () => ipcRenderer.invoke("update:check"),
+    getStatus: () => ipcRenderer.invoke("update:getStatus"),
+    install: () => ipcRenderer.invoke("update:install"),
+  },
 
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => {

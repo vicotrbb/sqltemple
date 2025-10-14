@@ -28,17 +28,24 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<PreferencesTab>("general");
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const { 
-    config, 
-    updateGeneralSettings, 
-    updateAppearanceSettings, 
-    updateEditorSettings, 
-    updateAISettings, 
-    updateConnectionSettings, 
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState<boolean>(false);
+  const [currentVersion, setCurrentVersion] = useState<string>("");
+  const [isCheckingForUpdates, setIsCheckingForUpdates] =
+    useState<boolean>(false);
+  const [updateStatus, setUpdateStatus] = useState<string>("");
+  const {
+    config,
+    updateGeneralSettings,
+    updateAppearanceSettings,
+    updateEditorSettings,
+    updateAISettings,
+    updateConnectionSettings,
     resetSettings,
     hasUnsavedChanges,
-    isLoading 
+    isLoading,
   } = useConfig();
 
   const [localConfig, setLocalConfig] = useState(config);
@@ -46,6 +53,58 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
   useEffect(() => {
     setLocalConfig(config);
   }, [config]);
+
+  useEffect(() => {
+    loadUpdateSettings();
+  }, []);
+
+  const loadUpdateSettings = async () => {
+    try {
+      const autoUpdateResult =
+        await window.api.storage.get("autoUpdateEnabled");
+      if (autoUpdateResult.success && autoUpdateResult.value) {
+        setAutoUpdateEnabled(autoUpdateResult.value === "true");
+      }
+
+      const statusResult = await window.api.update.getStatus();
+      if (statusResult.success && statusResult.currentVersion) {
+        setCurrentVersion(statusResult.currentVersion);
+      }
+    } catch (error) {
+      console.error("Failed to load update settings:", error);
+    }
+  };
+
+  const handleAutoUpdateToggle = async (enabled: boolean) => {
+    try {
+      await window.api.storage.set("autoUpdateEnabled", enabled.toString());
+      setAutoUpdateEnabled(enabled);
+    } catch (error) {
+      console.error("Failed to save auto-update setting:", error);
+    }
+  };
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingForUpdates(true);
+    setUpdateStatus("Checking for updates...");
+
+    try {
+      const result = await window.api.update.check();
+      if (result.success) {
+        if (result.updateInfo) {
+          setUpdateStatus(`Update available: ${result.updateInfo.version}`);
+        } else {
+          setUpdateStatus("Your application is up to date");
+        }
+      } else {
+        setUpdateStatus(result.error || "Failed to check for updates");
+      }
+    } catch (error) {
+      setUpdateStatus("Failed to check for updates");
+    } finally {
+      setIsCheckingForUpdates(false);
+    }
+  };
 
   const tabs = [
     {
@@ -74,48 +133,54 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
 
   const handleSave = async () => {
     try {
-      setSaveStatus('saving');
-      
+      setSaveStatus("saving");
+
       if (localConfig.ai.apiKey && localConfig.ai.apiKey.trim()) {
         const aiValidation = await window.api.aiValidateConfig({
-          provider: 'openai', // Default to OpenAI for backward compatibility
+          provider: "openai", // Default to OpenAI for backward compatibility
           apiKey: localConfig.ai.apiKey,
-          model: localConfig.ai.model
+          model: localConfig.ai.model,
         });
-        
+
         if (!aiValidation.success) {
-          const errorMessage = aiValidation.errors?.join(', ') || 'AI configuration validation failed';
+          const errorMessage =
+            aiValidation.errors?.join(", ") ||
+            "AI configuration validation failed";
           alert(`AI Configuration Error: ${errorMessage}`);
-          setSaveStatus('error');
-          setTimeout(() => setSaveStatus('idle'), 3000);
+          setSaveStatus("error");
+          setTimeout(() => setSaveStatus("idle"), 3000);
           return;
         }
       }
-      
+
       await updateGeneralSettings(localConfig.general);
       await updateAppearanceSettings(localConfig.appearance);
       await updateEditorSettings(localConfig.editor);
       await updateAISettings(localConfig.ai);
       await updateConnectionSettings(localConfig.connections);
-      
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (error) {
-      console.error('Failed to save settings:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      console.error("Failed to save settings:", error);
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
     }
   };
 
   const handleReset = async () => {
-    if (confirm('Are you sure you want to reset all settings to defaults?')) {
+    if (confirm("Are you sure you want to reset all settings to defaults?")) {
       await resetSettings();
       setLocalConfig(config);
     }
   };
 
   const handleResetSection = async () => {
-    if (confirm(`Are you sure you want to reset ${activeTab} settings to defaults?`)) {
+    if (
+      confirm(
+        `Are you sure you want to reset ${activeTab} settings to defaults?`
+      )
+    ) {
       await resetSettings(activeTab);
       setLocalConfig(config);
     }
@@ -140,7 +205,7 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label 
+                  <label
                     htmlFor="auto-save-queries"
                     className="text-sm font-medium text-vscode-text"
                   >
@@ -156,9 +221,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.general.autoSaveQueries}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      general: { ...prev.general, autoSaveQueries: e.target.checked }
+                      general: {
+                        ...prev.general,
+                        autoSaveQueries: e.target.checked,
+                      },
                     }))
                   }
                   aria-describedby="auto-save-queries-desc"
@@ -178,9 +246,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   type="number"
                   value={localConfig.general.queryHistoryLimit}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      general: { ...prev.general, queryHistoryLimit: parseInt(e.target.value) || 100 }
+                      general: {
+                        ...prev.general,
+                        queryHistoryLimit: parseInt(e.target.value) || 100,
+                      },
                     }))
                   }
                   min="10"
@@ -203,9 +274,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.general.defaultConnectionOnStartup}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      general: { ...prev.general, defaultConnectionOnStartup: e.target.checked }
+                      general: {
+                        ...prev.general,
+                        defaultConnectionOnStartup: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -225,12 +299,67 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.general.confirmBeforeClosing}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      general: { ...prev.general, confirmBeforeClosing: e.target.checked }
+                      general: {
+                        ...prev.general,
+                        confirmBeforeClosing: e.target.checked,
+                      },
                     }))
                   }
                 />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium text-vscode-text mb-4">
+                Application Updates
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-vscode-text">
+                      Auto-update
+                    </label>
+                    <p className="text-xs text-vscode-text-secondary">
+                      Automatically check for and install updates
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="toggle"
+                    checked={autoUpdateEnabled}
+                    onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-vscode-text">
+                        Current version
+                      </label>
+                      <p className="text-xs text-vscode-text-secondary">
+                        {currentVersion || "Unknown"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCheckForUpdates}
+                      disabled={isCheckingForUpdates}
+                      className="px-3 py-1 bg-vscode-blue hover:bg-vscode-blue-light disabled:bg-vscode-bg-quaternary disabled:text-vscode-text-secondary text-white rounded text-sm font-medium transition-colors"
+                    >
+                      {isCheckingForUpdates
+                        ? "Checking..."
+                        : "Check for Updates"}
+                    </button>
+                  </div>
+
+                  {updateStatus && (
+                    <div className="text-xs text-vscode-text-secondary">
+                      {updateStatus}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -258,9 +387,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                 <select
                   value={localConfig.appearance.theme}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      appearance: { ...prev.appearance, theme: e.target.value as 'dark' | 'light' | 'system' }
+                      appearance: {
+                        ...prev.appearance,
+                        theme: e.target.value as "dark" | "light" | "system",
+                      },
                     }))
                   }
                   className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm"
@@ -281,9 +413,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   max="20"
                   value={localConfig.appearance.fontSize}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      appearance: { ...prev.appearance, fontSize: parseInt(e.target.value) }
+                      appearance: {
+                        ...prev.appearance,
+                        fontSize: parseInt(e.target.value),
+                      },
                     }))
                   }
                   className="w-full"
@@ -301,9 +436,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                 <select
                   value={localConfig.appearance.fontFamily}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      appearance: { ...prev.appearance, fontFamily: e.target.value as any }
+                      appearance: {
+                        ...prev.appearance,
+                        fontFamily: e.target.value as any,
+                      },
                     }))
                   }
                   className="w-full px-3 py-2 bg-vscode-bg border border-vscode-border rounded text-sm"
@@ -326,9 +464,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   step="0.1"
                   value={localConfig.appearance.uiScale}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      appearance: { ...prev.appearance, uiScale: parseFloat(e.target.value) }
+                      appearance: {
+                        ...prev.appearance,
+                        uiScale: parseFloat(e.target.value),
+                      },
                     }))
                   }
                   className="w-full"
@@ -371,9 +512,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.editor.showLineNumbers}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      editor: { ...prev.editor, showLineNumbers: e.target.checked }
+                      editor: {
+                        ...prev.editor,
+                        showLineNumbers: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -393,9 +537,9 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.editor.wordWrap}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      editor: { ...prev.editor, wordWrap: e.target.checked }
+                      editor: { ...prev.editor, wordWrap: e.target.checked },
                     }))
                   }
                 />
@@ -415,9 +559,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.editor.autoComplete}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      editor: { ...prev.editor, autoComplete: e.target.checked }
+                      editor: {
+                        ...prev.editor,
+                        autoComplete: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -436,9 +583,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   type="number"
                   value={localConfig.editor.tabSize}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      editor: { ...prev.editor, tabSize: parseInt(e.target.value) || 2 }
+                      editor: {
+                        ...prev.editor,
+                        tabSize: parseInt(e.target.value) || 2,
+                      },
                     }))
                   }
                   min="2"
@@ -461,9 +611,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.editor.formatOnSave}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      editor: { ...prev.editor, formatOnSave: e.target.checked }
+                      editor: {
+                        ...prev.editor,
+                        formatOnSave: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -507,9 +660,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   type="number"
                   value={localConfig.connections.defaultTimeout}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      connections: { ...prev.connections, defaultTimeout: parseInt(e.target.value) || 30 }
+                      connections: {
+                        ...prev.connections,
+                        defaultTimeout: parseInt(e.target.value) || 30,
+                      },
                     }))
                   }
                   min="5"
@@ -532,9 +688,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.connections.autoReconnect}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      connections: { ...prev.connections, autoReconnect: e.target.checked }
+                      connections: {
+                        ...prev.connections,
+                        autoReconnect: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -554,9 +713,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.connections.sslVerification}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      connections: { ...prev.connections, sslVerification: e.target.checked }
+                      connections: {
+                        ...prev.connections,
+                        sslVerification: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -576,9 +738,12 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   className="toggle"
                   checked={localConfig.connections.connectionPooling}
                   onChange={(e) =>
-                    setLocalConfig(prev => ({
+                    setLocalConfig((prev) => ({
                       ...prev,
-                      connections: { ...prev.connections, connectionPooling: e.target.checked }
+                      connections: {
+                        ...prev.connections,
+                        connectionPooling: e.target.checked,
+                      },
                     }))
                   }
                 />
@@ -603,11 +768,14 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
             </div>
             <div className="space-y-1 max-h-96 overflow-y-auto">
               {Object.entries(
-                localConfig.shortcuts.shortcuts.reduce((acc, shortcut) => {
-                  if (!acc[shortcut.category]) acc[shortcut.category] = [];
-                  acc[shortcut.category].push(shortcut);
-                  return acc;
-                }, {} as Record<string, typeof localConfig.shortcuts.shortcuts>)
+                localConfig.shortcuts.shortcuts.reduce(
+                  (acc, shortcut) => {
+                    if (!acc[shortcut.category]) acc[shortcut.category] = [];
+                    acc[shortcut.category].push(shortcut);
+                    return acc;
+                  },
+                  {} as Record<string, typeof localConfig.shortcuts.shortcuts>
+                )
               ).map(([category, shortcuts]) => (
                 <div key={category} className="mb-4">
                   <h4 className="text-sm font-medium text-vscode-text mb-2 opacity-80">
@@ -661,16 +829,26 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
         {/* Sidebar */}
         <div className="w-48 bg-vscode-bg-tertiary border-r border-vscode-border">
           <div className="p-4 border-b border-vscode-border">
-            <h2 className="text-lg font-medium text-vscode-text" id="preferences-title">
+            <h2
+              className="text-lg font-medium text-vscode-text"
+              id="preferences-title"
+            >
               Preferences
             </h2>
             {hasUnsavedChanges && (
-              <p className="text-xs text-vscode-text-secondary mt-1" aria-live="polite">
+              <p
+                className="text-xs text-vscode-text-secondary mt-1"
+                aria-live="polite"
+              >
                 • Unsaved changes
               </p>
             )}
           </div>
-          <nav className="p-2" role="tablist" aria-labelledby="preferences-title">
+          <nav
+            className="p-2"
+            role="tablist"
+            aria-labelledby="preferences-title"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -696,19 +874,19 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
         <div className="flex-1 flex flex-col">
           <div className="flex justify-between items-center p-4 border-b border-vscode-border">
             <div className="flex items-center space-x-2">
-              {saveStatus === 'saving' && (
+              {saveStatus === "saving" && (
                 <div className="flex items-center space-x-2 text-vscode-text-secondary">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-vscode-blue"></div>
                   <span className="text-xs">Saving...</span>
                 </div>
               )}
-              {saveStatus === 'saved' && (
+              {saveStatus === "saved" && (
                 <div className="flex items-center space-x-2 text-vscode-green">
                   <CheckIcon size={14} />
                   <span className="text-xs">Saved!</span>
                 </div>
               )}
-              {saveStatus === 'error' && (
+              {saveStatus === "error" && (
                 <div className="flex items-center space-x-2 text-vscode-error">
                   <AlertTriangleIcon size={14} />
                   <span className="text-xs">Failed to save</span>
@@ -723,7 +901,7 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
             </button>
           </div>
 
-          <div 
+          <div
             className="flex-1 p-6 overflow-y-auto"
             role="tabpanel"
             id={`${activeTab}-panel`}
@@ -748,10 +926,10 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
               </button>
               <button
                 onClick={handleSave}
-                disabled={saveStatus === 'saving'}
+                disabled={saveStatus === "saving"}
                 className="px-4 py-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {saveStatus === 'saving' ? 'Saving...' : 'Save'}
+                {saveStatus === "saving" ? "Saving..." : "Save"}
               </button>
             </div>
           </div>

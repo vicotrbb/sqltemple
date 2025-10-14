@@ -1,4 +1,5 @@
-import { ipcMain, dialog, BrowserWindow } from "electron";
+import { ipcMain, dialog, BrowserWindow, app } from "electron";
+import { autoUpdater } from "electron-updater";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { PostgresClient } from "../database/PostgresClient";
@@ -15,16 +16,7 @@ export async function initializeIpcHandlers(
   storage: StorageManager
 ): Promise<void> {
   storageManager = storage;
-  aiService = new AIService();
-
-  const savedConfig = await storageManager.getAIConfig();
-  if (savedConfig) {
-    try {
-      aiService.setConfigSync(savedConfig);
-    } catch (error) {
-      console.warn("Failed to load saved AI config:", error);
-    }
-  }
+  aiService = new AIService(storageManager);
 
   ipcMain.handle(
     "connect-database",
@@ -188,12 +180,16 @@ export async function initializeIpcHandlers(
       }
     ) => {
       try {
-        const result = await aiService.setConfig(config);
-        if (!result.success) {
+        const validation = aiService.validateConfig(config);
+        if (!validation.isValid) {
+          return { success: false, error: validation.errors.join("; ") };
+        }
+
+        const apiValidation = await aiService.validateApiKey(config);
+        if (!apiValidation.isValid) {
           return {
             success: false,
-            error:
-              result.errors?.join("; ") || "Configuration validation failed",
+            error: apiValidation.error || "API key validation failed",
           };
         }
 
@@ -726,6 +722,65 @@ export async function initializeIpcHandlers(
       }
     }
   );
+
+  // Update handlers
+  ipcMain.handle("update:check", async () => {
+    try {
+      if (!app.isPackaged) {
+        return {
+          success: false,
+          error: "Update checking is only available in packaged applications",
+        };
+      }
+
+      const result = await autoUpdater.checkForUpdates();
+      return {
+        success: true,
+        updateInfo: result?.updateInfo || null,
+        currentVersion: app.getVersion(),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || String(error),
+      };
+    }
+  });
+
+  ipcMain.handle("update:getStatus", async () => {
+    try {
+      return {
+        success: true,
+        currentVersion: app.getVersion(),
+        isPackaged: app.isPackaged,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || String(error),
+      };
+    }
+  });
+
+  ipcMain.handle("update:install", async () => {
+    try {
+      if (!app.isPackaged) {
+        return {
+          success: false,
+          error:
+            "Update installation is only available in packaged applications",
+        };
+      }
+
+      autoUpdater.quitAndInstall();
+      return { success: true };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || String(error),
+      };
+    }
+  });
 
   ipcMain.handle(
     "database:getRelatedData",

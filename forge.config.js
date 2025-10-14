@@ -15,6 +15,8 @@ module.exports = {
     extendInfo: {
       CFBundleShortVersionString: packageJson.version,
       CFBundleVersion: process.env.BUILD_NUMBER || Date.now().toString(),
+      CFBundleName: "SQLTemple",
+      CFBundleDisplayName: "SQLTemple",
     },
     win32metadata: {
       FileVersion: packageJson.version,

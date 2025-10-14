@@ -25,6 +25,63 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<PreferencesTab>("general");
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState<boolean>(false);
+  const [currentVersion, setCurrentVersion] = useState<string>("");
+  const [isCheckingForUpdates, setIsCheckingForUpdates] =
+    useState<boolean>(false);
+  const [updateStatus, setUpdateStatus] = useState<string>("");
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const autoUpdateResult =
+        await window.api.storage.get("autoUpdateEnabled");
+      if (autoUpdateResult.success && autoUpdateResult.value) {
+        setAutoUpdateEnabled(autoUpdateResult.value === "true");
+      }
+
+      const statusResult = await window.api.update.getStatus();
+      if (statusResult.success && statusResult.currentVersion) {
+        setCurrentVersion(statusResult.currentVersion);
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    }
+  };
+
+  const handleAutoUpdateToggle = async (enabled: boolean) => {
+    try {
+      await window.api.storage.set("autoUpdateEnabled", enabled.toString());
+      setAutoUpdateEnabled(enabled);
+    } catch (error) {
+      console.error("Failed to save auto-update setting:", error);
+    }
+  };
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingForUpdates(true);
+    setUpdateStatus("Checking for updates...");
+
+    try {
+      const result = await window.api.update.check();
+      if (result.success) {
+        if (result.updateInfo) {
+          setUpdateStatus(`Update available: ${result.updateInfo.version}`);
+        } else {
+          setUpdateStatus("Your application is up to date");
+        }
+      } else {
+        setUpdateStatus(result.error || "Failed to check for updates");
+      }
+    } catch (error) {
+      setUpdateStatus("Failed to check for updates");
+    } finally {
+      setIsCheckingForUpdates(false);
+    }
+  };
 
   const tabs = [
     {
@@ -99,6 +156,58 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
                     </p>
                   </div>
                   <input type="checkbox" className="toggle" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium text-vscode-text mb-4">
+                Application Updates
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-vscode-text">
+                      Auto-update
+                    </label>
+                    <p className="text-xs text-vscode-text-secondary">
+                      Automatically check for and install updates
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="toggle"
+                    checked={autoUpdateEnabled}
+                    onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-vscode-text">
+                        Current version
+                      </label>
+                      <p className="text-xs text-vscode-text-secondary">
+                        {currentVersion || "Unknown"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCheckForUpdates}
+                      disabled={isCheckingForUpdates}
+                      className="px-3 py-1 bg-vscode-blue hover:bg-vscode-blue-light disabled:bg-vscode-bg-quaternary disabled:text-vscode-text-secondary text-white rounded text-sm font-medium transition-colors"
+                    >
+                      {isCheckingForUpdates
+                        ? "Checking..."
+                        : "Check for Updates"}
+                    </button>
+                  </div>
+
+                  {updateStatus && (
+                    <div className="text-xs text-vscode-text-secondary">
+                      {updateStatus}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

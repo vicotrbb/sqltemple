@@ -62,7 +62,12 @@ export interface IElectronAPI {
   importConnections: () => Promise<{ success: boolean; connections?: any[]; canceled?: boolean; error?: string }>;
   exportConnections: () => Promise<{ success: boolean; filePath?: string; count?: number; canceled?: boolean; error?: string }>;
 
-  
+  update: {
+    check: () => Promise<{ success: boolean; updateInfo?: any; currentVersion?: string; error?: string }>;
+    getStatus: () => Promise<{ success: boolean; currentVersion?: string; isPackaged?: boolean; error?: string }>;
+    install: () => Promise<{ success: boolean; error?: string }>;
+  };
+
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => void;
     removeListener: (

@@ -1,29 +1,27 @@
 import { aiProviderRegistry } from "./AIProviderRegistry";
 import { AIConfig, AIPrompt, AIProvider } from "./providers/AIProvider";
+import { StorageManager } from "../storage/StorageManager";
 
 export { AIConfig, AIPrompt } from "./providers/AIProvider";
 
 export class AIService {
-  private config: AIConfig | null = null;
-  private provider: AIProvider | null = null;
-  private providerName: string = "openai";
+  constructor(private storageManager: StorageManager) {}
 
-  constructor() {
-    this.provider = aiProviderRegistry.getDefaultProvider();
-  }
-
-  setProvider(providerName: string): boolean {
-    const provider = aiProviderRegistry.getProvider(providerName);
-    if (provider) {
-      this.provider = provider;
-      this.providerName = providerName;
-      return true;
+  private async getConfigAndProvider(): Promise<{
+    config: AIConfig;
+    provider: AIProvider;
+  }> {
+    const config = await this.storageManager.getAIConfig();
+    if (!config) {
+      throw new Error("AI service not configured. Please set your API key.");
     }
-    return false;
-  }
 
-  getProviderName(): string {
-    return this.providerName;
+    const provider = aiProviderRegistry.getProvider(config.provider);
+    if (!provider) {
+      throw new Error(`Provider ${config.provider} not found`);
+    }
+
+    return { config, provider };
   }
 
   getAvailableProviders(): Array<{
@@ -41,78 +39,36 @@ export class AIService {
   }
 
   validateConfig(config: AIConfig): { isValid: boolean; errors: string[] } {
-    if (!this.provider) {
-      return { isValid: false, errors: ["No AI provider configured"] };
+    const provider = aiProviderRegistry.getProvider(config.provider);
+    if (!provider) {
+      return {
+        isValid: false,
+        errors: [`Unknown provider: ${config.provider}`],
+      };
     }
-    return this.provider.validateConfig(config);
+    return provider.validateConfig(config);
   }
 
   async validateApiKey(
     config: AIConfig
   ): Promise<{ isValid: boolean; error?: string }> {
-    if (!this.provider) {
-      return { isValid: false, error: "No AI provider configured" };
+    const provider = aiProviderRegistry.getProvider(config.provider);
+    if (!provider) {
+      return { isValid: false, error: `Unknown provider: ${config.provider}` };
     }
-    return this.provider.validateApiKey(config);
-  }
-
-  async setConfig(
-    config: AIConfig
-  ): Promise<{ success: boolean; errors?: string[] }> {
-    if (!this.setProvider(config.provider)) {
-      return {
-        success: false,
-        errors: [`Unknown provider: ${config.provider}`],
-      };
-    }
-
-    const validation = this.validateConfig(config);
-    if (!validation.isValid) {
-      return { success: false, errors: validation.errors };
-    }
-
-    try {
-      const apiValidation = await this.validateApiKey(config);
-      if (!apiValidation.isValid) {
-        return {
-          success: false,
-          errors: [apiValidation.error || "API key validation failed"],
-        };
-      }
-
-      this.config = config;
-      return { success: true };
-    } catch (error: any) {
-      return {
-        success: false,
-        errors: [`Failed to configure AI service: ${error.message}`],
-      };
-    }
-  }
-
-  setConfigSync(config: AIConfig) {
-    if (!this.setProvider(config.provider)) {
-      throw new Error(`Unknown provider: ${config.provider}`);
-    }
-
-    const validation = this.validateConfig(config);
-    if (!validation.isValid) {
-      throw new Error(
-        `Invalid AI configuration: ${validation.errors.join(", ")}`
-      );
-    }
-
-    this.config = config;
+    return provider.validateApiKey(config);
   }
 
   async getAvailableModels(
     providerName?: string,
     config?: AIConfig
   ): Promise<string[]> {
-    let provider = this.provider;
+    let provider: AIProvider | null = null;
 
     if (providerName) {
       provider = aiProviderRegistry.getProvider(providerName);
+    } else if (config) {
+      provider = aiProviderRegistry.getProvider(config.provider);
     }
 
     if (!provider) {
@@ -123,9 +79,7 @@ export class AIService {
   }
 
   async analyzeQueryPlan(query: string, plan: any): Promise<string> {
-    if (!this.provider || !this.config) {
-      throw new Error("AI service not configured. Please set your API key.");
-    }
+    const { config, provider } = await this.getConfigAndProvider();
 
     const systemPrompt = `You are an expert database performance analyst specializing in PostgreSQL query optimization. Your role is to analyze query execution plans and provide clear, actionable insights.
 
@@ -156,17 +110,15 @@ ${JSON.stringify(plan, null, 2)}
 
 Provide a detailed analysis with specific optimization recommendations.`;
 
-    const response = await this.provider.complete(
+    const response = await provider.complete(
       { systemPrompt, userPrompt },
-      this.config
+      config
     );
     return response.content;
   }
 
   async explainQuery(query: string, schema?: any): Promise<string> {
-    if (!this.provider || !this.config) {
-      throw new Error("AI service not configured. Please set your API key.");
-    }
+    const { config, provider } = await this.getConfigAndProvider();
 
     const systemPrompt = `You are an expert SQL instructor who explains queries in a clear, educational manner. Your explanations should be:
 1. Accurate and technically correct
@@ -194,17 +146,15 @@ ${JSON.stringify(schema, null, 2)}`
 
 Provide a comprehensive explanation that helps understand what this query does and how it works.`;
 
-    const response = await this.provider.complete(
+    const response = await provider.complete(
       { systemPrompt, userPrompt },
-      this.config
+      config
     );
     return response.content;
   }
 
   async createQuery(userRequest: string, schema: any): Promise<string> {
-    if (!this.provider || !this.config) {
-      throw new Error("AI service not configured. Please set your API key.");
-    }
+    const { config, provider } = await this.getConfigAndProvider();
 
     const systemPrompt = `You are an expert SQL query writer. Your role is to create efficient, correct SQL queries based on user requirements and database schema.
 
@@ -227,21 +177,19 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the SQL query without any explanations or markdown formatting.`;
 
-    const response = await this.provider.complete(
+    const response = await provider.complete(
       {
         systemPrompt,
         userPrompt,
         temperature: 0.3,
       },
-      this.config
+      config
     );
     return this.cleanSQLResponse(response.content);
   }
 
   async optimizeQuery(query: string, plan: any, schema: any): Promise<string> {
-    if (!this.provider || !this.config) {
-      throw new Error("AI service not configured. Please set your API key.");
-    }
+    const { config, provider } = await this.getConfigAndProvider();
 
     const systemPrompt = `You are a database optimization expert. Your task is to rewrite SQL queries for better performance based on their execution plans.
 
@@ -269,21 +217,19 @@ ${JSON.stringify(schema, null, 2)}
 
 Return ONLY the optimized SQL query.`;
 
-    const response = await this.provider.complete(
+    const response = await provider.complete(
       {
         systemPrompt,
         userPrompt,
         temperature: 0.2,
       },
-      this.config
+      config
     );
     return this.cleanSQLResponse(response.content);
   }
 
   async analyzeData(prompt: string): Promise<string> {
-    if (!this.provider || !this.config) {
-      throw new Error("AI service not configured. Please set your API key.");
-    }
+    const { config, provider } = await this.getConfigAndProvider();
 
     const systemPrompt = `You are an expert data analyst. Your role is to analyze query results and provide insights about the data.
 
@@ -296,14 +242,14 @@ When analyzing data, you should:
 
 Return your response as valid JSON in the exact format requested, without any markdown formatting or additional text.`;
 
-    const response = await this.provider.complete(
+    const response = await provider.complete(
       {
         systemPrompt,
         userPrompt: prompt,
         temperature: 0.7,
         maxTokens: 1000,
       },
-      this.config
+      config
     );
 
     return response.content;

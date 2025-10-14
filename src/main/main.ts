@@ -59,7 +59,7 @@ const createWindow = (): void => {
   });
 };
 
-const configureAutoUpdater = () => {
+const configureAutoUpdater = async () => {
   if (!app.isPackaged) {
     return;
   }
@@ -70,11 +70,19 @@ const configureAutoUpdater = () => {
     repo: "sqltemple",
   });
 
-  autoUpdater.checkForUpdatesAndNotify();
+  const autoUpdateEnabled =
+    await storageManager?.getSetting("autoUpdateEnabled");
 
-  setInterval(() => {
+  if (autoUpdateEnabled === "true") {
     autoUpdater.checkForUpdatesAndNotify();
-  }, 24 * 60 * 60 * 1000);
+
+    setInterval(
+      () => {
+        autoUpdater.checkForUpdatesAndNotify();
+      },
+      24 * 60 * 60 * 1000
+    );
+  }
   autoUpdater.on("checking-for-update", () => {
     console.log("Checking for update...");
   });
@@ -94,7 +102,13 @@ const configureAutoUpdater = () => {
   autoUpdater.on("download-progress", (progressObj) => {
     let log_message = "Download speed: " + progressObj.bytesPerSecond;
     log_message = log_message + " - Downloaded " + progressObj.percent + "%";
-    log_message = log_message + " (" + progressObj.transferred + "/" + progressObj.total + ")";
+    log_message =
+      log_message +
+      " (" +
+      progressObj.transferred +
+      "/" +
+      progressObj.total +
+      ")";
     console.log(log_message);
   });
 
@@ -109,7 +123,7 @@ app.on("ready", async () => {
   await initializeIpcHandlers(storageManager);
 
   createWindow();
-  configureAutoUpdater();
+  await configureAutoUpdater();
 });
 
 app.on("window-all-closed", () => {
