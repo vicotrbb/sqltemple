@@ -4,7 +4,7 @@ import { UnifiedExplorer } from "./components/UnifiedExplorer";
 import { ResizeHandle } from "./components/ResizeHandle";
 import { SQLEditor } from "./components/SQLEditor";
 import { ResultsGrid } from "./components/ResultsGrid";
-import { TabManager, QueryTab } from "./components/TabManager";
+import { TabManager } from "./components/TabManager";
 import { QueryHistory } from "./components/QueryHistory";
 import { PlanVisualizer } from "./components/PlanVisualizer";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
@@ -13,6 +13,7 @@ import { AISettings } from "./components/AISettings";
 import { AIQueryDialog } from "./components/AIQueryDialog";
 import { AIResultDialog } from "./components/AIResultDialog";
 import { TableTopology } from "./components/TableTopology";
+import { TableDetailsView } from "./components/TableDetailsView";
 import { AboutDialog } from "./components/AboutDialog";
 import { FunctionalPreferencesDialog } from "./components/FunctionalPreferencesDialog";
 import { SpotlightSearch } from "./components/SpotlightSearch";
@@ -40,6 +41,7 @@ import { useTheme } from "./hooks/useTheme";
 import { appService } from "./services/AppService";
 import { aiService } from "./services/AIService";
 import { errorService } from "./services/ErrorService";
+import { AppTab, QueryTab, TableDetailsTab } from "./services/TabService";
 
 const AppContent: React.FC = () => {
   const [showConnectionManager, setShowConnectionManager] = useState(false);
@@ -75,7 +77,7 @@ const AppContent: React.FC = () => {
   const [currentConnection, setCurrentConnection] =
     useState<DatabaseConnectionConfig | null>(null);
   const [schema, setSchema] = useState<DatabaseSchema | null>(null);
-  const [tabs, setTabs] = useState<QueryTab[]>([]);
+  const [tabs, setTabs] = useState<AppTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryPlan, setQueryPlan] = useState<any>(null);
@@ -131,7 +133,6 @@ const AppContent: React.FC = () => {
 
     appService.initialize();
   }, []);
-
 
   useEffect(() => {
     loadConnections();
@@ -322,7 +323,6 @@ const AppContent: React.FC = () => {
     appService.createNewTab();
   };
 
-
   const closeTab = (tabId: string) => {
     appService.closeTab(tabId);
   };
@@ -357,7 +357,7 @@ const AppContent: React.FC = () => {
 
   const executeQuery = async (selectedText?: string) => {
     if (isExecuting) return;
-    
+
     setIsExecuting(true);
     await appService.executeQuery(selectedText);
   };
@@ -367,6 +367,10 @@ const AppContent: React.FC = () => {
     appService.addQueryToActiveTab(query);
   };
 
+  const handleOpenTableDetails = (tableName: string, schemaName: string) => {
+    appService.openTableDetailsTab(schemaName, tableName);
+  };
+
   const handleViewClick = (viewName: string, schemaName: string) => {
     const query = `SELECT * FROM ${schemaName}.${viewName} LIMIT 100;`;
     appService.addQueryToActiveTab(query);
@@ -374,7 +378,7 @@ const AppContent: React.FC = () => {
 
   const handleQuerySelect = (query: string) => {
     const activeTab = appService.getActiveTab();
-    if (activeTab) {
+    if (activeTab && activeTab.type === "query") {
       appService.updateTabContent(activeTab.id, query);
     }
     setShowQueryHistory(false);
@@ -436,6 +440,12 @@ const AppContent: React.FC = () => {
 
   const handleOpenQuery = async () => {
     await appService.openQueryFile();
+  };
+
+  const handleOpenSqlInNewTab = (sql: string, title?: string) => {
+    const tabId = appService.createNewTab(title);
+    appService.updateTabContent(tabId, sql);
+    appService.setActiveTab(tabId);
   };
 
   const handleSaveQuery = async () => {
@@ -503,7 +513,11 @@ const AppContent: React.FC = () => {
         }
       } else {
         const activeTab = appService.getActiveTab();
-        if (activeTab?.content?.trim()) {
+        if (
+          activeTab &&
+          activeTab.type === "query" &&
+          activeTab.content?.trim()
+        ) {
           handleExplainQuery(activeTab.content);
         }
       }
@@ -522,7 +536,11 @@ const AppContent: React.FC = () => {
         }
       } else {
         const activeTab = appService.getActiveTab();
-        if (activeTab?.content?.trim()) {
+        if (
+          activeTab &&
+          activeTab.type === "query" &&
+          activeTab.content?.trim()
+        ) {
           handleOptimizeQuery(activeTab.content);
         }
       }
@@ -572,6 +590,14 @@ const AppContent: React.FC = () => {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
+  const activeTab = appService.getActiveTab();
+  const activeQueryTab =
+    activeTab && activeTab.type === "query" ? activeTab : null;
+  const activeDetailsTab =
+    activeTab && activeTab.type === "table-details" ? activeTab : null;
+  const isQueryTabActive = Boolean(activeQueryTab);
+  const shouldShowResultsPanel = showResultsPanel && isQueryTabActive;
+
   useEffect(() => {
     if (editorInstance) {
       const selectionListener = editorInstance.onDidChangeCursorSelection(
@@ -593,10 +619,9 @@ const AppContent: React.FC = () => {
   }, [editorInstance]);
 
   useEffect(() => {
-    const activeTab = appService.getActiveTab();
     updateMenuState({
       isConnected,
-      hasActiveQuery: Boolean(activeTab?.content?.trim()),
+      hasActiveQuery: Boolean(activeQueryTab?.content?.trim()),
       hasSelectedText,
       canUndo,
       canRedo,
@@ -608,10 +633,9 @@ const AppContent: React.FC = () => {
     hasSelectedText,
     canUndo,
     canRedo,
+    activeQueryTab?.content,
     updateMenuState,
   ]);
-
-  const activeTab = appService.getActiveTab();
 
   return (
     <div className="flex flex-col h-screen bg-vscode-bg text-vscode-text font-sans text-base">
@@ -636,6 +660,7 @@ const AppContent: React.FC = () => {
             }}
             onRefresh={() => appService.loadSchema()}
             onTableClick={handleTableClick}
+            onTableDoubleClick={handleOpenTableDetails}
             onViewClick={handleViewClick}
             onShowTopology={handleShowTopology}
             onShowConnectionManager={() => setShowConnectionManager(true)}
@@ -653,8 +678,8 @@ const AppContent: React.FC = () => {
 
         <div className="flex-1 flex flex-col min-w-0">
           <div className="bg-vscode-bg-tertiary border-b border-vscode-border px-4 py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center space-x-3 min-w-0">
                 {!isConnected ? (
                   <button
                     onClick={() => setShowConnectionManager(true)}
@@ -663,7 +688,7 @@ const AppContent: React.FC = () => {
                     <ConnectIcon className="w-4 h-4" />
                     <span>Connect</span>
                   </button>
-                ) : (
+                ) : isQueryTabActive ? (
                   <button
                     onClick={async () => {
                       if (!isConnected || isExecuting) return;
@@ -682,13 +707,26 @@ const AppContent: React.FC = () => {
                       ({getShortcut("execute-query")[0] || "⌘+↵"})
                     </span>
                   </button>
+                ) : activeDetailsTab ? (
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-sm font-medium text-vscode-text">
+                      Table Details
+                    </span>
+                    <span className="text-xs text-vscode-text-tertiary truncate">
+                      {activeDetailsTab.schema}.{activeDetailsTab.table}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-vscode-text-secondary">
+                    Ready
+                  </span>
                 )}
               </div>
 
               {isConnected && (
-                <div className="flex items-center space-x-2 text-sm">
+                <div className="hidden md:flex items-center space-x-2 text-sm">
                   <ConnectedIcon className="w-4 h-4 text-vscode-green" />
-                  <span className="text-vscode-text-secondary">
+                  <span className="text-vscode-text-secondary truncate">
                     Connected to{" "}
                     <span className="text-vscode-green font-medium">
                       {currentConnection?.name}
@@ -706,33 +744,37 @@ const AppContent: React.FC = () => {
                   <PlusIcon className="w-4 h-4 text-vscode-text-secondary" />
                 </button>
 
-                <button
-                  onClick={handleSaveQuery}
-                  disabled={!activeTab?.content?.trim()}
-                  className={`p-2 rounded transition-colors ${
-                    activeTab?.content?.trim()
-                      ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
-                      : "text-vscode-text-tertiary cursor-not-allowed"
-                  }`}
-                  title="Save Query (⌘+S)"
-                >
-                  <SaveIcon className="w-4 h-4" />
-                </button>
+                {isQueryTabActive && (
+                  <>
+                    <button
+                      onClick={handleSaveQuery}
+                      disabled={!activeQueryTab?.content?.trim()}
+                      className={`p-2 rounded transition-colors ${
+                        activeQueryTab?.content?.trim()
+                          ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
+                          : "text-vscode-text-tertiary cursor-not-allowed"
+                      }`}
+                      title="Save Query (⌘+S)"
+                    >
+                      <SaveIcon className="w-4 h-4" />
+                    </button>
 
-                <button
-                  onClick={handleFormatQuery}
-                  disabled={!activeTab?.content?.trim()}
-                  className={`p-2 rounded transition-colors ${
-                    activeTab?.content?.trim()
-                      ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
-                      : "text-vscode-text-tertiary cursor-not-allowed"
-                  }`}
-                  title="Format Query (⇧⌥F)"
-                >
-                  <FormatIcon className="w-4 h-4" />
-                </button>
+                    <button
+                      onClick={handleFormatQuery}
+                      disabled={!activeQueryTab?.content?.trim()}
+                      className={`p-2 rounded transition-colors ${
+                        activeQueryTab?.content?.trim()
+                          ? "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
+                          : "text-vscode-text-tertiary cursor-not-allowed"
+                      }`}
+                      title="Format Query (⇧⌥F)"
+                    >
+                      <FormatIcon className="w-4 h-4" />
+                    </button>
 
-                <div className="w-px h-4 bg-vscode-border"></div>
+                    <div className="w-px h-4 bg-vscode-border" />
+                  </>
+                )}
 
                 <button
                   onClick={() => setShowSpotlight(true)}
@@ -742,7 +784,7 @@ const AppContent: React.FC = () => {
                   <SearchIcon className="w-4 h-4 text-vscode-text-secondary" />
                 </button>
 
-                {isConnected && (
+                {isConnected && isQueryTabActive && (
                   <button
                     onClick={() => setShowQueryHistory(true)}
                     className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
@@ -752,15 +794,29 @@ const AppContent: React.FC = () => {
                   </button>
                 )}
 
-                <button
-                  onClick={() => setShowAIQueryDialog(true)}
-                  className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
-                  title="Create Query with AI (⌘⇧N)"
-                >
-                  <BrainIcon className="w-4 h-4 text-vscode-text-secondary" />
-                </button>
+                {isQueryTabActive && (
+                  <button
+                    onClick={() => setShowAIQueryDialog(true)}
+                    className="p-2 hover:bg-vscode-bg-quaternary rounded transition-colors"
+                    title="Create Query with AI (⌘⇧N)"
+                  >
+                    <BrainIcon className="w-4 h-4 text-vscode-text-secondary" />
+                  </button>
+                )}
               </div>
             </div>
+
+            {isConnected && (
+              <div className="md:hidden flex items-center space-x-2 text-xs text-vscode-text-secondary mt-2">
+                <ConnectedIcon className="w-3 h-3 text-vscode-green" />
+                <span className="truncate">
+                  Connected to{" "}
+                  <span className="text-vscode-green font-medium">
+                    {currentConnection?.name}
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 main-content-area relative">
@@ -772,50 +828,65 @@ const AppContent: React.FC = () => {
               onNewTab={() => appService.createNewTab()}
             />
 
-            <div
-              className="flex-1 min-h-0 bg-vscode-bg"
-              style={{
-                marginBottom: showResultsPanel
-                  ? `${resultsPanelHeight}px`
-                  : "0px",
-              }}
-            >
-              {activeTab && (
-                <SQLEditor
-                  value={activeTab.content}
-                  onChange={(content) =>
-                    appService.updateTabContent(activeTab.id, content)
-                  }
-                  onExecute={executeQuery}
-                  onExplainQuery={handleExplainQuery}
-                  onOptimizeQuery={handleOptimizeQuery}
-                  onExplainQueryPlan={explainQuery}
-                  onEditorMount={setEditorInstance}
-                  schema={schema}
+            {isQueryTabActive ? (
+              <>
+                <div
+                  className="flex-1 min-h-0 bg-vscode-bg"
+                  style={{
+                    marginBottom: shouldShowResultsPanel
+                      ? `${resultsPanelHeight}px`
+                      : "0px",
+                  }}
+                >
+                  {activeQueryTab && (
+                    <SQLEditor
+                      value={activeQueryTab.content}
+                      onChange={(content) =>
+                        appService.updateTabContent(activeQueryTab.id, content)
+                      }
+                      onExecute={executeQuery}
+                      onExplainQuery={handleExplainQuery}
+                      onOptimizeQuery={handleOptimizeQuery}
+                      onExplainQueryPlan={explainQuery}
+                      onEditorMount={setEditorInstance}
+                      schema={schema}
+                    />
+                  )}
+                </div>
+
+                {shouldShowResultsPanel && (
+                  <div
+                    className="absolute left-0 right-0 h-1 cursor-ns-resize hover:bg-vscode-blue transition-colors z-10 resize-handle"
+                    style={{ bottom: `${resultsPanelHeight}px` }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setIsResizing(true);
+                    }}
+                  >
+                    <div className="absolute inset-x-0 -top-1 -bottom-1" />
+                  </div>
+                )}
+
+                {shouldShowResultsPanel && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 border-t border-vscode-border overflow-hidden bg-vscode-bg-secondary"
+                    style={{ height: `${resultsPanelHeight}px` }}
+                  >
+                    <ResultsGrid result={queryResult} isLoading={isExecuting} />
+                  </div>
+                )}
+              </>
+            ) : activeDetailsTab ? (
+              <div className="flex-1 min-h-0 bg-vscode-bg overflow-hidden">
+                <TableDetailsView
+                  schema={activeDetailsTab.schema}
+                  table={activeDetailsTab.table}
+                  connectionName={currentConnection?.name || ""}
+                  onOpenInEditor={handleOpenSqlInNewTab}
                 />
-              )}
-            </div>
-
-            {showResultsPanel && (
-              <div
-                className="absolute left-0 right-0 h-1 cursor-ns-resize hover:bg-vscode-blue transition-colors z-10 resize-handle"
-                style={{ bottom: `${resultsPanelHeight}px` }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setIsResizing(true);
-                }}
-              >
-                <div className="absolute inset-x-0 -top-1 -bottom-1" />
               </div>
-            )}
-
-            {showResultsPanel && (
-              <div
-                className="absolute bottom-0 left-0 right-0 border-t border-vscode-border overflow-hidden bg-vscode-bg-secondary"
-                style={{ height: `${resultsPanelHeight}px` }}
-              >
-                <ResultsGrid result={queryResult} isLoading={isExecuting} />
-              </div>
+            ) : (
+              <div className="flex-1 min-h-0 bg-vscode-bg" />
             )}
           </div>
         </div>

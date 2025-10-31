@@ -1,15 +1,9 @@
 import React from "react";
 import { PlusIcon, CloseIcon } from "./icons/IconLibrary";
-
-export interface QueryTab {
-  id: string;
-  title: string;
-  content: string;
-  isDirty: boolean;
-}
+import { AppTab } from "../services/TabService";
 
 interface TabManagerProps {
-  tabs: QueryTab[];
+  tabs: AppTab[];
   activeTabId: string | null;
   onTabClick: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
@@ -38,7 +32,7 @@ export const TabManager: React.FC<TabManagerProps> = ({
           >
             <span className="flex-1 text-sm truncate">
               {tab.title}
-              {tab.isDirty && (
+              {tab.type === "query" && tab.isDirty && (
                 <span className="ml-1 text-vscode-text-tertiary">•</span>
               )}
             </span>

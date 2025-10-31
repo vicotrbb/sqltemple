@@ -9,6 +9,13 @@ export interface IElectronAPI {
   getTableColumns: (schemaName: string, tableName: string) => Promise<any>;
   getViewColumns: (schemaName: string, viewName: string) => Promise<any>;
   getViews: (schemaName: string) => Promise<any>;
+  getTableData: (
+    schemaName: string,
+    tableName: string,
+    limit?: number,
+    offset?: number
+  ) => Promise<any>;
+  getTableDetails: (schemaName: string, tableName: string) => Promise<any>;
   getFunctions: (schemaName: string) => Promise<any>;
   getProcedures: (schemaName: string) => Promise<any>;
   getSequences: (schemaName: string) => Promise<any>;

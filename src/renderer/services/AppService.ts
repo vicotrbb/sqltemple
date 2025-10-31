@@ -1,17 +1,30 @@
-import { DatabaseConnectionConfig, DatabaseSchema, QueryResult } from "../../main/database/interfaces";
+import {
+  DatabaseConnectionConfig,
+  DatabaseSchema,
+  QueryResult,
+} from "../../main/database/interfaces";
 import { databaseService, DatabaseServiceResult } from "./DatabaseService";
 import { aiService, AIServiceResult } from "./AIService";
 import { fileService, FileServiceResult } from "./FileService";
-import { tabService, TabService, QueryTab } from "./TabService";
+import {
+  tabService,
+  TabService,
+  QueryTab,
+  TableDetailsTab,
+  AppTab,
+} from "./TabService";
 
 export interface AppServiceCallbacks {
-  onConnectionChange?: (connection: DatabaseConnectionConfig | null, isConnected: boolean) => void;
+  onConnectionChange?: (
+    connection: DatabaseConnectionConfig | null,
+    isConnected: boolean
+  ) => void;
   onSchemaChange?: (schema: DatabaseSchema | null) => void;
   onQueryResult?: (result: QueryResult | null) => void;
   onQueryPlan?: (plan: any, query: string) => void;
   onError?: (error: string) => void;
   onSuccess?: (message: string) => void;
-  onTabsChange?: (tabs: QueryTab[], activeTabId: string | null) => void;
+  onTabsChange?: (tabs: AppTab[], activeTabId: string | null) => void;
   onActiveTabChange?: (tabId: string | null) => void;
 }
 
@@ -22,10 +35,11 @@ export class AppService {
   constructor(callbacks?: AppServiceCallbacks) {
     this.callbacks = callbacks || {};
     this.tabService = tabService;
-    
+
     // Set up tab service callbacks
     this.tabService.setCallbacks({
-      onTabsChange: (tabs) => this.callbacks.onTabsChange?.(tabs, this.tabService.getActiveTabId()),
+      onTabsChange: (tabs) =>
+        this.callbacks.onTabsChange?.(tabs, this.tabService.getActiveTabId()),
       onActiveTabChange: (tabId) => this.callbacks.onActiveTabChange?.(tabId),
     });
   }
@@ -38,12 +52,15 @@ export class AppService {
   async connectToDatabase(config: DatabaseConnectionConfig): Promise<boolean> {
     const result = await databaseService.connect(config);
     if (result.success) {
-      this.callbacks.onConnectionChange?.(databaseService.getCurrentConnection(), true);
-      
+      this.callbacks.onConnectionChange?.(
+        databaseService.getCurrentConnection(),
+        true
+      );
+
       // Load connections and schema after successful connection
       await this.loadConnections();
       await this.loadSchema();
-      
+
       return true;
     } else {
       this.callbacks.onError?.(result.error || "Connection failed");
@@ -65,7 +82,7 @@ export class AppService {
   }
 
   async executeQuery(selectedText?: string): Promise<boolean> {
-    const activeTab = this.tabService.getActiveTab();
+    const activeTab = this.getActiveQueryTab();
     if (!activeTab) {
       this.callbacks.onError?.("No active tab found");
       return false;
@@ -81,13 +98,15 @@ export class AppService {
       this.callbacks.onQueryResult?.(result.data);
       return true;
     } else {
-      this.callbacks.onQueryResult?.(result.data || {
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        duration: 0,
-        error: result.error || "Unknown error",
-      });
+      this.callbacks.onQueryResult?.(
+        result.data || {
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          duration: 0,
+          error: result.error || "Unknown error",
+        }
+      );
       return false;
     }
   }
@@ -114,7 +133,7 @@ export class AppService {
   }
 
   async explainQuery(): Promise<boolean> {
-    const activeTab = this.tabService.getActiveTab();
+    const activeTab = this.getActiveQueryTab();
     if (!activeTab || !activeTab.content.trim()) {
       return false;
     }
@@ -131,7 +150,7 @@ export class AppService {
 
   // AI operations
   async explainQueryWithAI(selectedText?: string): Promise<string | null> {
-    const queryText = selectedText || this.tabService.getActiveTab()?.content;
+    const queryText = selectedText || this.getActiveQueryTab()?.content;
     if (!queryText?.trim()) {
       return null;
     }
@@ -145,8 +164,10 @@ export class AppService {
     }
   }
 
-  async optimizeQueryWithAI(selectedText?: string): Promise<{ optimizedQuery: string; originalQuery: string } | null> {
-    const queryText = selectedText || this.tabService.getActiveTab()?.content;
+  async optimizeQueryWithAI(
+    selectedText?: string
+  ): Promise<{ optimizedQuery: string; originalQuery: string } | null> {
+    const queryText = selectedText || this.getActiveQueryTab()?.content;
     if (!queryText?.trim()) {
       return null;
     }
@@ -174,11 +195,11 @@ export class AppService {
   async openQueryFile(): Promise<boolean> {
     const result = await fileService.openQueryFile();
     if (result.success && result.data && !result.canceled) {
-      const activeTabId = this.tabService.getActiveTabId();
-      if (activeTabId) {
-        this.tabService.updateTabContent(activeTabId, result.data.content);
+      const activeTab = this.getActiveQueryTab();
+      if (activeTab) {
+        this.tabService.updateTabContent(activeTab.id, result.data.content);
         if (result.data.fileName) {
-          this.tabService.updateTabTitle(activeTabId, result.data.fileName);
+          this.tabService.updateTabTitle(activeTab.id, result.data.fileName);
         }
       }
       return true;
@@ -191,12 +212,15 @@ export class AppService {
   }
 
   async saveQueryFile(): Promise<boolean> {
-    const activeTab = this.tabService.getActiveTab();
-    if (!activeTab?.content?.trim()) {
+    const activeTab = this.getActiveQueryTab();
+    if (!activeTab || !activeTab.content?.trim()) {
       return false;
     }
 
-    const result = await fileService.saveQueryFile(activeTab.content, activeTab.filePath);
+    const result = await fileService.saveQueryFile(
+      activeTab.content,
+      activeTab.filePath
+    );
     if (result.success && result.data && !result.canceled) {
       if (result.data.fileName) {
         this.tabService.updateTabTitle(activeTab.id, result.data.fileName);
@@ -211,8 +235,8 @@ export class AppService {
   }
 
   async saveQueryFileAs(): Promise<boolean> {
-    const activeTab = this.tabService.getActiveTab();
-    if (!activeTab?.content?.trim()) {
+    const activeTab = this.getActiveQueryTab();
+    if (!activeTab || !activeTab.content?.trim()) {
       return false;
     }
 
@@ -235,12 +259,16 @@ export class AppService {
     if (result.success && result.data && !result.canceled) {
       const { imported, failed } = result.data;
       if (imported > 0) {
-        this.callbacks.onSuccess?.(`Successfully imported ${imported} connection(s).`);
+        this.callbacks.onSuccess?.(
+          `Successfully imported ${imported} connection(s).`
+        );
         if (failed > 0) {
           this.callbacks.onError?.(`${failed} connection(s) failed to import.`);
         }
       } else {
-        this.callbacks.onError?.("No connections were imported. Please check the file format.");
+        this.callbacks.onError?.(
+          "No connections were imported. Please check the file format."
+        );
       }
       return imported > 0;
     } else if (result.canceled) {
@@ -254,7 +282,9 @@ export class AppService {
   async exportConnections(): Promise<boolean> {
     const result = await fileService.exportConnections();
     if (result.success && result.data && !result.canceled) {
-      this.callbacks.onSuccess?.(`Successfully exported ${result.data.count} connection(s) to ${result.data.filePath}`);
+      this.callbacks.onSuccess?.(
+        `Successfully exported ${result.data.count} connection(s) to ${result.data.filePath}`
+      );
       return true;
     } else if (result.canceled) {
       return false; // User canceled, not an error
@@ -295,11 +325,11 @@ export class AppService {
     this.tabService.setActiveTab(tabId);
   }
 
-  getActiveTab(): QueryTab | null {
+  getActiveTab(): AppTab | null {
     return this.tabService.getActiveTab();
   }
 
-  getTabs(): QueryTab[] {
+  getTabs(): AppTab[] {
     return this.tabService.getTabs();
   }
 
@@ -309,7 +339,7 @@ export class AppService {
 
   // Utility methods
   addQueryToActiveTab(query: string): boolean {
-    const activeTab = this.tabService.getActiveTab();
+    const activeTab = this.getActiveQueryTab();
     if (activeTab) {
       const newContent =
         activeTab.content +
@@ -321,7 +351,7 @@ export class AppService {
   }
 
   addQueryToActiveTabWithNewlines(query: string): boolean {
-    const activeTab = this.tabService.getActiveTab();
+    const activeTab = this.getActiveQueryTab();
     if (activeTab) {
       const newContent =
         activeTab.content +
@@ -333,7 +363,7 @@ export class AppService {
   }
 
   replaceQueryInActiveTab(oldQuery: string, newQuery: string): boolean {
-    const activeTab = this.tabService.getActiveTab();
+    const activeTab = this.getActiveQueryTab();
     if (activeTab) {
       const newContent = activeTab.content.replace(oldQuery, newQuery);
       return this.tabService.updateTabContent(activeTab.id, newContent);
@@ -352,6 +382,29 @@ export class AppService {
   // Initialize the service
   initialize(): void {
     this.tabService.initialize();
+  }
+
+  openTableDetailsTab(schema: string, table: string): TableDetailsTab {
+    const existing = this.tabService
+      .getTabs()
+      .find(
+        (tab): tab is TableDetailsTab =>
+          tab.type === "table-details" &&
+          tab.schema === schema &&
+          tab.table === table
+      );
+
+    if (existing) {
+      this.tabService.setActiveTab(existing.id);
+      return existing;
+    }
+
+    return this.tabService.createTableDetailsTab(schema, table);
+  }
+
+  private getActiveQueryTab(): QueryTab | null {
+    const tab = this.tabService.getActiveTab();
+    return tab && tab.type === "query" ? tab : null;
   }
 }
 

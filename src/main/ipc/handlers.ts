@@ -116,6 +116,50 @@ export async function initializeIpcHandlers(
     }
   );
 
+  ipcMain.handle(
+    "get-table-data",
+    async (
+      event,
+      schemaName: string,
+      tableName: string,
+      limit?: number,
+      offset?: number
+    ) => {
+      try {
+        if (!currentClient || !currentClient.getTableData) {
+          throw new Error("Database not connected or method not supported");
+        }
+        const result = await currentClient.getTableData(
+          schemaName,
+          tableName,
+          limit,
+          offset
+        );
+        return { success: true, page: result };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "get-table-details",
+    async (event, schemaName: string, tableName: string) => {
+      try {
+        if (!currentClient || !currentClient.getTableDetails) {
+          throw new Error("Database not connected or method not supported");
+        }
+        const details = await currentClient.getTableDetails(
+          schemaName,
+          tableName
+        );
+        return { success: true, details };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
   ipcMain.handle("get-query-plan", async (event, sql: string) => {
     if (!currentClient) {
       return { success: false, error: "No database connection" };

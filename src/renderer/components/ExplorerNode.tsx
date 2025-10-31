@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronRightIcon, ChevronDownIcon } from './icons/IconLibrary';
+import React from "react";
+import { ChevronRightIcon, ChevronDownIcon } from "./icons/IconLibrary";
 
 export interface ExplorerNodeProps {
   id: string;
@@ -13,6 +13,7 @@ export interface ExplorerNodeProps {
   isLoading?: boolean;
   level: number;
   onClick?: () => void;
+  onDoubleClick?: (e?: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   children?: React.ReactNode;
   hasChildren?: boolean;
@@ -22,7 +23,7 @@ export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
   id,
   label,
   icon,
-  iconColor = 'text-vscode-text-secondary',
+  iconColor = "text-vscode-text-secondary",
   count,
   isExpanded = false,
   isSelected = false,
@@ -30,9 +31,10 @@ export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
   isLoading = false,
   level,
   onClick,
+  onDoubleClick,
   onContextMenu,
   children,
-  hasChildren = false
+  hasChildren = false,
 }) => {
   const paddingLeft = level * 12; // 12px per level
 
@@ -40,10 +42,16 @@ export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
     <div>
       <div
         className={`flex items-center px-3 py-1 hover:bg-vscode-bg-tertiary cursor-pointer text-sm group ${
-          isSelected ? 'bg-vscode-bg-quaternary' : ''
-        } ${isConnected ? 'text-vscode-green' : ''}`}
+          isSelected ? "bg-vscode-bg-quaternary" : ""
+        } ${isConnected ? "text-vscode-green" : ""}`}
         style={{ paddingLeft: `${paddingLeft + 12}px` }}
         onClick={onClick}
+        onDoubleClick={(e) => {
+          if (onDoubleClick) {
+            e.stopPropagation();
+            onDoubleClick(e);
+          }
+        }}
         onContextMenu={onContextMenu}
       >
         {hasChildren && (
@@ -57,7 +65,7 @@ export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
             )}
           </span>
         )}
-        
+
         {!hasChildren && <span className="w-4 mr-1"></span>}
 
         {icon && (
@@ -75,15 +83,14 @@ export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
         )}
 
         {isConnected && (
-          <div className="w-2 h-2 bg-vscode-green rounded-full ml-2 flex-shrink-0" title="Connected"></div>
+          <div
+            className="w-2 h-2 bg-vscode-green rounded-full ml-2 flex-shrink-0"
+            title="Connected"
+          ></div>
         )}
       </div>
 
-      {isExpanded && children && (
-        <div>
-          {children}
-        </div>
-      )}
+      {isExpanded && children && <div>{children}</div>}
     </div>
   );
 };

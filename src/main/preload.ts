@@ -11,6 +11,15 @@ contextBridge.exposeInMainWorld("api", {
   getViewColumns: (schemaName: string, viewName: string) =>
     ipcRenderer.invoke("get-view-columns", schemaName, viewName),
   getViews: (schemaName: string) => ipcRenderer.invoke("get-views", schemaName),
+  getTableData: (
+    schemaName: string,
+    tableName: string,
+    limit?: number,
+    offset?: number
+  ) =>
+    ipcRenderer.invoke("get-table-data", schemaName, tableName, limit, offset),
+  getTableDetails: (schemaName: string, tableName: string) =>
+    ipcRenderer.invoke("get-table-details", schemaName, tableName),
   getFunctions: (schemaName: string) =>
     ipcRenderer.invoke("get-functions", schemaName),
   getProcedures: (schemaName: string) =>

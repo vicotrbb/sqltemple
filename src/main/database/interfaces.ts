@@ -24,6 +24,19 @@ export interface ColumnInfo {
   nullable?: boolean;
 }
 
+export interface TableColumnDetail extends ColumnInfo {
+  defaultValue?: string | null;
+  isPrimaryKey?: boolean;
+  isUnique?: boolean;
+  hasIndex?: boolean;
+  comment?: string | null;
+  statistics?: {
+    distinctValues?: number | null;
+    nullFraction?: number | null;
+    averageWidth?: number | null;
+  };
+}
+
 export interface DatabaseSchema {
   databases?: DatabaseInfo[];
   schemas: SchemaInfo[];
@@ -110,6 +123,47 @@ export interface DomainInfo {
   checkConstraint?: string;
 }
 
+export interface TableRelationship {
+  constraintName: string;
+  relatedSchema: string;
+  relatedTable: string;
+  direction: "outgoing" | "incoming";
+  columns: Array<{ localColumn: string; relatedColumn: string }>;
+  updateRule?: string;
+  deleteRule?: string;
+}
+
+export interface TableDetails {
+  schema: string;
+  name: string;
+  comment?: string | null;
+  rowEstimate?: number | null;
+  totalBytes?: number | null;
+  tableBytes?: number | null;
+  indexBytes?: number | null;
+  toastBytes?: number | null;
+  totalSize?: string | null;
+  tableSize?: string | null;
+  indexSize?: string | null;
+  toastSize?: string | null;
+  lastVacuum?: string | null;
+  lastAutovacuum?: string | null;
+  lastAnalyze?: string | null;
+  lastAutoanalyze?: string | null;
+  columns: TableColumnDetail[];
+  primaryKey?: { name: string; columns: string[] } | null;
+  indexes: IndexInfo[];
+  triggers: TriggerInfo[];
+  relationships: TableRelationship[];
+}
+
+export interface TableDataPage {
+  columns: ColumnInfo[];
+  rows: any[];
+  nextOffset: number;
+  hasMore: boolean;
+}
+
 export interface IDatabaseClient {
   connect(config: DatabaseConnectionConfig): Promise<void>;
   disconnect(): Promise<void>;
@@ -134,4 +188,14 @@ export interface IDatabaseClient {
     depth?: number,
     visitedTables?: Set<string>
   ): Promise<any>;
+  getTableData?(
+    schemaName: string,
+    tableName: string,
+    limit?: number,
+    offset?: number
+  ): Promise<TableDataPage>;
+  getTableDetails?(
+    schemaName: string,
+    tableName: string
+  ): Promise<TableDetails>;
 }
