@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useConfig } from "../contexts/ConfigContext";
-import { AISettings } from "./AISettings";
+import { AISettings, AIConfigurationState } from "./AISettings";
 import {
   SettingsIcon,
   EyeIcon,
@@ -49,6 +49,42 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
   } = useConfig();
 
   const [localConfig, setLocalConfig] = useState(config);
+  const [aiConfigState, setAIConfigState] =
+    useState<AIConfigurationState | null>(null);
+
+  const handleAIConfigChange = useCallback(
+    (configState: AIConfigurationState) => {
+      const trimmedApiKey = configState.apiKey ? configState.apiKey.trim() : "";
+      const normalizedModel = configState.model || "";
+
+      setAIConfigState({
+        provider: configState.provider,
+        apiKey: trimmedApiKey,
+        model: normalizedModel,
+        baseUrl: configState.baseUrl,
+      });
+      setLocalConfig((prev) => {
+        const nextAI = {
+          ...prev.ai,
+          apiKey: trimmedApiKey,
+          model: normalizedModel || prev.ai.model,
+        };
+
+        if (
+          nextAI.apiKey === prev.ai.apiKey &&
+          nextAI.model === prev.ai.model
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          ai: nextAI,
+        };
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     setLocalConfig(config);
@@ -135,18 +171,55 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
     try {
       setSaveStatus("saving");
 
-      if (localConfig.ai.apiKey && localConfig.ai.apiKey.trim()) {
-        const aiValidation = await window.api.aiValidateConfig({
-          provider: "openai", // Default to OpenAI for backward compatibility
-          apiKey: localConfig.ai.apiKey,
-          model: localConfig.ai.model,
-        });
+      let effectiveAIConfig = aiConfigState;
+
+      if (!effectiveAIConfig) {
+        const existingConfig = await window.api.aiGetConfig();
+        if (existingConfig.success && existingConfig.config) {
+          effectiveAIConfig = {
+            provider: existingConfig.config.provider,
+            apiKey: existingConfig.config.apiKey || "",
+            model: existingConfig.config.model,
+            baseUrl: existingConfig.config.baseUrl,
+          };
+        }
+      }
+
+      if (effectiveAIConfig) {
+        const normalizedAIConfig = {
+          provider: effectiveAIConfig.provider,
+          apiKey:
+            effectiveAIConfig.apiKey &&
+            effectiveAIConfig.apiKey.trim().length > 0
+              ? effectiveAIConfig.apiKey.trim()
+              : undefined,
+          model: effectiveAIConfig.model,
+          baseUrl:
+            effectiveAIConfig.baseUrl &&
+            effectiveAIConfig.baseUrl.trim().length > 0
+              ? effectiveAIConfig.baseUrl.trim()
+              : undefined,
+        };
+
+        const aiValidation =
+          await window.api.aiValidateConfig(normalizedAIConfig);
 
         if (!aiValidation.success) {
           const errorMessage =
             aiValidation.errors?.join(", ") ||
             "AI configuration validation failed";
           alert(`AI Configuration Error: ${errorMessage}`);
+          setSaveStatus("error");
+          setTimeout(() => setSaveStatus("idle"), 3000);
+          return;
+        }
+
+        const aiSaveResult = await window.api.aiSetConfig(normalizedAIConfig);
+        if (!aiSaveResult.success) {
+          alert(
+            aiSaveResult.error ||
+              "Failed to save AI configuration. Please try again."
+          );
           setSaveStatus("error");
           setTimeout(() => setSaveStatus("idle"), 3000);
           return;
@@ -628,7 +701,11 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
       case "ai":
         return (
           <div className="space-y-6">
-            <AISettings onClose={() => {}} embedded={true} />
+            <AISettings
+              onClose={() => {}}
+              embedded={true}
+              onConfigChange={handleAIConfigChange}
+            />
           </div>
         );
 

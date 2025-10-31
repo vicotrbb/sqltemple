@@ -6,7 +6,6 @@ import React, {
   ReactNode,
 } from "react";
 
-
 export interface GeneralSettings {
   autoSaveQueries: boolean;
   queryHistoryLimit: number;
@@ -37,7 +36,7 @@ export interface EditorSettings {
 
 export interface AISettings {
   apiKey: string;
-  model: "gpt-4" | "gpt-3.5-turbo" | "gpt-4-turbo";
+  model: string;
   temperature: number;
   maxTokens: number;
   enableSuggestions: boolean;
@@ -68,7 +67,6 @@ export interface ShortcutSettings {
   enableGlobalShortcuts: boolean;
 }
 
-
 export interface AppConfig {
   general: GeneralSettings;
   appearance: AppearanceSettings;
@@ -79,7 +77,6 @@ export interface AppConfig {
   version: string;
   lastModified: string;
 }
-
 
 const defaultShortcuts: KeyboardShortcut[] = [
   {
@@ -278,7 +275,7 @@ const defaultConfig: AppConfig = {
   },
   ai: {
     apiKey: "",
-    model: "gpt-4",
+    model: "gpt-4o-mini",
     temperature: 0.3,
     maxTokens: 2000,
     enableSuggestions: true,
@@ -300,7 +297,6 @@ const defaultConfig: AppConfig = {
   version: "1.0.0",
   lastModified: new Date().toISOString(),
 };
-
 
 interface ConfigContextType {
   config: AppConfig;
@@ -327,7 +323,6 @@ interface ConfigContextType {
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
-
 export const useConfig = () => {
   const context = useContext(ConfigContext);
   if (!context) {
@@ -335,7 +330,6 @@ export const useConfig = () => {
   }
   return context;
 };
-
 
 interface ConfigProviderProps {
   children: ReactNode;
@@ -537,7 +531,6 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
     </ConfigContext.Provider>
   );
 };
-
 
 export interface Settings {
   keyboardShortcuts: KeyboardShortcut[];
