@@ -233,7 +233,15 @@ export class StorageManager {
     const results = stmt.all(...params);
 
     return results.map((row: any) => ({
-      ...row,
+      id: row.id,
+      connectionId: row.connection_id,
+      query: row.query,
+      runAt: row.run_at,
+      duration: row.duration,
+      rowCount:
+        typeof row.row_count === "number"
+          ? row.row_count
+          : Number(row.row_count ?? 0),
       success: Boolean(row.success),
     }));
   }
