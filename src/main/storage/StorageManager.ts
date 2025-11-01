@@ -27,6 +27,21 @@ export class StorageManager {
     this.initializeTables();
   }
 
+  private normalizeRowCount(rowCount: unknown): number {
+    if (typeof rowCount === "number" && Number.isFinite(rowCount)) {
+      return Math.max(0, Math.trunc(rowCount));
+    }
+
+    if (typeof rowCount === "string" && rowCount.trim() !== "") {
+      const parsed = Number(rowCount);
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        return Math.max(0, Math.trunc(parsed));
+      }
+    }
+
+    return 0;
+  }
+
   private getOrCreateEncryptionKey(): Buffer {
     const keyPath = path.join(app.getPath("userData"), ".encryption-key");
 
@@ -204,12 +219,14 @@ export class StorageManager {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
+    const normalizedRowCount = this.normalizeRowCount(entry.rowCount);
+
     stmt.run(
       entry.connectionId,
       entry.query,
       entry.runAt,
       entry.duration,
-      entry.rowCount,
+      normalizedRowCount,
       entry.success ? 1 : 0
     );
   }
@@ -238,10 +255,7 @@ export class StorageManager {
       query: row.query,
       runAt: row.run_at,
       duration: row.duration,
-      rowCount:
-        typeof row.row_count === "number"
-          ? row.row_count
-          : Number(row.row_count ?? 0),
+      rowCount: this.normalizeRowCount(row.row_count),
       success: Boolean(row.success),
     }));
   }

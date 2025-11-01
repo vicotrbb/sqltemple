@@ -1,11 +1,21 @@
+const path = require("path");
 const packageJson = require("./package.json");
+
+const platformIcons = {
+  darwin: path.resolve(__dirname, "assets/icons/mac/icon.icns"),
+  win32: path.resolve(__dirname, "assets/icons/win/icon.ico"),
+  linux: path.resolve(__dirname, "assets/icons/linux/icon.png"),
+};
+
+const resolvedIcon =
+  platformIcons[process.platform] || platformIcons.darwin;
 
 module.exports = {
   packagerConfig: {
     asar: {
       unpack: "**/{*.node,*.dll}",
     },
-    icon: "./assets/icon",
+    icon: resolvedIcon,
     appBundleId: "com.sqltemple.app",
     appCategoryType: "public.app-category.developer-tools",
     name: "SQLTemple",
@@ -35,6 +45,7 @@ module.exports = {
         title: "SQLTemple",
         format: "ULFO",
         overwrite: true,
+        icon: platformIcons.darwin,
       },
     },
     {
@@ -47,6 +58,7 @@ module.exports = {
         name: "SQLTemple",
         setupExe: `SQLTemple-${packageJson.version}-Setup.exe`,
         setupMsi: `SQLTemple-${packageJson.version}-Setup.msi`,
+        setupIcon: platformIcons.win32,
       },
     },
     {
@@ -60,6 +72,7 @@ module.exports = {
           maintainer: "SQLTemple Team",
           homepage: "https://github.com/sqltemple/sqltemple",
           bin: "SQLTemple",
+          icon: platformIcons.linux,
         },
       },
     },
@@ -74,6 +87,7 @@ module.exports = {
           maintainer: "SQLTemple Team",
           homepage: "https://github.com/sqltemple/sqltemple",
           bin: "SQLTemple",
+          icon: platformIcons.linux,
         },
       },
     },

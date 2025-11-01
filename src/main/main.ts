@@ -1,4 +1,6 @@
 import { app, BrowserWindow } from "electron";
+import * as path from "path";
+import * as fs from "fs";
 import { autoUpdater } from "electron-updater";
 import { StorageManager } from "./storage/StorageManager";
 import { initializeIpcHandlers, registerMenuBuilder } from "./ipc/handlers";
@@ -15,6 +17,30 @@ let mainWindow: BrowserWindow | null = null;
 let storageManager: StorageManager | null = null;
 let menuBuilder: MenuBuilder | null = null;
 
+const resolveAssetPath = (...segments: string[]): string =>
+  app.isPackaged
+    ? path.join(process.resourcesPath, ...segments)
+    : path.join(__dirname, "..", "..", "assets", ...segments);
+
+const resolvePlatformIcon = (): string | undefined => {
+  let iconPath: string;
+
+  switch (process.platform) {
+    case "win32":
+      iconPath = resolveAssetPath("icons", "win", "icon.ico");
+      break;
+    case "linux":
+      iconPath = resolveAssetPath("icons", "linux", "icon.png");
+      break;
+    case "darwin":
+    default:
+      iconPath = resolveAssetPath("icons", "mac", "icon.icns");
+      break;
+  }
+
+  return fs.existsSync(iconPath) ? iconPath : undefined;
+};
+
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     height: 800,
@@ -30,6 +56,7 @@ const createWindow = (): void => {
     trafficLightPosition: { x: 15, y: 15 },
     title: "SQLTemple",
     fullscreenable: true,
+    icon: resolvePlatformIcon(),
   });
 
   console.log("Loading URL:", MAIN_WINDOW_WEBPACK_ENTRY);
