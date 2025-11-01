@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { QueryResult } from "../../main/database/interfaces";
 import {
   LoadingIcon,
@@ -13,7 +19,11 @@ import { RelationshipTooltip } from "./ResultsGrid/RelationshipTooltip";
 import { ColumnHeader } from "./ResultsGrid/ColumnHeader";
 import { useResultsExport } from "../hooks/useResultsExport";
 import { useColumnResize } from "../hooks/useColumnResize";
-import { useRowHeight } from "../hooks/useRowHeight";
+import {
+  useRowHeight,
+  ROW_HEIGHT_MIN,
+  ROW_HEIGHT_MAX,
+} from "../hooks/useRowHeight";
 import {
   ResultsAnalyzer,
   AnalysisResponse,
@@ -36,6 +46,130 @@ interface EnhancedResultsGridProps {
 
 const HEADER_HEIGHT = 60;
 const BUFFER_SIZE = 10;
+const ROW_RESIZE_HANDLE_HEIGHT = 6;
+
+interface RowResizeHandleProps {
+  rowHeight: number;
+  onResize: (height: number) => void;
+  className?: string;
+}
+
+const RowResizeHandle: React.FC<RowResizeHandleProps> = ({
+  rowHeight,
+  onResize,
+  className = "",
+}) => {
+  const isResizingRef = useRef(false);
+  const startYRef = useRef(0);
+  const startHeightRef = useRef(rowHeight);
+
+  const clampHeight = useCallback(
+    (value: number) =>
+      Math.min(Math.max(value, ROW_HEIGHT_MIN), ROW_HEIGHT_MAX),
+    []
+  );
+
+  const handleMouseMove = useCallback(
+    (event: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const deltaY = event.clientY - startYRef.current;
+      const nextHeight = clampHeight(startHeightRef.current + deltaY);
+      onResize(nextHeight);
+    },
+    [clampHeight, onResize]
+  );
+
+  const stopResizing = useCallback(() => {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", stopResizing);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, [handleMouseMove]);
+
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      if (isResizingRef.current) {
+        stopResizing();
+      }
+      startYRef.current = event.clientY;
+      startHeightRef.current = rowHeight;
+      isResizingRef.current = true;
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+    },
+    [handleMouseMove, rowHeight, stopResizing]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const step = event.shiftKey ? 10 : 4;
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        onResize(clampHeight(rowHeight - step));
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        onResize(clampHeight(rowHeight + step));
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        onResize(ROW_HEIGHT_MIN);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        onResize(ROW_HEIGHT_MAX);
+      }
+    },
+    [clampHeight, onResize, rowHeight]
+  );
+
+  useEffect(() => stopResizing, [stopResizing]);
+
+  return (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label="Resize result row height"
+      aria-orientation="vertical"
+      aria-valuemin={ROW_HEIGHT_MIN}
+      aria-valuemax={ROW_HEIGHT_MAX}
+      aria-valuenow={Math.round(rowHeight)}
+      className={`w-full cursor-row-resize bg-vscode-border/40 border-b border-vscode-border transition-colors hover:bg-vscode-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-blue ${className}`}
+      style={{ height: ROW_RESIZE_HANDLE_HEIGHT }}
+      onMouseDown={handleMouseDown}
+      onKeyDown={handleKeyDown}
+    />
+  );
+};
+
+const formatCellValue = (
+  value: any,
+  column: any
+): { display: React.ReactNode; fullText: string } => {
+  if (value === null || value === undefined) {
+    return {
+      display: <span className="text-vscode-text-tertiary italic">NULL</span>,
+      fullText: "NULL",
+    };
+  }
+
+  const typeInfo = getColumnTypeInfo(column.dataType);
+  const formattedValue = typeInfo.format(value);
+
+  const fullText =
+    typeof formattedValue === "string"
+      ? formattedValue
+      : formattedValue !== null && formattedValue !== undefined
+        ? String(formattedValue)
+        : "";
+
+  return {
+    display: formattedValue,
+    fullText,
+  };
+};
 
 const VirtualizedTable: React.FC<{
   result: QueryResult;
@@ -44,6 +178,7 @@ const VirtualizedTable: React.FC<{
   getColumnWidth: (key: string) => number;
   handleMouseDown: (key: string, e: React.MouseEvent) => void;
   relationships: ForeignKeyRelationship[];
+  onRowHeightChange: (height: number) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isAppending?: boolean;
@@ -54,6 +189,7 @@ const VirtualizedTable: React.FC<{
   getColumnWidth,
   handleMouseDown,
   relationships,
+  onRowHeightChange,
   onLoadMore,
   hasMore,
   isAppending,
@@ -82,8 +218,11 @@ const VirtualizedTable: React.FC<{
   useEffect(() => {
     const updateHeight = () => {
       if (containerRef.current) {
-        const height = containerRef.current.clientHeight - HEADER_HEIGHT;
-        setContainerHeight(height);
+        const height =
+          containerRef.current.clientHeight -
+          HEADER_HEIGHT -
+          ROW_RESIZE_HANDLE_HEIGHT;
+        setContainerHeight(Math.max(height, 0));
       }
     };
 
@@ -120,28 +259,6 @@ const VirtualizedTable: React.FC<{
         onLoadMore();
       }
     }
-  };
-
-  const formatCellValue = (
-    value: any,
-    column: any
-  ): string | React.ReactNode => {
-    if (value === null || value === undefined) {
-      return <span className="text-vscode-text-tertiary italic">NULL</span>;
-    }
-
-    const typeInfo = getColumnTypeInfo(column.dataType);
-    const formattedValue = typeInfo.format(value);
-
-    if (formattedValue.length > 1000) {
-      return (
-        <span title={formattedValue}>
-          {formattedValue.substring(0, 1000)}...
-        </span>
-      );
-    }
-
-    return formattedValue;
   };
 
   const handleStatsHover = (column: any, e: React.MouseEvent) => {
@@ -190,29 +307,48 @@ const VirtualizedTable: React.FC<{
     >
       <div
         className="relative"
-        style={{ height: totalHeight + HEADER_HEIGHT + indicatorHeight }}
+        style={{
+          height:
+            totalHeight +
+            HEADER_HEIGHT +
+            ROW_RESIZE_HANDLE_HEIGHT +
+            indicatorHeight,
+        }}
       >
         <div
           className="sticky top-0 z-10 bg-vscode-bg-quaternary border-b border-vscode-border"
           style={{ height: HEADER_HEIGHT }}
         >
           <div className="flex">
-            {(result.columns || []).map((column, index) => (
-              <ColumnHeader
-                key={index}
-                column={column}
-                width={getColumnWidth(column.name)}
-                onMouseDown={(e) => handleMouseDown(column.name, e)}
-                onStatsHover={(e) => handleStatsHover(column, e)}
-                onStatsLeave={handleStatsLeave}
-              />
-            ))}
+            {(result.columns || []).map((column, index) => {
+              const columnWidth = getColumnWidth(column.name);
+              return (
+                <ColumnHeader
+                  key={index}
+                  column={column}
+                  width={columnWidth}
+                  onMouseDown={(e) => handleMouseDown(column.name, e)}
+                  onStatsHover={(e) => handleStatsHover(column, e)}
+                  onStatsLeave={handleStatsLeave}
+                />
+              );
+            })}
           </div>
         </div>
 
+        <RowResizeHandle
+          rowHeight={rowHeight}
+          onResize={onRowHeightChange}
+          className="relative z-10"
+        />
+
         <div
           className="absolute top-0 left-0 right-0"
-          style={{ transform: `translateY(${offsetY + HEADER_HEIGHT}px)` }}
+          style={{
+            transform: `translateY(${
+              offsetY + HEADER_HEIGHT + ROW_RESIZE_HANDLE_HEIGHT
+            }px)`,
+          }}
         >
           {(result.rows || [])
             .slice(visibleRange.startIndex, visibleRange.endIndex)
@@ -224,24 +360,30 @@ const VirtualizedTable: React.FC<{
                   className="flex border-b border-vscode-border hover:bg-vscode-bg-tertiary"
                   style={{ height: rowHeight }}
                 >
-                  {(result.columns || []).map((column, colIndex) => (
-                    <div
-                      key={colIndex}
-                      className="px-4 py-2 text-vscode-text border-r border-vscode-border last:border-r-0 overflow-hidden"
-                      style={{
-                        width: getColumnWidth(column.name),
-                        height: rowHeight,
-                      }}
-                      onMouseEnter={(e) =>
-                        handleCellHover(row[column.name], column, e)
-                      }
-                      onMouseLeave={handleCellLeave}
-                    >
-                      <div className="truncate">
-                        {formatCellValue(row[column.name], column)}
+                  {(result.columns || []).map((column, colIndex) => {
+                    const { display, fullText } = formatCellValue(
+                      row[column.name],
+                      column
+                    );
+                    const columnWidth = getColumnWidth(column.name);
+                    return (
+                      <div
+                        key={colIndex}
+                        className="flex h-full items-center px-4 text-vscode-text border-r border-vscode-border last:border-r-0 overflow-hidden"
+                        style={{
+                          width: columnWidth,
+                          maxWidth: columnWidth,
+                        }}
+                        onMouseEnter={(e) =>
+                          handleCellHover(row[column.name], column, e)
+                        }
+                        onMouseLeave={handleCellLeave}
+                        title={fullText}
+                      >
+                        <div className="truncate w-full">{display}</div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -251,7 +393,9 @@ const VirtualizedTable: React.FC<{
           <div
             className="absolute left-0 right-0 flex justify-center"
             style={{
-              transform: `translateY(${totalHeight + HEADER_HEIGHT}px)`,
+              transform: `translateY(${
+                totalHeight + HEADER_HEIGHT + ROW_RESIZE_HANDLE_HEIGHT
+              }px)`,
             }}
           >
             <div className="w-full bg-vscode-bg py-3 flex items-center justify-center space-x-2 text-xs text-vscode-text-secondary">
@@ -305,7 +449,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
   );
 
   const { exportResults, isExporting, error: exportError } = useResultsExport();
-  const { rowHeight, adjustRowHeight } = useRowHeight();
+  const { rowHeight, adjustRowHeight, setRowHeight } = useRowHeight();
 
   const columnConfig = useMemo(() => {
     if (!result) return [];
@@ -313,7 +457,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
       key: col.name,
       width: 150,
       minWidth: 80,
-      maxWidth: 500,
+      maxWidth: 320,
     }));
   }, [result]);
 
@@ -420,7 +564,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
             <button
               onClick={() => adjustRowHeight(-4)}
               className="px-1 hover:bg-vscode-bg-secondary rounded"
-              disabled={rowHeight <= 20}
+              disabled={rowHeight <= ROW_HEIGHT_MIN}
             >
               -
             </button>
@@ -428,7 +572,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
             <button
               onClick={() => adjustRowHeight(4)}
               className="px-1 hover:bg-vscode-bg-secondary rounded"
-              disabled={rowHeight >= 100}
+              disabled={rowHeight >= ROW_HEIGHT_MAX}
             >
               +
             </button>
@@ -471,6 +615,7 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
             getColumnWidth={getColumnWidth}
             handleMouseDown={handleMouseDown}
             relationships={relationships}
+            onRowHeightChange={setRowHeight}
             onLoadMore={onLoadMore}
             hasMore={hasMore}
             isAppending={isAppending}
@@ -498,22 +643,33 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
             >
               <thead className="bg-vscode-bg-quaternary sticky top-0">
                 <tr role="row">
-                  {(result.columns || []).map((column, index) => (
-                    <th
-                      key={index}
-                      role="columnheader"
-                      className="px-4 py-2 text-left font-medium text-vscode-text border-r border-vscode-border last:border-r-0"
-                      style={{ width: getColumnWidth(column.name) }}
-                    >
-                      <ColumnHeader
-                        column={column}
-                        width={getColumnWidth(column.name)}
-                        onMouseDown={(e) => handleMouseDown(column.name, e)}
-                        onStatsHover={() => {}}
-                        onStatsLeave={() => {}}
-                      />
-                    </th>
-                  ))}
+                  {(result.columns || []).map((column, index) => {
+                    const columnWidth = getColumnWidth(column.name);
+                    return (
+                      <th
+                        key={index}
+                        role="columnheader"
+                        className="px-4 py-2 text-left font-medium text-vscode-text border-r border-vscode-border last:border-r-0"
+                        style={{ width: columnWidth, maxWidth: columnWidth }}
+                      >
+                        <ColumnHeader
+                          column={column}
+                          width={columnWidth}
+                          onMouseDown={(e) => handleMouseDown(column.name, e)}
+                          onStatsHover={() => {}}
+                          onStatsLeave={() => {}}
+                        />
+                      </th>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <th colSpan={result.columns.length} className="p-0">
+                    <RowResizeHandle
+                      rowHeight={rowHeight}
+                      onResize={setRowHeight}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -524,25 +680,32 @@ export const EnhancedResultsGrid: React.FC<EnhancedResultsGridProps> = ({
                     className="border-b border-vscode-border hover:bg-vscode-bg-tertiary"
                     style={{ height: rowHeight }}
                   >
-                    {(result.columns || []).map((column, colIndex) => (
-                      <td
-                        key={colIndex}
-                        role="cell"
-                        className="px-4 py-2 text-vscode-text border-r border-vscode-border last:border-r-0"
-                        style={{ width: getColumnWidth(column.name) }}
-                      >
-                        {row[column.name] !== null &&
-                        row[column.name] !== undefined ? (
-                          getColumnTypeInfo(column.dataType).format(
-                            row[column.name]
-                          )
-                        ) : (
-                          <span className="text-vscode-text-tertiary italic">
-                            NULL
-                          </span>
-                        )}
-                      </td>
-                    ))}
+                    {(result.columns || []).map((column, colIndex) => {
+                      const { display, fullText } = formatCellValue(
+                        row[column.name],
+                        column
+                      );
+                      const columnWidth = getColumnWidth(column.name);
+                      return (
+                        <td
+                          key={colIndex}
+                          role="cell"
+                          className="p-0 border-r border-vscode-border last:border-r-0"
+                          style={{
+                            width: columnWidth,
+                            maxWidth: columnWidth,
+                            height: rowHeight,
+                          }}
+                        >
+                          <div
+                            className="flex h-full items-center px-4 text-vscode-text overflow-hidden"
+                            title={fullText}
+                          >
+                            <div className="truncate w-full">{display}</div>
+                          </div>
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

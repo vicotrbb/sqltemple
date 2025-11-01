@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface ColumnConfig {
   key: string;
@@ -8,51 +8,69 @@ interface ColumnConfig {
 }
 
 export const useColumnResize = (columns: ColumnConfig[]) => {
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('sqltemple-column-widths');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return {};
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    () => {
+      const saved = localStorage.getItem("sqltemple-column-widths");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return {};
+        }
       }
+      return {};
     }
-    return {};
-  });
-  
+  );
+
   const [isResizing, setIsResizing] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  const getColumnWidth = useCallback((columnKey: string): number => {
-    return columnWidths[columnKey] || columns.find(c => c.key === columnKey)?.width || 120;
-  }, [columnWidths, columns]);
+  const getColumnWidth = useCallback(
+    (columnKey: string): number => {
+      const column = columns.find((c) => c.key === columnKey);
+      const baseWidth = columnWidths[columnKey] ?? column?.width ?? 120;
 
-  const handleMouseDown = useCallback((columnKey: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(columnKey);
-    setStartX(e.clientX);
-    setStartWidth(getColumnWidth(columnKey));
-  }, [getColumnWidth]);
+      if (!column) {
+        return baseWidth;
+      }
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
+      return Math.min(Math.max(baseWidth, column.minWidth), column.maxWidth);
+    },
+    [columnWidths, columns]
+  );
 
-    const column = columns.find(c => c.key === isResizing);
-    if (!column) return;
+  const handleMouseDown = useCallback(
+    (columnKey: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(columnKey);
+      setStartX(e.clientX);
+      setStartWidth(getColumnWidth(columnKey));
+    },
+    [getColumnWidth]
+  );
 
-    const deltaX = e.clientX - startX;
-    const newWidth = Math.min(
-      Math.max(startWidth + deltaX, column.minWidth),
-      column.maxWidth
-    );
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
 
-    setColumnWidths(prev => ({
-      ...prev,
-      [isResizing]: newWidth
-    }));
-  }, [isResizing, startX, startWidth, columns]);
+      const column = columns.find((c) => c.key === isResizing);
+      if (!column) return;
+
+      const deltaX = e.clientX - startX;
+      const newWidth = Math.min(
+        Math.max(startWidth + deltaX, column.minWidth),
+        column.maxWidth
+      );
+
+      setColumnWidths((prev) => ({
+        ...prev,
+        [isResizing]: newWidth,
+      }));
+    },
+    [isResizing, startX, startWidth, columns]
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(null);
@@ -60,22 +78,25 @@ export const useColumnResize = (columns: ColumnConfig[]) => {
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
     }
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
-    localStorage.setItem('sqltemple-column-widths', JSON.stringify(columnWidths));
+    localStorage.setItem(
+      "sqltemple-column-widths",
+      JSON.stringify(columnWidths)
+    );
   }, [columnWidths]);
 
   return {
