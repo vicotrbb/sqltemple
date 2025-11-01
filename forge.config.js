@@ -114,6 +114,7 @@ module.exports = {
       name: "@electron-forge/plugin-webpack",
       config: {
         mainConfig: "./webpack.main.config.js",
+        externalModules: ["better-sqlite3", "pg"],
         renderer: {
           config: "./webpack.renderer.config.js",
           entryPoints: [
@@ -127,6 +128,12 @@ module.exports = {
             },
           ],
         },
+      },
+    },
+    {
+      name: "@timfish/forge-externals-plugin",
+      config: {
+        externals: ["better-sqlite3", "pg"],
       },
     },
   ],
