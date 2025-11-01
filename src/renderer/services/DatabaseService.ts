@@ -1,4 +1,8 @@
-import { DatabaseConnectionConfig, DatabaseSchema, QueryResult } from "../../main/database/interfaces";
+import {
+  DatabaseConnectionConfig,
+  DatabaseSchema,
+  QueryResult,
+} from "../../main/database/interfaces";
 import { errorService, ErrorLevel, ErrorCategory } from "./ErrorService";
 
 export interface DatabaseServiceResult<T = any> {
@@ -11,11 +15,17 @@ export class DatabaseService {
   private currentConnection: DatabaseConnectionConfig | null = null;
   private isConnected: boolean = false;
 
-  async connect(config: DatabaseConnectionConfig): Promise<DatabaseServiceResult<void>> {
+  async connect(
+    config: DatabaseConnectionConfig
+  ): Promise<DatabaseServiceResult<void>> {
     try {
       const result = await window.api.connectDatabase(config);
       if (result.success) {
-        this.currentConnection = config;
+        const connectionId = result.connectionId ?? config.id;
+        this.currentConnection = {
+          ...config,
+          id: connectionId ?? config.id,
+        };
         this.isConnected = true;
         return { success: true };
       } else {
@@ -47,11 +57,14 @@ export class DatabaseService {
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Database connection failed", 
+        "Database connection failed",
         error instanceof Error ? error.message : String(error),
         { config: { ...config, password: "[REDACTED]" } }
       );
-      return { success: false, error: "An unexpected error occurred while connecting to the database." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while connecting to the database.",
+      };
     }
   }
 
@@ -63,18 +76,26 @@ export class DatabaseService {
         this.currentConnection = null;
         return { success: true };
       } else {
-        return { success: false, error: result.error || "Failed to disconnect" };
+        return {
+          success: false,
+          error: result.error || "Failed to disconnect",
+        };
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Database disconnection failed", 
+        "Database disconnection failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while disconnecting." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while disconnecting.",
+      };
     }
   }
 
-  async executeQuery(query: string): Promise<DatabaseServiceResult<QueryResult>> {
+  async executeQuery(
+    query: string
+  ): Promise<DatabaseServiceResult<QueryResult>> {
     if (!this.isConnected || !query.trim()) {
       return { success: false, error: "Not connected or empty query" };
     }
@@ -121,9 +142,9 @@ export class DatabaseService {
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Query execution failed", 
+        "Query execution failed",
         error instanceof Error ? error.message : String(error),
-        { query: query.substring(0, 100) + (query.length > 100 ? '...' : '') }
+        { query: query.substring(0, 100) + (query.length > 100 ? "..." : "") }
       );
       return {
         success: false,
@@ -144,14 +165,20 @@ export class DatabaseService {
       if (result.success && result.schema) {
         return { success: true, data: result.schema };
       } else {
-        return { success: false, error: result.error || "Failed to load schema" };
+        return {
+          success: false,
+          error: result.error || "Failed to load schema",
+        };
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Schema loading failed", 
+        "Schema loading failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while loading schema." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while loading schema.",
+      };
     }
   }
 
@@ -161,32 +188,46 @@ export class DatabaseService {
       if (result.success && result.plan) {
         return { success: true, data: result.plan };
       } else {
-        return { success: false, error: result.error || "Failed to get query plan" };
+        return {
+          success: false,
+          error: result.error || "Failed to get query plan",
+        };
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Query plan generation failed", 
+        "Query plan generation failed",
         error instanceof Error ? error.message : String(error),
-        { query: query.substring(0, 100) + (query.length > 100 ? '...' : '') }
+        { query: query.substring(0, 100) + (query.length > 100 ? "..." : "") }
       );
-      return { success: false, error: "An unexpected error occurred while getting query plan." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while getting query plan.",
+      };
     }
   }
 
-  async loadConnections(): Promise<DatabaseServiceResult<DatabaseConnectionConfig[]>> {
+  async loadConnections(): Promise<
+    DatabaseServiceResult<DatabaseConnectionConfig[]>
+  > {
     try {
       const result = await window.api.getConnections();
       if (result.success && result.connections) {
         return { success: true, data: result.connections };
       } else {
-        return { success: false, error: result.error || "Failed to load connections" };
+        return {
+          success: false,
+          error: result.error || "Failed to load connections",
+        };
       }
     } catch (error) {
       const errorId = errorService.logDatabaseError(
-        "Failed to load saved connections", 
+        "Failed to load saved connections",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while loading connections." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while loading connections.",
+      };
     }
   }
 

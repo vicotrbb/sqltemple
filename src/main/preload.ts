@@ -81,26 +81,6 @@ contextBridge.exposeInMainWorld("api", {
   aiAnalyzeData: (prompt: string) =>
     ipcRenderer.invoke("ai-analyze-data", prompt),
 
-  localModel: {
-    list: () => ipcRenderer.invoke("localModel:list"),
-    status: (modelName: string) =>
-      ipcRenderer.invoke("localModel:status", modelName),
-    download: (modelName: string) =>
-      ipcRenderer.invoke("localModel:download", modelName),
-    cancelDownload: (modelName: string) =>
-      ipcRenderer.invoke("localModel:cancelDownload", modelName),
-    load: (modelName: string) =>
-      ipcRenderer.invoke("localModel:load", modelName),
-    unload: () => ipcRenderer.invoke("localModel:unload"),
-    delete: (modelName: string) =>
-      ipcRenderer.invoke("localModel:delete", modelName),
-    getSystemResources: () =>
-      ipcRenderer.invoke("localModel:getSystemResources"),
-    getRecommendation: (modelName: string) =>
-      ipcRenderer.invoke("localModel:getRecommendation", modelName),
-    getCurrentModel: () => ipcRenderer.invoke("localModel:getCurrentModel"),
-  },
-
   storage: {
     get: (key: string) => ipcRenderer.invoke("storage-get", key),
     set: (key: string, value: string) =>

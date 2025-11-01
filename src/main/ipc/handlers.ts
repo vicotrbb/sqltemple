@@ -5,12 +5,18 @@ import * as path from "path";
 import { PostgresClient } from "../database/PostgresClient";
 import { StorageManager } from "../storage/StorageManager";
 import { AIService } from "../ai/AIService";
+import { MenuBuilder } from "../menu/menuBuilder";
 import { DatabaseConnectionConfig, QueryResult } from "../database/interfaces";
 
 let currentClient: PostgresClient | null = null;
 let currentConnection: DatabaseConnectionConfig | null = null;
 let storageManager: StorageManager;
 let aiService: AIService;
+let menuBuilderInstance: MenuBuilder | null = null;
+
+export function registerMenuBuilder(builder: MenuBuilder | null): void {
+  menuBuilderInstance = builder;
+}
 
 export async function initializeIpcHandlers(
   storage: StorageManager
@@ -187,7 +193,7 @@ export async function initializeIpcHandlers(
     async (event, connection: DatabaseConnectionConfig) => {
       try {
         const id = await storageManager.saveConnection(connection);
-        return { success: true, id };
+        return { success: true, connectionId: id, id };
       } catch (error: any) {
         return { success: false, error: error.message || String(error) };
       }
@@ -524,7 +530,7 @@ export async function initializeIpcHandlers(
   });
 
   ipcMain.on("update-menu-state", (event, state) => {
-    console.log("Menu state updated:", state);
+    menuBuilderInstance?.updateState(state);
   });
 
   ipcMain.handle("file:open-query", async (event) => {

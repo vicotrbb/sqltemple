@@ -45,19 +45,6 @@ export interface IElectronAPI {
   aiOptimizeQuery: (sql: string) => Promise<any>;
   aiAnalyzeData: (prompt: string) => Promise<any>;
 
-  localModel: {
-    list: () => Promise<any>;
-    status: (modelName: string) => Promise<any>;
-    download: (modelName: string) => Promise<any>;
-    cancelDownload: (modelName: string) => Promise<any>;
-    load: (modelName: string) => Promise<any>;
-    unload: () => Promise<any>;
-    delete: (modelName: string) => Promise<any>;
-    getSystemResources: () => Promise<any>;
-    getRecommendation: (modelName: string) => Promise<any>;
-    getCurrentModel: () => Promise<any>;
-  };
-
   storage: {
     get: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;
     set: (key: string, value: string) => Promise<{ success: boolean; error?: string }>;

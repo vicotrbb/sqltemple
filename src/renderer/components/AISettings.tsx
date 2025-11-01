@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { aiService } from "../services/AIService";
+import {
+  errorService,
+  ErrorLevel,
+  ErrorCategory,
+} from "../services/ErrorService";
 
 interface AIProvider {
   name: string;
@@ -171,12 +176,42 @@ export const AISettings: React.FC<AISettingsProps> = ({
       const result = await aiService.validateConfig(config);
       if (result.success) {
         setError(null);
-        alert("Connection test successful!");
+        errorService.logError(
+          ErrorLevel.INFO,
+          ErrorCategory.AI,
+          "AI connection test successful",
+          {
+            userMessage: "AI connection test successful",
+            autoHide: true,
+            duration: 3000,
+          }
+        );
       } else {
-        setError(result.error || "Connection test failed");
+        const message = result.error || "Connection test failed";
+        setError(message);
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.AI,
+          "AI connection test failed",
+          {
+            userMessage: message,
+            details: message,
+            autoHide: false,
+          }
+        );
       }
     } catch (err) {
       setError("Connection test failed");
+      errorService.logError(
+        ErrorLevel.ERROR,
+        ErrorCategory.AI,
+        "AI connection test failed",
+        {
+          userMessage: "Connection test failed",
+          details: err instanceof Error ? err.message : String(err),
+          autoHide: false,
+        }
+      );
     } finally {
       setTestingConnection(false);
     }

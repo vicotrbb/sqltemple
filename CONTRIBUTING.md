@@ -14,15 +14,15 @@ Thank you for your interest in contributing to SQLTemple! This document provides
 
 ## 📋 Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
-- [Development Setup](#development-setup)
-- [Development Workflow](#development-workflow)
-- [Coding Standards](#coding-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Commit Guidelines](#commit-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Issue Reporting](#issue-reporting)
-- [Architecture Guidelines](#architecture-guidelines)
+- Code of Conduct
+- Development Setup
+- Development Workflow
+- Coding Standards
+- Testing Guidelines
+- Commit Guidelines
+- Pull Request Process
+- Issue Reporting
+- Architecture Guidelines
 
 ## 📜 Code of Conduct
 
@@ -170,7 +170,9 @@ interface DatabaseConnection {
   database: string;
 }
 
-async function connectToDatabase(config: DatabaseConnection): Promise<Connection> {
+async function connectToDatabase(
+  config: DatabaseConnection
+): Promise<Connection> {
   try {
     // Implementation
     return connection;
@@ -252,7 +254,7 @@ const QueryEditor = (props) => {
 
 We follow a comprehensive testing approach:
 
-```
+```text
 tests/
 ├── unit/           # Unit tests (Jest)
 ├── integration/    # Integration tests
@@ -264,32 +266,34 @@ tests/
 
 ```typescript
 // Unit test example
-describe('DatabaseService', () => {
+describe("DatabaseService", () => {
   let service: DatabaseService;
 
   beforeEach(() => {
     service = new DatabaseService();
   });
 
-  it('should connect to database with valid config', async () => {
+  it("should connect to database with valid config", async () => {
     const config: DatabaseConnection = {
-      host: 'localhost',
+      host: "localhost",
       port: 5432,
-      database: 'test'
+      database: "test",
     };
 
     const result = await service.connect(config);
     expect(result.success).toBe(true);
   });
 
-  it('should handle connection errors gracefully', async () => {
+  it("should handle connection errors gracefully", async () => {
     const invalidConfig: DatabaseConnection = {
-      host: 'invalid',
+      host: "invalid",
       port: 0,
-      database: ''
+      database: "",
     };
 
-    await expect(service.connect(invalidConfig)).rejects.toThrow(DatabaseConnectionError);
+    await expect(service.connect(invalidConfig)).rejects.toThrow(
+      DatabaseConnectionError
+    );
   });
 });
 ```
@@ -320,7 +324,7 @@ We follow [Conventional Commits](https://conventionalcommits.org/) specification
 
 ### Commit Format
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]
@@ -375,15 +379,18 @@ test(database): add integration tests for PostgreSQL client
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests pass
 - [ ] Integration tests pass
 - [ ] Manual testing completed
@@ -391,6 +398,7 @@ Brief description of changes
 ## Screenshots (if applicable)
 
 ## Checklist
+
 - [ ] Code follows project style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -421,6 +429,7 @@ Brief description of changes
 Clear description of the issue
 
 **To Reproduce**
+
 1. Go to '...'
 2. Click on '...'
 3. See error
@@ -432,6 +441,7 @@ What should happen
 If applicable
 
 **Environment**
+
 - OS: [e.g., macOS 12.0]
 - Node.js version: [e.g., 18.17.0]
 - SQLTemple version: [e.g., 1.0.0]
@@ -460,7 +470,7 @@ Mockups, examples, or other context
 
 ### Project Structure
 
-```
+```text
 src/
 ├── main/              # Electron main process
 │   ├── ai/           # AI service providers

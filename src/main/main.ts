@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import { autoUpdater } from "electron-updater";
 import { StorageManager } from "./storage/StorageManager";
-import { initializeIpcHandlers } from "./ipc/handlers";
+import { initializeIpcHandlers, registerMenuBuilder } from "./ipc/handlers";
 import { MenuBuilder } from "./menu/menuBuilder";
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -37,6 +37,7 @@ const createWindow = (): void => {
 
   menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
+  registerMenuBuilder(menuBuilder);
 
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
@@ -45,6 +46,7 @@ const createWindow = (): void => {
   mainWindow.on("closed", () => {
     mainWindow = null;
     menuBuilder = null;
+    registerMenuBuilder(null);
   });
 
   mainWindow.webContents.on(

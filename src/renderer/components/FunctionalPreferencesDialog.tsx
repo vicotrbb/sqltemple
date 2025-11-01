@@ -11,6 +11,11 @@ import {
   CheckIcon,
   AlertTriangleIcon,
 } from "./icons/IconLibrary";
+import {
+  errorService,
+  ErrorLevel,
+  ErrorCategory,
+} from "../services/ErrorService";
 
 interface PreferencesDialogProps {
   onClose: () => void;
@@ -208,7 +213,16 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
           const errorMessage =
             aiValidation.errors?.join(", ") ||
             "AI configuration validation failed";
-          alert(`AI Configuration Error: ${errorMessage}`);
+          errorService.logError(
+            ErrorLevel.ERROR,
+            ErrorCategory.AI,
+            "AI configuration validation failed",
+            {
+              userMessage: errorMessage,
+              details: errorMessage,
+              autoHide: false,
+            }
+          );
           setSaveStatus("error");
           setTimeout(() => setSaveStatus("idle"), 3000);
           return;
@@ -216,9 +230,18 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
 
         const aiSaveResult = await window.api.aiSetConfig(normalizedAIConfig);
         if (!aiSaveResult.success) {
-          alert(
+          const message =
             aiSaveResult.error ||
-              "Failed to save AI configuration. Please try again."
+            "Failed to save AI configuration. Please try again.";
+          errorService.logError(
+            ErrorLevel.ERROR,
+            ErrorCategory.AI,
+            "Failed to save AI configuration",
+            {
+              userMessage: message,
+              details: message,
+              autoHide: false,
+            }
           );
           setSaveStatus("error");
           setTimeout(() => setSaveStatus("idle"), 3000);

@@ -39,9 +39,12 @@ import {
 import { ConfigProvider, useSettings } from "./contexts/ConfigContext";
 import { useTheme } from "./hooks/useTheme";
 import { appService } from "./services/AppService";
-import { aiService } from "./services/AIService";
-import { errorService } from "./services/ErrorService";
-import { AppTab, QueryTab, TableDetailsTab } from "./services/TabService";
+import {
+  errorService,
+  ErrorLevel,
+  ErrorCategory,
+} from "./services/ErrorService";
+import { AppTab } from "./services/TabService";
 
 const AppContent: React.FC = () => {
   const [showConnectionManager, setShowConnectionManager] = useState(false);
@@ -50,7 +53,8 @@ const AppContent: React.FC = () => {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showAIQueryDialog, setShowAIQueryDialog] = useState(false);
-  const [showTableTopology, setShowTableTopology] = useState(false);
+  const [showConnectionsExplorer, setShowConnectionsExplorer] = useState(true);
+  const [showSchemaExplorer, setShowSchemaExplorer] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showSpotlight, setShowSpotlight] = useState(false);
@@ -95,7 +99,6 @@ const AppContent: React.FC = () => {
   const { updateMenuState } = useMenuState();
   const theme = useTheme();
 
-  // Initialize app service with callbacks
   useEffect(() => {
     appService.setCallbacks({
       onConnectionChange: (connection, connected) => {
@@ -116,11 +119,24 @@ const AppContent: React.FC = () => {
         setIsExecuting(false);
       },
       onError: (error) => {
-        alert(error);
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.UI,
+          "Application error",
+          {
+            userMessage: error,
+            details: error,
+            autoHide: false,
+          }
+        );
         setIsExecuting(false);
       },
       onSuccess: (message) => {
-        alert(message);
+        errorService.logError(ErrorLevel.INFO, ErrorCategory.UI, "Success", {
+          userMessage: message,
+          autoHide: true,
+          duration: 4000,
+        });
       },
       onTabsChange: (newTabs, newActiveTabId) => {
         setTabs(newTabs);
@@ -434,7 +450,6 @@ const AppContent: React.FC = () => {
 
   const handleShowTopology = (tableName: string, schemaName: string) => {
     setTopologyTable({ name: tableName, schema: schemaName });
-    setShowTableTopology(true);
     setRightSidebarView("topology");
   };
 
@@ -560,8 +575,20 @@ const AppContent: React.FC = () => {
     onReplace: handleReplace,
     onFormatQuery: handleFormatQuery,
 
-    onToggleConnections: () => refreshSchema(),
-    onToggleSchema: () => refreshSchema(),
+    onToggleConnections: () => {
+      const next = !showConnectionsExplorer;
+      setShowConnectionsExplorer(next);
+      if (next) {
+        loadConnections();
+      }
+    },
+    onToggleSchema: () => {
+      const next = !showSchemaExplorer;
+      setShowSchemaExplorer(next);
+      if (next && isConnected) {
+        refreshSchema();
+      }
+    },
     onToggleResults: handleToggleResults,
     onToggleHistory: () => setShowQueryHistory(!showQueryHistory),
 
@@ -597,6 +624,7 @@ const AppContent: React.FC = () => {
     activeTab && activeTab.type === "table-details" ? activeTab : null;
   const isQueryTabActive = Boolean(activeQueryTab);
   const shouldShowResultsPanel = showResultsPanel && isQueryTabActive;
+  const explorerVisible = showConnectionsExplorer || showSchemaExplorer;
 
   useEffect(() => {
     if (editorInstance) {
@@ -647,33 +675,47 @@ const AppContent: React.FC = () => {
       <div className="flex flex-1 min-h-0">
         <div
           className="bg-vscode-bg-secondary border-r border-vscode-border flex-shrink-0 flex flex-col relative"
-          style={{ width: `${sidebarWidth}px` }}
+          style={{
+            width: explorerVisible ? `${sidebarWidth}px` : 0,
+            minWidth: explorerVisible ? undefined : 0,
+          }}
         >
-          <UnifiedExplorer
-            currentConnection={currentConnection}
-            schema={schema}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            onEdit={(config) => {
-              setEditingConnection(config);
-              setShowConnectionManager(true);
-            }}
-            onRefresh={() => appService.loadSchema()}
-            onTableClick={handleTableClick}
-            onTableDoubleClick={handleOpenTableDetails}
-            onViewClick={handleViewClick}
-            onShowTopology={handleShowTopology}
-            onShowConnectionManager={() => setShowConnectionManager(true)}
-          />
+          {explorerVisible ? (
+            <>
+              <UnifiedExplorer
+                currentConnection={currentConnection}
+                schema={schema}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onEdit={(config) => {
+                  setEditingConnection(config);
+                  setShowConnectionManager(true);
+                }}
+                onRefresh={() => appService.loadSchema()}
+                onTableClick={handleTableClick}
+                onTableDoubleClick={handleOpenTableDetails}
+                onViewClick={handleViewClick}
+                onShowTopology={handleShowTopology}
+                onShowConnectionManager={() => setShowConnectionManager(true)}
+                showConnectionsPanel={showConnectionsExplorer}
+                showSchemaExplorer={showSchemaExplorer}
+              />
 
-          <ResizeHandle
-            direction="horizontal"
-            className="absolute top-0 right-0 bottom-0"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setIsSidebarResizing(true);
-            }}
-          />
+              <ResizeHandle
+                direction="horizontal"
+                className="absolute top-0 right-0 bottom-0"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsSidebarResizing(true);
+                }}
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center px-4 text-center text-xs text-vscode-text-tertiary">
+              Explorer hidden. Use View &gt; Toggle Connections Panel or Toggle
+              Schema Explorer to show it again.
+            </div>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">

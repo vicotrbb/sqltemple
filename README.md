@@ -135,45 +135,45 @@ npm run make
 
 ### File Operations
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| New Tab | `Cmd+T` | `Ctrl+T` |
-| Open Query | `Cmd+O` | `Ctrl+O` |
-| Save Query | `Cmd+S` | `Ctrl+S` |
+| Action        | macOS         | Windows/Linux  |
+| ------------- | ------------- | -------------- |
+| New Tab       | `Cmd+T`       | `Ctrl+T`       |
+| Open Query    | `Cmd+O`       | `Ctrl+O`       |
+| Save Query    | `Cmd+S`       | `Ctrl+S`       |
 | Save Query As | `Cmd+Shift+S` | `Ctrl+Shift+S` |
-| Preferences | `Cmd+,` | `Ctrl+,` |
+| Preferences   | `Cmd+,`       | `Ctrl+,`       |
 
 ### Edit Operations
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Undo | `Cmd+Z` | `Ctrl+Z` |
-| Redo | `Cmd+Shift+Z` | `Ctrl+Y` |
-| Cut | `Cmd+X` | `Ctrl+X` |
-| Copy | `Cmd+C` | `Ctrl+C` |
-| Paste | `Cmd+V` | `Ctrl+V` |
-| Select All | `Cmd+A` | `Ctrl+A` |
+| Action     | macOS         | Windows/Linux |
+| ---------- | ------------- | ------------- |
+| Undo       | `Cmd+Z`       | `Ctrl+Z`      |
+| Redo       | `Cmd+Shift+Z` | `Ctrl+Y`      |
+| Cut        | `Cmd+X`       | `Ctrl+X`      |
+| Copy       | `Cmd+C`       | `Ctrl+C`      |
+| Paste      | `Cmd+V`       | `Ctrl+V`      |
+| Select All | `Cmd+A`       | `Ctrl+A`      |
 
 ### View & Navigation
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Find | `Cmd+F` | `Ctrl+F` |
-| Find & Replace | `Cmd+Shift+F` | `Ctrl+Shift+F` |
-| Toggle History | `Cmd+H` | `Ctrl+H` |
-| Spotlight Search | `Cmd+K` | `Ctrl+K` |
-| Zoom In | `Cmd++` | `Ctrl++` |
-| Zoom Out | `Cmd+-` | `Ctrl+-` |
-| Reset Zoom | `Cmd+0` | `Ctrl+0` |
+| Action           | macOS         | Windows/Linux  |
+| ---------------- | ------------- | -------------- |
+| Find             | `Cmd+F`       | `Ctrl+F`       |
+| Find & Replace   | `Cmd+Shift+F` | `Ctrl+Shift+F` |
+| Toggle History   | `Cmd+H`       | `Ctrl+H`       |
+| Spotlight Search | `Cmd+K`       | `Ctrl+K`       |
+| Zoom In          | `Cmd++`       | `Ctrl++`       |
+| Zoom Out         | `Cmd+-`       | `Ctrl+-`       |
+| Reset Zoom       | `Cmd+0`       | `Ctrl+0`       |
 
 ### Tabs & Windows
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Switch to Tab 1 | `Cmd+1` | `Ctrl+1` |
-| Switch to Tab 2 | `Cmd+2` | `Ctrl+2` |
-| Switch to Tab 3 | `Cmd+3` | `Ctrl+3` |
-| Execute Query | `Cmd+Enter` | `Ctrl+Enter` |
+| Action          | macOS       | Windows/Linux |
+| --------------- | ----------- | ------------- |
+| Switch to Tab 1 | `Cmd+1`     | `Ctrl+1`      |
+| Switch to Tab 2 | `Cmd+2`     | `Ctrl+2`      |
+| Switch to Tab 3 | `Cmd+3`     | `Ctrl+3`      |
+| Execute Query   | `Cmd+Enter` | `Ctrl+Enter`  |
 
 ## 🤖 AI Features Guide
 

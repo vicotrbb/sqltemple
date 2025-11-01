@@ -1,154 +1,106 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
-import { resetAllMocks } from "../../utils/mockHelpers";
 import {
-  createTestConnectionConfig,
-  createTestQueryResult,
-  createTestDatabaseSchema,
-} from "../../utils/testFactories";
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
+import { PostgresClient } from "../../../database/PostgresClient";
+import { DatabaseConnectionConfig } from "../../../database/interfaces";
+import { Client as PgClient } from "pg";
 
-const mockPostgresClient = {
-  connect: jest.fn() as jest.MockedFunction<any>,
-  disconnect: jest.fn() as jest.MockedFunction<any>,
-  executeQuery: jest.fn() as jest.MockedFunction<any>,
-  getSchemaMetadata: jest.fn() as jest.MockedFunction<any>,
-  getQueryPlan: jest.fn() as jest.MockedFunction<any>,
-  getTableColumns: jest.fn() as jest.MockedFunction<any>,
-};
+jest.mock("pg");
 
 describe("PostgresClient", () => {
+  const ClientMock = PgClient as unknown as jest.Mock;
+  let mockPgInstance: any;
+  let client: PostgresClient;
+  const baseConfig: DatabaseConnectionConfig = {
+    name: "Test",
+    type: "postgres",
+    host: "https://example.org/database",
+    port: 5432,
+    database: "postgres",
+    username: "postgres",
+    password: "secret",
+    ssl: true,
+  };
+
   beforeEach(() => {
-    resetAllMocks();
-    Object.values(mockPostgresClient).forEach((mockFn) => {
-      if (jest.isMockFunction(mockFn)) {
-        mockFn.mockReset();
-      }
-    });
+    mockPgInstance = {
+      connect: jest.fn(),
+      end: jest.fn(),
+      query: jest.fn(),
+    } as any;
+    ClientMock.mockImplementation(() => mockPgInstance);
+    client = new PostgresClient();
   });
 
-  describe("Connection Management", () => {
-    it("should connect successfully with valid config", async () => {
-      const config = createTestConnectionConfig();
-
-      await mockPostgresClient.connect(config);
-
-      expect(mockPostgresClient.connect).toHaveBeenCalledWith(config);
-    });
-
-    it("should disconnect successfully", async () => {
-      await mockPostgresClient.disconnect();
-
-      expect(mockPostgresClient.disconnect).toHaveBeenCalled();
-    });
-
-    it("should handle connection failures", async () => {
-      const config = createTestConnectionConfig();
-      mockPostgresClient.connect.mockRejectedValue(
-        new Error("Connection failed")
-      );
-
-      await expect(mockPostgresClient.connect(config)).rejects.toThrow(
-        "Connection failed"
-      );
-    });
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await client.disconnect();
   });
 
-  describe("Query Execution", () => {
-    it("should execute query successfully", async () => {
-      const mockResult = createTestQueryResult(3);
-      mockPostgresClient.executeQuery.mockResolvedValue(mockResult);
+  it("normalizes host values before connecting", async () => {
+    await client.connect(baseConfig);
 
-      const result = await mockPostgresClient.executeQuery(
-        "SELECT * FROM users"
-      );
-
-      expect(result.rows).toHaveLength(3);
-      expect(result.rowCount).toBe(3);
-      expect(mockPostgresClient.executeQuery).toHaveBeenCalledWith(
-        "SELECT * FROM users"
-      );
+    expect(ClientMock).toHaveBeenCalledWith({
+      host: "example.org",
+      port: 5432,
+      database: "postgres",
+      user: "postgres",
+      password: "secret",
+      ssl: { rejectUnauthorized: false },
     });
-
-    it("should handle query errors gracefully", async () => {
-      const error = new Error("SQL syntax error");
-      mockPostgresClient.executeQuery.mockResolvedValue({
-        rows: [],
-        columns: [],
-        rowCount: 0,
-        duration: 10,
-        error: "SQL syntax error",
-      });
-
-      const result = await mockPostgresClient.executeQuery("INVALID SQL");
-
-      expect(result.error).toBe("SQL syntax error");
-      expect(result.rows).toEqual([]);
-    });
+    expect(mockPgInstance.connect).toHaveBeenCalled();
   });
 
-  describe("Schema Operations", () => {
-    it("should retrieve database schema", async () => {
-      const mockSchema = createTestDatabaseSchema();
-      mockPostgresClient.getSchemaMetadata.mockResolvedValue(mockSchema);
+  it("returns structured results for successful queries", async () => {
+    await client.connect(baseConfig);
 
-      const result = await mockPostgresClient.getSchemaMetadata();
-
-      expect(result.databases).toHaveLength(1);
-      expect(result.schemas).toHaveLength(2);
-      expect(mockPostgresClient.getSchemaMetadata).toHaveBeenCalled();
+    mockPgInstance.query.mockResolvedValue({
+      rows: [{ id: 1 }],
+      rowCount: 1,
+      fields: [{ name: "id", dataTypeID: 23 }],
     });
 
-    it("should retrieve table columns", async () => {
-      const mockColumns = [
-        { name: "id", dataType: "integer", nullable: false },
-        { name: "name", dataType: "varchar(255)", nullable: false },
-      ];
-      mockPostgresClient.getTableColumns.mockResolvedValue(mockColumns);
+    const result = await client.executeQuery("SELECT 1");
 
-      const result = await mockPostgresClient.getTableColumns(
-        "public",
-        "users"
-      );
-
-      expect(result).toHaveLength(2);
-      expect(result[0].name).toBe("id");
-      expect(mockPostgresClient.getTableColumns).toHaveBeenCalledWith(
-        "public",
-        "users"
-      );
-    });
+    expect(result.error).toBeUndefined();
+    expect(result.rowCount).toBe(1);
+    expect(result.columns).toEqual([
+      { name: "id", dataType: "integer", nullable: true },
+    ]);
   });
 
-  describe("Query Plan Analysis", () => {
-    it("should analyze query plan for SELECT statements", async () => {
-      const mockPlan = {
-        Plan: {
-          "Node Type": "Seq Scan",
-          "Relation Name": "users",
-          "Total Cost": 22.5,
-          "Plan Rows": 1000,
-        },
-      };
-      mockPostgresClient.getQueryPlan.mockResolvedValue(mockPlan);
+  it("captures and returns query errors", async () => {
+    await client.connect(baseConfig);
 
-      const result = await mockPostgresClient.getQueryPlan(
-        "SELECT * FROM users"
-      );
+    mockPgInstance.query.mockRejectedValue(new Error("syntax error"));
 
-      expect(result.Plan["Node Type"]).toBe("Seq Scan");
-      expect(result.Plan["Relation Name"]).toBe("users");
-      expect(mockPostgresClient.getQueryPlan).toHaveBeenCalledWith(
-        "SELECT * FROM users"
-      );
+    const result = await client.executeQuery("INVALID");
+
+    expect(result.error).toBe("syntax error");
+    expect(result.rows).toHaveLength(0);
+    expect(result.rowCount).toBe(0);
+  });
+
+  it("paginates table data using LIMIT and OFFSET", async () => {
+    await client.connect(baseConfig);
+
+    mockPgInstance.query.mockResolvedValue({
+      rows: Array.from({ length: 5 }, (_, index) => ({ id: index })),
+      fields: [{ name: "id", dataTypeID: 23 }],
     });
 
-    it("should reject destructive queries for plan analysis", async () => {
-      mockPostgresClient.getQueryPlan.mockRejectedValue(
-        new Error("EXPLAIN is only supported for SELECT statements")
-      );
+    const page = await client.getTableData("public", "users", 5, 10);
 
-      await expect(
-        mockPostgresClient.getQueryPlan("DROP TABLE users")
-      ).rejects.toThrow("EXPLAIN is only supported for SELECT statements");
-    });
+    expect(mockPgInstance.query).toHaveBeenCalledWith(
+      expect.stringContaining('FROM "public"."users"'),
+      [10, 6]
+    );
+    expect(page.rows).toHaveLength(5);
+    expect(page.nextOffset).toBe(15);
   });
 });

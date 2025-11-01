@@ -57,7 +57,7 @@
     "buffer": "^6.0.3",
     "css-loader": "^7.1.2",
     "electron": "^36.4.0",
-    "electron-forge": "^5.2.4",
+    "electron-forge": "^7.8.1",
     "electron-rebuild": "^3.2.9",
     "electron-squirrel-startup": "^1.0.1",
     "events": "^3.3.0",
