@@ -6,7 +6,7 @@ Thank you for your interest in contributing to SQLTemple! This document provides
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/vicotrbb/sqltemple.git`
-3. Install dependencies: `npm install`
+3. Install dependencies: `npm ci`
 4. Start development: `npm start`
 5. Make your changes
 6. Test your changes: `npm run typecheck && npm run lint`
@@ -55,7 +55,7 @@ cd sqltemple
 git remote add upstream https://github.com/victorbona/sqltemple.git
 
 # Install dependencies
-npm install
+npm ci
 
 # Start development server
 npm start
@@ -75,6 +75,7 @@ npm run lint
 
 # Build for production
 npm run make
+# (macOS generates DMG/ZIP, Windows generates Squirrel installers, Linux generates deb/rpm/zip)
 
 # Package without distributables
 npm run package
@@ -82,6 +83,8 @@ npm run package
 # Rebuild native modules
 npm run rebuild
 ```
+
+> ℹ️ **Packaging is platform-specific.** Run `npm run make` on the matching OS (macOS for DMG/ZIP, Windows for Squirrel, Linux for deb/rpm) or let the GitHub Actions workflow build and upload installers for you.
 
 ### IDE Setup
 

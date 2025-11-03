@@ -64,7 +64,7 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 - **Hot Reload Development**: Fast development cycle with webpack hot module replacement
 - **Secure Context Isolation**: Electron security best practices with IPC communication
 - **Local Storage**: SQLite-based local storage for connections, history, and settings
-- **Cross-Platform**: Built for macOS with Windows/Linux support planned
+- **Cross-Platform**: macOS app bundle ready today, with Windows and Linux installers produced via our CI builds
 
 ## 🖥️ Supported Databases
 
@@ -73,28 +73,31 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 
 ## 📋 Requirements
 
-- macOS 10.15 or later
-- Node.js 16 or later (for development)
+- macOS 10.15 or later (for the prebuilt DMG)
+- Node.js 18 or later (for development/build tooling)
 - OpenAI API key (for AI features)
 
 ## 🚀 Installation
 
 ### Option 1: Download Pre-built App
 
-1. Go to the [Releases](https://github.com/yourusername/sqltemple/releases) page
-2. Download the latest `.dmg` file
-3. Open the DMG and drag SQLTemple to your Applications folder
-4. Launch SQLTemple from Applications
+1. Visit the [SQLTemple Releases](https://github.com/vicotrbb/sqltemple/releases) page
+2. Download the installer for your platform:
+   - `.dmg` for macOS
+   - `.exe` / `.msi` for Windows
+   - `.deb` / `.rpm` / `.AppImage` (when available) for Linux
+3. Install as you would any native application for that platform
+4. Launch SQLTemple from Applications / Start Menu / your desktop environment
 
 ### Option 2: Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/sqltemple.git
+git clone https://github.com/vicotrbb/sqltemple.git
 cd sqltemple
 
 # Install dependencies
-npm install
+npm ci
 
 # Run in development mode
 npm start
@@ -284,11 +287,11 @@ Built-in tools to help optimize your queries:
 ### Prerequisites
 
 ```bash
-# Install Node.js 16+
-brew install node
+# Install Node.js 18+
+brew install node   # or use nvm / volta on any platform
 
 # Install dependencies
-npm install
+npm ci
 ```
 
 ### Development Commands
@@ -308,6 +311,9 @@ npm run make
 
 # Package without making distributables
 npm run package
+
+# Rebuild native dependencies (after switching Node/Electron versions)
+npm run rebuild
 ```
 
 ### Project Structure
@@ -358,7 +364,9 @@ sqltemple/
 
 ## 📦 Building for Distribution
 
-### Build for macOS
+Forge produces platform-specific installers. You must run the packaging commands on the matching operating system (or rely on the GitHub Actions workflow, which builds macOS, Windows, and Linux artifacts for each tagged release).
+
+### Build for macOS (local)
 
 ```bash
 # Build .app bundle
@@ -372,6 +380,20 @@ The built application will be in:
 
 - `.app` bundle: `out/SQLTemple-darwin-*/SQLTemple.app`
 - `.dmg` installer: `out/make/SQLTemple-*.dmg`
+
+### Build for Windows or Linux (local)
+
+Run the same commands on a Windows or Linux machine respectively:
+
+```bash
+npm run make
+```
+
+Forge will emit installers under `out/make/` (Squirrel `.exe/.msi` on Windows, `.deb/.rpm/.zip` on Linux).
+
+### Continuous Delivery
+
+The `build-*` GitHub Actions jobs run `npm run make` on macOS, Windows, and Ubuntu runners, uploading the resulting installers as workflow artifacts. The `release` job downloads those artifacts and attaches them to GitHub Releases, giving you ready-to-share download links for every platform.
 
 ### Code Signing (Optional)
 
@@ -408,6 +430,11 @@ To sign your app for distribution:
 - For large result sets, the app automatically limits display
 - Close unused tabs to free memory
 - Restart the app if it becomes unresponsive
+
+### Packaging Errors (Missing Native Modules)
+
+- If you see `Cannot find module 'better-sqlite3'` in a packaged app, ensure `npm run rebuild` has been executed and rerun `npm run make`
+- When packaging via CI, confirm that `@timfish/forge-externals-plugin` and the `externalModules` list in `forge.config.js` include every native dependency
 
 ## 🤝 Contributing
 

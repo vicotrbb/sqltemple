@@ -38,19 +38,10 @@ jest.mock("electron-updater", () => ({
   },
 }));
 
-// Mock better-sqlite3
-jest.mock("better-sqlite3", () => {
-  const mockDB = {
-    exec: jest.fn(),
-    prepare: jest.fn(() => ({
-      run: jest.fn(),
-      get: jest.fn(),
-      all: jest.fn(() => []),
-    })),
-    close: jest.fn(),
-  };
-  return jest.fn(() => mockDB);
-});
+// Mock better-sqlite3 using in-memory implementation
+jest.mock("better-sqlite3", () =>
+  require("./mocks/inMemoryBetterSqlite").createBetterSqliteMock()
+);
 
 // Mock pg
 jest.mock("pg", () => ({

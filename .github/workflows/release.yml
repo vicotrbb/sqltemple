@@ -39,6 +39,12 @@ jobs:
       - name: Run type checking
         run: npm run typecheck
 
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+
       - name: Set BUILD_NUMBER
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
@@ -175,17 +181,28 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
             echo "Tag push detected, will create release"
           else
-            # For main branch, check if version changed in the last commit
-            PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version" 2>/dev/null || echo "")
-            echo "previous_version=${PREV_VERSION}" >> $GITHUB_OUTPUT
             echo "is_tag=false" >> $GITHUB_OUTPUT
-            
-            if [ "$CURRENT_VERSION" != "$PREV_VERSION" ] && [ -n "$PREV_VERSION" ]; then
-              echo "should_release=true" >> $GITHUB_OUTPUT
-              echo "Version changed from ${PREV_VERSION} to ${CURRENT_VERSION}, will create release"
+            if [ -n "${{ github.event.before }}" ]; then
+              PREV_SHA="${{ github.event.before }}"
+              PREV_VERSION=$(git show ${PREV_SHA}:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version" 2>/dev/null || echo "")
+              echo "previous_version=${PREV_VERSION}" >> $GITHUB_OUTPUT
+
+              if [ "$CURRENT_VERSION" != "$PREV_VERSION" ] && [ -n "$PREV_VERSION" ]; then
+                echo "should_release=true" >> $GITHUB_OUTPUT
+                echo "Version changed from ${PREV_VERSION} to ${CURRENT_VERSION}, will create release"
+              else
+                if git diff --quiet ${{ github.event.before }} HEAD -- package.json; then
+                  echo "should_release=false" >> $GITHUB_OUTPUT
+                  echo "Package.json unchanged in this push; skipping release"
+                else
+                  echo "should_release=true" >> $GITHUB_OUTPUT
+                  echo "Package.json changed in this push; will create release"
+                fi
+              fi
             else
-              echo "should_release=false" >> $GITHUB_OUTPUT
-              echo "Version unchanged (${CURRENT_VERSION}), skipping release"
+              echo "previous_version=" >> $GITHUB_OUTPUT
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "No previous commit found; will create release"
             fi
           fi
 
