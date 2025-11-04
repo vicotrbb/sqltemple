@@ -63,12 +63,7 @@ class IPCTestHelperImpl implements IPCTestHelper {
       throw new Error(`No handler registered for channel: ${channel}`);
     }
 
-    try {
-      const result = await handler(this.mockEvent, ...args);
-      return result;
-    } catch (error) {
-      throw error;
-    }
+    return await handler(this.mockEvent, ...args);
   }
 
   /**
@@ -178,12 +173,7 @@ export const testIPCErrorHandling = async (
     throw errorToThrow;
   });
 
-  try {
-    const result = await ipcTestHelper.invokeHandler(channel, ...args);
-    return result;
-  } catch (error) {
-    throw error;
-  }
+  return await ipcTestHelper.invokeHandler(channel, ...args);
 };
 
 /**

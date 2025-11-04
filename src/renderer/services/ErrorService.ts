@@ -65,13 +65,15 @@ export class ErrorService {
       details: options?.details,
       timestamp: new Date(),
       context: options?.context,
-      userMessage: options?.userMessage || this.getDefaultUserMessage(category, message),
-      autoHide: options?.autoHide ?? (level === ErrorLevel.INFO || level === ErrorLevel.WARNING),
+      userMessage: options?.userMessage || this.getDefaultUserMessage(category),
+      autoHide:
+        options?.autoHide ??
+        (level === ErrorLevel.INFO || level === ErrorLevel.WARNING),
       duration: options?.duration ?? this.getDefaultDuration(level),
     };
   }
 
-  private getDefaultUserMessage(category: ErrorCategory, message: string): string {
+  private getDefaultUserMessage(category: ErrorCategory): string {
     switch (category) {
       case ErrorCategory.DATABASE:
         return "Database operation failed";
@@ -160,7 +162,7 @@ export class ErrorService {
   clearAllErrors(): void {
     const errorIds = Array.from(this.errors.keys());
     this.errors.clear();
-    errorIds.forEach(id => this.callbacks.onErrorCleared?.(id));
+    errorIds.forEach((id) => this.callbacks.onErrorCleared?.(id));
   }
 
   getError(errorId: string): AppError | undefined {
@@ -168,11 +170,17 @@ export class ErrorService {
   }
 
   getAllErrors(): AppError[] {
-    return Array.from(this.errors.values()).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return Array.from(this.errors.values()).sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+    );
   }
 
   // Convenience methods for common error types
-  logDatabaseError(message: string, details?: string, context?: Record<string, any>): string {
+  logDatabaseError(
+    message: string,
+    details?: string,
+    context?: Record<string, any>
+  ): string {
     return this.logError(ErrorLevel.ERROR, ErrorCategory.DATABASE, message, {
       details,
       context,
@@ -180,7 +188,11 @@ export class ErrorService {
     });
   }
 
-  logAIError(message: string, details?: string, context?: Record<string, any>): string {
+  logAIError(
+    message: string,
+    details?: string,
+    context?: Record<string, any>
+  ): string {
     return this.logError(ErrorLevel.ERROR, ErrorCategory.AI, message, {
       details,
       context,
@@ -188,7 +200,11 @@ export class ErrorService {
     });
   }
 
-  logFileError(message: string, details?: string, context?: Record<string, any>): string {
+  logFileError(
+    message: string,
+    details?: string,
+    context?: Record<string, any>
+  ): string {
     return this.logError(ErrorLevel.ERROR, ErrorCategory.FILE, message, {
       details,
       context,
@@ -196,22 +212,39 @@ export class ErrorService {
     });
   }
 
-  logValidationError(message: string, details?: string, context?: Record<string, any>): string {
-    return this.logError(ErrorLevel.WARNING, ErrorCategory.VALIDATION, message, {
-      details,
-      context,
-      userMessage: "Please check your input and try again",
-    });
+  logValidationError(
+    message: string,
+    details?: string,
+    context?: Record<string, any>
+  ): string {
+    return this.logError(
+      ErrorLevel.WARNING,
+      ErrorCategory.VALIDATION,
+      message,
+      {
+        details,
+        context,
+        userMessage: "Please check your input and try again",
+      }
+    );
   }
 
-  logInfo(message: string, userMessage?: string, context?: Record<string, any>): string {
+  logInfo(
+    message: string,
+    userMessage?: string,
+    context?: Record<string, any>
+  ): string {
     return this.logError(ErrorLevel.INFO, ErrorCategory.UI, message, {
       context,
       userMessage,
     });
   }
 
-  logSuccess(message: string, userMessage?: string, context?: Record<string, any>): string {
+  logSuccess(
+    message: string,
+    userMessage?: string,
+    context?: Record<string, any>
+  ): string {
     return this.logError(ErrorLevel.INFO, ErrorCategory.UI, message, {
       context,
       userMessage,

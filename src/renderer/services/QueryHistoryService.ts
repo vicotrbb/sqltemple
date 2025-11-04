@@ -8,8 +8,7 @@ export interface QueryHistoryServiceResult<T = any> {
 
 export class QueryHistoryService {
   async getQueryHistory(
-    connectionId?: number,
-    limit: number = 100
+    connectionId?: number
   ): Promise<QueryHistoryServiceResult<QueryHistoryEntry[]>> {
     try {
       const result = await window.api.getQueryHistory(connectionId);
@@ -31,19 +30,11 @@ export class QueryHistoryService {
   }
 
   async addQueryToHistory(
-    entry: QueryHistoryEntry
+    _entry: QueryHistoryEntry
   ): Promise<QueryHistoryServiceResult<void>> {
-    try {
-      // The history is typically added by the main process after query execution
-      // This method is here for completeness in case manual history management is needed
-      return { success: true };
-    } catch (error) {
-      console.error("Failed to add query to history:", error);
-      return {
-        success: false,
-        error: "An unexpected error occurred while adding query to history.",
-      };
-    }
+    // The history is typically added by the main process after query execution
+    // This method is here for completeness in case manual history management is needed
+    return { success: true };
   }
 
   formatDate(dateString: string): string {

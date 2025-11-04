@@ -77,7 +77,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
   onEdit,
   onRefresh,
   onTableClick,
-  onViewClick,
+  onViewClick: _onViewClick,
   onShowTopology,
   onShowConnectionManager,
   onTableDoubleClick,

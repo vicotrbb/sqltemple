@@ -568,7 +568,6 @@ export class PostgresClient implements IDatabaseClient {
       throw new Error("Database not connected");
     }
 
-    const fullName = `${schemaName}.${tableName}`;
     const regClass = `to_regclass(format('%I.%I', $1::text, $2::text))`;
 
     const columnsQuery = `

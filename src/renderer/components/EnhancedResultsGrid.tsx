@@ -185,7 +185,7 @@ const VirtualizedTable: React.FC<{
 }> = ({
   result,
   rowHeight,
-  columnWidths,
+  columnWidths: _columnWidths,
   getColumnWidth,
   handleMouseDown,
   relationships,

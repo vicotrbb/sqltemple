@@ -6,7 +6,7 @@ import { PostgresClient } from "../database/PostgresClient";
 import { StorageManager } from "../storage/StorageManager";
 import { AIService } from "../ai/AIService";
 import { MenuBuilder } from "../menu/menuBuilder";
-import { DatabaseConnectionConfig, QueryResult } from "../database/interfaces";
+import { DatabaseConnectionConfig } from "../database/interfaces";
 
 let currentClient: PostgresClient | null = null;
 let currentConnection: DatabaseConnectionConfig | null = null;
@@ -732,11 +732,14 @@ export async function initializeIpcHandlers(
 
   ipcMain.handle(
     "database:getForeignKeys",
-    async (event, tableName: string, schemaName: string) => {
+    async (_event, tableName: string, schemaName: string) => {
       try {
         if (!currentClient) {
           throw new Error("Database not connected");
         }
+
+        const escapeLiteral = (value: string): string =>
+          value.replace(/'/g, "''");
 
         const query = `
         SELECT 
@@ -754,8 +757,8 @@ export async function initializeIpcHandlers(
             AND ccu.table_schema = tc.table_schema
         WHERE 
           tc.constraint_type = 'FOREIGN KEY' 
-          AND tc.table_name = $1 
-          AND tc.table_schema = $2;
+          AND tc.table_name = '${escapeLiteral(tableName)}'
+          AND tc.table_schema = '${escapeLiteral(schemaName)}';
       `;
 
         const result = await currentClient.executeQuery(query);

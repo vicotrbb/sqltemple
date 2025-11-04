@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 interface ColumnConfig {
   key: string;
@@ -25,7 +26,6 @@ export const useColumnResize = (columns: ColumnConfig[]) => {
   const [isResizing, setIsResizing] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
-  const resizeRef = useRef<HTMLDivElement>(null);
 
   const getColumnWidth = useCallback(
     (columnKey: string): number => {
@@ -42,10 +42,10 @@ export const useColumnResize = (columns: ColumnConfig[]) => {
   );
 
   const handleMouseDown = useCallback(
-    (columnKey: string, e: React.MouseEvent) => {
-      e.preventDefault();
+    (columnKey: string, event: ReactMouseEvent) => {
+      event.preventDefault();
       setIsResizing(columnKey);
-      setStartX(e.clientX);
+      setStartX(event.clientX);
       setStartWidth(getColumnWidth(columnKey));
     },
     [getColumnWidth]

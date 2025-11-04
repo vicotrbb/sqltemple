@@ -141,6 +141,7 @@ export const FunctionalPreferencesDialog: React.FC<PreferencesDialogProps> = ({
         setUpdateStatus(result.error || "Failed to check for updates");
       }
     } catch (error) {
+      console.error("Failed to check for updates:", error);
       setUpdateStatus("Failed to check for updates");
     } finally {
       setIsCheckingForUpdates(false);

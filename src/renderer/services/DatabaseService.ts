@@ -3,7 +3,7 @@ import {
   DatabaseSchema,
   QueryResult,
 } from "../../main/database/interfaces";
-import { errorService, ErrorLevel, ErrorCategory } from "./ErrorService";
+import { errorService } from "./ErrorService";
 
 export interface DatabaseServiceResult<T = any> {
   success: boolean;
@@ -56,7 +56,7 @@ export class DatabaseService {
         return { success: false, error: userMessage };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Database connection failed",
         error instanceof Error ? error.message : String(error),
         { config: { ...config, password: "[REDACTED]" } }
@@ -82,7 +82,7 @@ export class DatabaseService {
         };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Database disconnection failed",
         error instanceof Error ? error.message : String(error)
       );
@@ -141,7 +141,7 @@ export class DatabaseService {
         };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Query execution failed",
         error instanceof Error ? error.message : String(error),
         { query: query.substring(0, 100) + (query.length > 100 ? "..." : "") }
@@ -171,7 +171,7 @@ export class DatabaseService {
         };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Schema loading failed",
         error instanceof Error ? error.message : String(error)
       );
@@ -194,7 +194,7 @@ export class DatabaseService {
         };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Query plan generation failed",
         error instanceof Error ? error.message : String(error),
         { query: query.substring(0, 100) + (query.length > 100 ? "..." : "") }
@@ -220,7 +220,7 @@ export class DatabaseService {
         };
       }
     } catch (error) {
-      const errorId = errorService.logDatabaseError(
+      errorService.logDatabaseError(
         "Failed to load saved connections",
         error instanceof Error ? error.message : String(error)
       );

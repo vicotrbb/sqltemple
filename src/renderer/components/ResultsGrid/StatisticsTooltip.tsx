@@ -18,14 +18,16 @@ export const StatisticsTooltip: React.FC<StatisticsTooltipProps> = ({
   position,
   visible,
 }) => {
-  if (!visible || !column) {
+  const stats = useMemo<ColumnStatistics | null>(() => {
+    if (!column) {
+      return null;
+    }
+    return ColumnStatsCalculator.calculateStats(data || [], column.dataType);
+  }, [column, data]);
+
+  if (!visible || !column || !stats) {
     return null;
   }
-
-  const stats = useMemo(
-    () => ColumnStatsCalculator.calculateStats(data || [], column.dataType),
-    [data, column?.dataType]
-  );
 
   const safeCount = stats.count || 0;
   const nullRatio = safeCount > 0 ? (stats.nullCount / safeCount) * 100 : 0;

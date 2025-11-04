@@ -37,7 +37,6 @@ import {
   QueryResult,
 } from "../main/database/interfaces";
 import { ConfigProvider, useSettings } from "./contexts/ConfigContext";
-import { useTheme } from "./hooks/useTheme";
 import { appService } from "./services/AppService";
 import {
   errorService,
@@ -97,7 +96,6 @@ const AppContent: React.FC = () => {
   );
   const { getShortcut } = useSettings();
   const { updateMenuState } = useMenuState();
-  const theme = useTheme();
 
   useEffect(() => {
     appService.setCallbacks({

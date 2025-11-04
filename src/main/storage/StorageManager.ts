@@ -51,7 +51,9 @@ export class StorageManager {
       if (fs.existsSync(keyPath)) {
         return fs.readFileSync(keyPath);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.warn("Failed to load encryption key from disk:", error);
+    }
 
     const key = crypto.randomBytes(32);
     try {

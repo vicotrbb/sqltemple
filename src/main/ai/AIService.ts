@@ -1,8 +1,8 @@
 import { aiProviderRegistry } from "./AIProviderRegistry";
-import { AIConfig, AIPrompt, AIProvider } from "./providers/AIProvider";
+import type { AIConfig, AIProvider } from "./providers/AIProvider";
 import { StorageManager } from "../storage/StorageManager";
 
-export { AIConfig, AIPrompt } from "./providers/AIProvider";
+export type { AIConfig, AIPrompt } from "./providers/AIProvider";
 
 export class AIService {
   constructor(private storageManager: StorageManager) {}

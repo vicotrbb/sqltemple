@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import mermaid from "mermaid";
-import { topologyService, RelationshipNode, TableRelationship } from '../services/TopologyService';
+import { topologyService, RelationshipNode } from "../services/TopologyService";
 
 interface TableTopologyProps {
   schemaName: string;
@@ -8,7 +8,6 @@ interface TableTopologyProps {
   onClose?: () => void;
   isModal?: boolean;
 }
-
 
 let mermaidInitialized = false;
 
@@ -62,7 +61,7 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mermaidRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const renderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     initializeMermaid();
@@ -70,7 +69,7 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
 
   useEffect(() => {
     loadInitialTopology();
-  }, [schemaName, tableName]);
+  }, [loadInitialTopology]);
 
   useEffect(() => {
     if (topology && mermaidRef.current) {
@@ -88,173 +87,181 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         clearTimeout(renderTimeoutRef.current);
       }
     };
-  }, [topology, expandedNodes]);
+  }, [expandedNodes, renderMermaidDiagram, topology]);
 
-  const loadInitialTopology = async () => {
+  const loadInitialTopology = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const result = await topologyService.getTableRelationships(schemaName, tableName, 3);
+    const result = await topologyService.getTableRelationships(
+      schemaName,
+      tableName,
+      3
+    );
     if (result.success && result.data) {
       setTopology(result.data);
     } else {
       setError(result.error || "Failed to load table relationships");
     }
     setLoading(false);
-  };
+  }, [schemaName, tableName]);
 
-  const loadMoreRelationships = async (
-    nodeKey: string,
-    nodeSchema: string,
-    nodeName: string
-  ) => {
-    setLoadingNodes((prev) => new Set(prev).add(nodeKey));
-
-    try {
-      const result = await topologyService.getTableRelationships(nodeSchema, nodeName, 3);
-      if (result.success && result.data) {
-        setTopology((prevTopology) => {
-          if (!prevTopology) return prevTopology;
-
-          const newTopology = JSON.parse(JSON.stringify(prevTopology));
-          updateNodeRelationships(newTopology, nodeKey, result.data);
-          return newTopology;
-        });
-
-        setExpandedNodes((prev) => new Set(prev).add(nodeKey));
-      } else {
-        console.error('Failed to load more relationships:', result.error);
+  const updateNodeRelationships = useCallback(
+    (node: any, targetKey: string, newData: any): boolean => {
+      if (node.table === targetKey) {
+        node.relationships = newData.relationships;
+        return true;
       }
-    } catch (err) {
-      console.error('Failed to load more relationships:', err);
-    } finally {
-      setLoadingNodes((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(nodeKey);
-        return newSet;
-      });
-    }
-  };
 
-  const updateNodeRelationships = (
-    node: any,
-    targetKey: string,
-    newData: any
-  ) => {
-    if (node.table === targetKey) {
-      node.relationships = newData.relationships;
-      return true;
-    }
-
-    if (node.relationships) {
-      for (const rel of node.relationships) {
-        if (
-          rel.children &&
-          updateNodeRelationships(rel.children, targetKey, newData)
-        ) {
-          return true;
+      if (node.relationships) {
+        for (const rel of node.relationships) {
+          if (
+            rel.children &&
+            updateNodeRelationships(rel.children, targetKey, newData)
+          ) {
+            return true;
+          }
         }
       }
-    }
 
-    return false;
-  };
+      return false;
+    },
+    []
+  );
 
-  const generateMermaidCode = (
-    node: RelationshipNode,
-    visitedNodes: Set<string> = new Set(),
-    depth: number = 0
-  ): string => {
-    const lines: string[] = [];
+  const loadMoreRelationships = useCallback(
+    async (nodeKey: string, nodeSchema: string, nodeName: string) => {
+      setLoadingNodes((prev) => new Set(prev).add(nodeKey));
 
-    if (depth === 0) {
-      lines.push("graph TD");
-      lines.push(
-        `  ${sanitizeNodeId(node.table)}[${sanitizeLabel(
-          node.name
-        )}<br/>${sanitizeLabel(node.schema)}]`
-      );
-      lines.push(
-        `  style ${sanitizeNodeId(
-          node.table
-        )} fill:#0e639c,stroke:#1177bb,color:#fff`
-      );
-    }
-
-    visitedNodes.add(node.table);
-
-    for (const rel of node.relationships) {
-      const sourceKey = `${rel.sourceSchema}.${rel.sourceTable}`;
-      const targetKey = `${rel.targetSchema}.${rel.targetTable}`;
-      const sourceId = sanitizeNodeId(sourceKey);
-      const targetId = sanitizeNodeId(targetKey);
-
-      if (!visitedNodes.has(sourceKey) && sourceKey !== node.table) {
-        lines.push(
-          `  ${sourceId}[${sanitizeLabel(rel.sourceTable)}<br/>${sanitizeLabel(
-            rel.sourceSchema
-          )}]`
+      try {
+        const result = await topologyService.getTableRelationships(
+          nodeSchema,
+          nodeName,
+          3
         );
-        visitedNodes.add(sourceKey);
+        if (result.success && result.data) {
+          setTopology((prevTopology) => {
+            if (!prevTopology) return prevTopology;
+
+            const newTopology = JSON.parse(JSON.stringify(prevTopology));
+            updateNodeRelationships(newTopology, nodeKey, result.data);
+            return newTopology;
+          });
+
+          setExpandedNodes((prev) => new Set(prev).add(nodeKey));
+        } else {
+          console.error("Failed to load more relationships:", result.error);
+        }
+      } catch (err) {
+        console.error("Failed to load more relationships:", err);
+      } finally {
+        setLoadingNodes((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(nodeKey);
+          return newSet;
+        });
       }
-      if (!visitedNodes.has(targetKey) && targetKey !== node.table) {
-        lines.push(
-          `  ${targetId}[${sanitizeLabel(rel.targetTable)}<br/>${sanitizeLabel(
-            rel.targetSchema
-          )}]`
-        );
-        visitedNodes.add(targetKey);
-      }
+    },
+    [updateNodeRelationships]
+  );
 
-      const label = `${sanitizeLabel(rel.sourceColumn)} → ${sanitizeLabel(
-        rel.targetColumn
-      )}`;
-      if (rel.direction === "outgoing") {
-        lines.push(`  ${sourceId} -->|${label}| ${targetId}`);
-      } else {
-        lines.push(`  ${sourceId} -->|${label}| ${targetId}`);
-        lines.push(
-          `  style ${sourceId} fill:#16825d,stroke:#1ea271,color:#fff`
-        );
-      }
+  const generateMermaidCode = useCallback(
+    (
+      node: RelationshipNode,
+      visitedNodes: Set<string> = new Set(),
+      depth: number = 0
+    ): string => {
+      const lines: string[] = [];
 
-      if (
-        rel.hasMore &&
-        !expandedNodes.has(targetKey) &&
-        !loadingNodes.has(targetKey)
-      ) {
-        const expandId = `expand_${targetId}`;
-        lines.push(`  ${targetId} --> ${expandId}[+]`);
+      if (depth === 0) {
+        lines.push("graph TD");
         lines.push(
-          `  style ${expandId} fill:#3c3c3c,stroke:#5a5a5a,color:#fff,cursor:pointer`
+          `  ${sanitizeNodeId(node.table)}[${sanitizeLabel(
+            node.name
+          )}<br/>${sanitizeLabel(node.schema)}]`
         );
         lines.push(
-          `  click ${expandId} expandNode_${sanitizeNodeId(targetKey)}`
+          `  style ${sanitizeNodeId(
+            node.table
+          )} fill:#0e639c,stroke:#1177bb,color:#fff`
         );
       }
 
-      if (rel.children && expandedNodes.has(targetKey)) {
-        const childLines = generateMermaidCode(
-          rel.children,
-          visitedNodes,
-          depth + 1
-        );
-        lines.push(
-          ...childLines
-            .split("\n")
-            .filter((line) => line && !line.startsWith("graph"))
-        );
+      visitedNodes.add(node.table);
+
+      for (const rel of node.relationships) {
+        const sourceKey = `${rel.sourceSchema}.${rel.sourceTable}`;
+        const targetKey = `${rel.targetSchema}.${rel.targetTable}`;
+        const sourceId = sanitizeNodeId(sourceKey);
+        const targetId = sanitizeNodeId(targetKey);
+
+        if (!visitedNodes.has(sourceKey) && sourceKey !== node.table) {
+          lines.push(
+            `  ${sourceId}[${sanitizeLabel(rel.sourceTable)}<br/>${sanitizeLabel(
+              rel.sourceSchema
+            )}]`
+          );
+          visitedNodes.add(sourceKey);
+        }
+        if (!visitedNodes.has(targetKey) && targetKey !== node.table) {
+          lines.push(
+            `  ${targetId}[${sanitizeLabel(rel.targetTable)}<br/>${sanitizeLabel(
+              rel.targetSchema
+            )}]`
+          );
+          visitedNodes.add(targetKey);
+        }
+
+        const label = `${sanitizeLabel(rel.sourceColumn)} → ${sanitizeLabel(
+          rel.targetColumn
+        )}`;
+        if (rel.direction === "outgoing") {
+          lines.push(`  ${sourceId} -->|${label}| ${targetId}`);
+        } else {
+          lines.push(`  ${sourceId} -->|${label}| ${targetId}`);
+          lines.push(
+            `  style ${sourceId} fill:#16825d,stroke:#1ea271,color:#fff`
+          );
+        }
+
+        if (
+          rel.hasMore &&
+          !expandedNodes.has(targetKey) &&
+          !loadingNodes.has(targetKey)
+        ) {
+          const expandId = `expand_${targetId}`;
+          lines.push(`  ${targetId} --> ${expandId}[+]`);
+          lines.push(
+            `  style ${expandId} fill:#3c3c3c,stroke:#5a5a5a,color:#fff,cursor:pointer`
+          );
+          lines.push(
+            `  click ${expandId} expandNode_${sanitizeNodeId(targetKey)}`
+          );
+        }
+
+        if (rel.children && expandedNodes.has(targetKey)) {
+          const childLines = generateMermaidCode(
+            rel.children,
+            visitedNodes,
+            depth + 1
+          );
+          lines.push(
+            ...childLines
+              .split("\n")
+              .filter((line) => line && !line.startsWith("graph"))
+          );
+        }
       }
-    }
+      return lines.join("\n");
+    },
+    [expandedNodes, loadingNodes, sanitizeLabel, sanitizeNodeId]
+  );
 
-    return lines.join("\n");
-  };
-
-  const sanitizeNodeId = (id: string): string => {
+  const sanitizeNodeId = useCallback((id: string): string => {
     return id.replace(/[^a-zA-Z0-9_]/g, "_");
-  };
+  }, []);
 
-  const sanitizeLabel = (label: string): string => {
+  const sanitizeLabel = useCallback((label: string): string => {
     return label
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;")
@@ -267,9 +274,9 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
       .replace(/\]/g, "&#93;")
       .replace(/\(/g, "&#40;")
       .replace(/\)/g, "&#41;");
-  };
+  }, []);
 
-  const renderMermaidDiagram = async () => {
+  const renderMermaidDiagram = useCallback(async () => {
     if (!mermaidRef.current || !topology) return;
 
     try {
@@ -309,7 +316,14 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
         setError("Failed to render diagram. Please click retry.");
       }
     }
-  };
+  }, [
+    error,
+    expandedNodes,
+    generateMermaidCode,
+    loadMoreRelationships,
+    sanitizeNodeId,
+    topology,
+  ]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();

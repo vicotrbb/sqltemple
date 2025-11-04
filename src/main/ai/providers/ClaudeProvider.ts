@@ -69,7 +69,7 @@ export class ClaudeProvider extends BaseAIProvider {
     }
   }
 
-  async getAvailableModels(config?: AIConfig): Promise<string[]> {
+  async getAvailableModels(_config?: AIConfig): Promise<string[]> {
     return [
       "claude-3-5-sonnet-20241022",
       "claude-3-5-sonnet-20240620",

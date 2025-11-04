@@ -42,14 +42,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [testingConnection, setTestingConnection] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  useEffect(() => {
-    loadModels();
-  }, [provider, apiKey, baseUrl]);
-
   const loadSettings = async () => {
     try {
       const providersResult = await aiService.getProviders();
@@ -63,14 +55,15 @@ export const AISettings: React.FC<AISettingsProps> = ({
         setModel(configResult.data.model || "");
         setBaseUrl(configResult.data.baseUrl || "");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Failed to load AI settings:", error);
       setError("Failed to load AI settings");
     } finally {
       setSettingsLoaded(true);
     }
   };
 
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       const config = {
         provider,
@@ -93,11 +86,19 @@ export const AISettings: React.FC<AISettingsProps> = ({
           }
         }
       }
-    } catch (err) {
-      console.warn("Failed to load models:", err);
+    } catch (error) {
+      console.warn("Failed to load models:", error);
       setModels([]);
     }
-  };
+  }, [apiKey, baseUrl, model, provider]);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   const emitConfigChange = useCallback(
     (
@@ -200,7 +201,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           }
         );
       }
-    } catch (err) {
+    } catch (error) {
       setError("Connection test failed");
       errorService.logError(
         ErrorLevel.ERROR,
@@ -208,7 +209,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
         "AI connection test failed",
         {
           userMessage: "Connection test failed",
-          details: err instanceof Error ? err.message : String(err),
+          details: error instanceof Error ? error.message : String(error),
           autoHide: false,
         }
       );
@@ -245,7 +246,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
       } else {
         setError(result.error || "Failed to save settings");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Failed to save AI settings:", error);
       setError("Failed to save settings");
     } finally {
       setLoading(false);

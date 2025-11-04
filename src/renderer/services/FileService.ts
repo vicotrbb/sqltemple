@@ -40,15 +40,21 @@ export class FileService {
         return { success: false, error: result.error || "Failed to open file" };
       }
     } catch (error) {
-      const errorId = errorService.logFileError(
-        "File open operation failed", 
+      errorService.logFileError(
+        "File open operation failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while opening the file." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while opening the file.",
+      };
     }
   }
 
-  async saveQueryFile(content: string, currentFilePath?: string): Promise<FileServiceResult<QueryFileResult>> {
+  async saveQueryFile(
+    content: string,
+    currentFilePath?: string
+  ): Promise<FileServiceResult<QueryFileResult>> {
     if (!content.trim()) {
       return { success: false, error: "Cannot save empty content" };
     }
@@ -69,16 +75,21 @@ export class FileService {
         return { success: false, error: result.error || "Failed to save file" };
       }
     } catch (error) {
-      const errorId = errorService.logFileError(
-        "File save operation failed", 
+      errorService.logFileError(
+        "File save operation failed",
         error instanceof Error ? error.message : String(error),
         { filePath: currentFilePath }
       );
-      return { success: false, error: "An unexpected error occurred while saving the file." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while saving the file.",
+      };
     }
   }
 
-  async saveQueryFileAs(content: string): Promise<FileServiceResult<QueryFileResult>> {
+  async saveQueryFileAs(
+    content: string
+  ): Promise<FileServiceResult<QueryFileResult>> {
     if (!content.trim()) {
       return { success: false, error: "Cannot save empty content" };
     }
@@ -99,15 +110,20 @@ export class FileService {
         return { success: false, error: result.error || "Failed to save file" };
       }
     } catch (error) {
-      const errorId = errorService.logFileError(
-        "File save-as operation failed", 
+      errorService.logFileError(
+        "File save-as operation failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while saving the file." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while saving the file.",
+      };
     }
   }
 
-  async importConnections(): Promise<FileServiceResult<{ imported: number; failed: number }>> {
+  async importConnections(): Promise<
+    FileServiceResult<{ imported: number; failed: number }>
+  > {
     try {
       const result = await window.api.importConnections();
       if (result.success && result.connections) {
@@ -120,13 +136,13 @@ export class FileService {
             importedCount++;
           } catch (error) {
             errorService.logError(
-              ErrorLevel.WARNING, 
-              ErrorCategory.FILE, 
+              ErrorLevel.WARNING,
+              ErrorCategory.FILE,
               "Failed to import connection",
               {
                 details: error instanceof Error ? error.message : String(error),
                 context: { connectionName: connection.name },
-                userMessage: `Failed to import connection '${connection.name}'`
+                userMessage: `Failed to import connection '${connection.name}'`,
               }
             );
             failedCount++;
@@ -140,14 +156,20 @@ export class FileService {
       } else if (result.canceled) {
         return { success: false, canceled: true };
       } else {
-        return { success: false, error: result.error || "Failed to import connections" };
+        return {
+          success: false,
+          error: result.error || "Failed to import connections",
+        };
       }
     } catch (error) {
-      const errorId = errorService.logFileError(
-        "Connections import failed", 
+      errorService.logFileError(
+        "Connections import failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while importing connections." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while importing connections.",
+      };
     }
   }
 
@@ -159,20 +181,26 @@ export class FileService {
           success: true,
           data: {
             count: result.count || 0,
-            filePath: result.filePath || '',
+            filePath: result.filePath || "",
           },
         };
       } else if (result.canceled) {
         return { success: false, canceled: true };
       } else {
-        return { success: false, error: result.error || "Failed to export connections" };
+        return {
+          success: false,
+          error: result.error || "Failed to export connections",
+        };
       }
     } catch (error) {
-      const errorId = errorService.logFileError(
-        "Connections export failed", 
+      errorService.logFileError(
+        "Connections export failed",
         error instanceof Error ? error.message : String(error)
       );
-      return { success: false, error: "An unexpected error occurred while exporting connections." };
+      return {
+        success: false,
+        error: "An unexpected error occurred while exporting connections.",
+      };
     }
   }
 }

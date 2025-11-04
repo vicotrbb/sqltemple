@@ -10,7 +10,7 @@ export const resetAllMocks = (): void => {
 /**
  * Setup mock for successful database connection
  */
-export const setupMockDatabaseConnection = (config?: any): void => {
+export const setupMockDatabaseConnection = (_config?: any): void => {
   // Mock implementation - would set up pg client mock
 };
 
@@ -18,8 +18,8 @@ export const setupMockDatabaseConnection = (config?: any): void => {
  * Setup mock for failed database connection
  */
 export const setupMockDatabaseConnectionFailure = (
-  error?: Error,
-  config?: any
+  _error?: Error,
+  _config?: any
 ): void => {
   // Mock implementation - would set up pg client connection failure
 };
@@ -30,7 +30,7 @@ export const setupMockDatabaseConnectionFailure = (
 export const setupMockAIResponse = (
   content: string,
   provider: string = "openai",
-  apiKey: string = "test-key"
+  _apiKey: string = "test-key"
 ): void => {
   // Mock implementation would be added here if needed
   console.log(`Setting up AI response for ${provider}:`, content);
@@ -42,7 +42,7 @@ export const setupMockAIResponse = (
 export const setupMockAIError = (
   error: Error,
   provider: string = "openai",
-  apiKey: string = "test-key"
+  _apiKey: string = "test-key"
 ): void => {
   // Mock implementation would be added here if needed
   console.log(`Setting up AI error for ${provider}:`, error.message);
@@ -51,7 +51,7 @@ export const setupMockAIError = (
 /**
  * Setup mock for SQLite database operations
  */
-export const setupMockSQLite = (dbPath: string = ":memory:"): void => {
+export const setupMockSQLite = (_dbPath: string = ":memory:"): void => {
   // Mock implementation - would set up better-sqlite3 mock
 };
 
@@ -73,8 +73,8 @@ export const setupMockIPC = (): void => {
  * Invoke a mock IPC handler
  */
 export const invokeMockIPC = async (
-  channel: string,
-  ...args: any[]
+  _channel: string,
+  ..._args: any[]
 ): Promise<any> => {
   // Mock implementation - would invoke registered IPC handler
   return Promise.resolve();
@@ -84,7 +84,7 @@ export const invokeMockIPC = async (
  * Setup mock for Electron app paths
  */
 export const setupMockAppPaths = (
-  paths: { [key: string]: string } = {}
+  _paths: { [key: string]: string } = {}
 ): void => {
   // Mock implementation - would set up electron app.getPath mock
 };

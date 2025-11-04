@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { AISettings } from "./AISettings";
 import {
   SettingsIcon,
   EyeIcon,
@@ -77,6 +76,7 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
         setUpdateStatus(result.error || "Failed to check for updates");
       }
     } catch (error) {
+      console.error("Failed to check for updates:", error);
       setUpdateStatus("Failed to check for updates");
     } finally {
       setIsCheckingForUpdates(false);

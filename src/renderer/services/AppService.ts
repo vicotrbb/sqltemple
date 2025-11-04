@@ -3,9 +3,9 @@ import {
   DatabaseSchema,
   QueryResult,
 } from "../../main/database/interfaces";
-import { databaseService, DatabaseServiceResult } from "./DatabaseService";
-import { aiService, AIServiceResult } from "./AIService";
-import { fileService, FileServiceResult } from "./FileService";
+import { databaseService } from "./DatabaseService";
+import { aiService } from "./AIService";
+import { fileService } from "./FileService";
 import {
   tabService,
   TabService,

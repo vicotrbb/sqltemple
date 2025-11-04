@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 
@@ -340,21 +341,27 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
+  const saveConfig = useCallback(async () => {
+    try {
+      const configToSave = {
+        ...config,
+        lastModified: new Date().toISOString(),
+      };
 
-  useEffect(() => {
-    if (!isLoading && hasUnsavedChanges) {
-      const timeoutId = setTimeout(() => {
-        saveConfig();
-      }, 1000);
+      if (window.api && "storage" in window.api) {
+        const storage = (window.api as any).storage;
+        await storage.set("app_config", JSON.stringify(configToSave));
+      } else {
+        localStorage.setItem("sqltemple-config", JSON.stringify(configToSave));
+      }
 
-      return () => clearTimeout(timeoutId);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Failed to save config:", error);
     }
-  }, [config, isLoading, hasUnsavedChanges]);
+  }, [config]);
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -378,27 +385,21 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const saveConfig = async () => {
-    try {
-      const configToSave = {
-        ...config,
-        lastModified: new Date().toISOString(),
-      };
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
 
-      if (window.api && "storage" in window.api) {
-        const storage = (window.api as any).storage;
-        await storage.set("app_config", JSON.stringify(configToSave));
-      } else {
-        localStorage.setItem("sqltemple-config", JSON.stringify(configToSave));
-      }
+  useEffect(() => {
+    if (!isLoading && hasUnsavedChanges) {
+      const timeoutId = setTimeout(() => {
+        saveConfig();
+      }, 1000);
 
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.error("Failed to save config:", error);
+      return () => clearTimeout(timeoutId);
     }
-  };
+  }, [hasUnsavedChanges, isLoading, saveConfig]);
 
   const updateConfig = (updater: (prevConfig: AppConfig) => AppConfig) => {
     setConfig(updater);

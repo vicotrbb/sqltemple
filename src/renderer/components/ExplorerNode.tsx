@@ -20,7 +20,7 @@ export interface ExplorerNodeProps {
 }
 
 export const ExplorerNode: React.FC<ExplorerNodeProps> = ({
-  id,
+  id: _id,
   label,
   icon,
   iconColor = "text-vscode-text-secondary",
