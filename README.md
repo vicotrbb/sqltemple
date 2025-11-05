@@ -10,6 +10,8 @@
 
 SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It provides intelligent query assistance, execution plan visualization, and a VS Code-like development experience for database work.
 
+> **_IMPORTANT DISCLAIMER:_** This app is not yet notorized by a valid Apple Developer ID, thus might have problems when installing on latest MacOS computers.
+
 ## ✨ Features
 
 ### 🚀 Core Database Features

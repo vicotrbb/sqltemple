@@ -67,28 +67,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     initializeMermaid();
   }, []);
 
-  useEffect(() => {
-    loadInitialTopology();
-  }, [loadInitialTopology]);
-
-  useEffect(() => {
-    if (topology && mermaidRef.current) {
-      if (renderTimeoutRef.current) {
-        clearTimeout(renderTimeoutRef.current);
-      }
-
-      renderTimeoutRef.current = setTimeout(() => {
-        renderMermaidDiagram();
-      }, 100);
-    }
-
-    return () => {
-      if (renderTimeoutRef.current) {
-        clearTimeout(renderTimeoutRef.current);
-      }
-    };
-  }, [expandedNodes, renderMermaidDiagram, topology]);
-
   const loadInitialTopology = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -105,6 +83,10 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     }
     setLoading(false);
   }, [schemaName, tableName]);
+
+  useEffect(() => {
+    loadInitialTopology();
+  }, [loadInitialTopology]);
 
   const updateNodeRelationships = useCallback(
     (node: any, targetKey: string, newData: any): boolean => {
@@ -164,6 +146,25 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     },
     [updateNodeRelationships]
   );
+
+  const sanitizeNodeId = useCallback((id: string): string => {
+    return id.replace(/[^a-zA-Z0-9_]/g, "_");
+  }, []);
+
+  const sanitizeLabel = useCallback((label: string): string => {
+    return label
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\|/g, "&#124;")
+      .replace(/\{/g, "&#123;")
+      .replace(/\}/g, "&#125;")
+      .replace(/\[/g, "&#91;")
+      .replace(/\]/g, "&#93;")
+      .replace(/\(/g, "&#40;")
+      .replace(/\)/g, "&#41;");
+  }, []);
 
   const generateMermaidCode = useCallback(
     (
@@ -257,25 +258,6 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     [expandedNodes, loadingNodes, sanitizeLabel, sanitizeNodeId]
   );
 
-  const sanitizeNodeId = useCallback((id: string): string => {
-    return id.replace(/[^a-zA-Z0-9_]/g, "_");
-  }, []);
-
-  const sanitizeLabel = useCallback((label: string): string => {
-    return label
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\|/g, "&#124;")
-      .replace(/\{/g, "&#123;")
-      .replace(/\}/g, "&#125;")
-      .replace(/\[/g, "&#91;")
-      .replace(/\]/g, "&#93;")
-      .replace(/\(/g, "&#40;")
-      .replace(/\)/g, "&#41;");
-  }, []);
-
   const renderMermaidDiagram = useCallback(async () => {
     if (!mermaidRef.current || !topology) return;
 
@@ -324,6 +306,24 @@ export const TableTopology: React.FC<TableTopologyProps> = ({
     sanitizeNodeId,
     topology,
   ]);
+
+  useEffect(() => {
+    if (topology && mermaidRef.current) {
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
+
+      renderTimeoutRef.current = setTimeout(() => {
+        renderMermaidDiagram();
+      }, 100);
+    }
+
+    return () => {
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
+    };
+  }, [renderMermaidDiagram, topology]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();

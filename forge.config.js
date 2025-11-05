@@ -22,17 +22,19 @@ module.exports = {
     executableName: "SQLTemple",
     appVersion: packageJson.version,
     buildVersion: process.env.BUILD_NUMBER || Date.now().toString(),
+    osxSign: false, // Makes apple partially happy.
     extendInfo: {
       CFBundleShortVersionString: packageJson.version,
       CFBundleVersion: process.env.BUILD_NUMBER || Date.now().toString(),
       CFBundleName: "SQLTemple",
       CFBundleDisplayName: "SQLTemple",
+      LSApplicationCategoryType: "public.app-category.developer-tools",
     },
     win32metadata: {
       FileVersion: packageJson.version,
       ProductVersion: packageJson.version,
       CompanyName: "SQLTemple",
-      FileDescription: "Modern SQL IDE",
+      FileDescription: "Modern SQL IDE powered by AI",
       ProductName: "SQLTemple",
     },
   },
@@ -46,6 +48,14 @@ module.exports = {
         format: "ULFO",
         overwrite: true,
         icon: platformIcons.darwin,
+        contents: (opts) => [
+          // app and Applications link
+          { x: 130, y: 220, type: "file", path: opts.appPath },
+          { x: 410, y: 220, type: "link", path: "/Applications" },
+
+          // Temporary readme file for unsigned builds.
+          { x: 270, y: 420, type: "file", path: path.resolve(__dirname, "assets/dmg/READ_ME_FIRST.txt") },
+        ],
       },
     },
     {
