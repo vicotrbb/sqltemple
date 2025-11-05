@@ -40,10 +40,7 @@ jobs:
         run: npm run typecheck
 
       - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Run integration tests
-        run: npm run test:integration
+        run: npm run test
 
       - name: Set BUILD_NUMBER
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
