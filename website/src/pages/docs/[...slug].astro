@@ -1,0 +1,25 @@
+---
+import { getCollection } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await entry.render();
+---
+
+<DocsLayout
+  title={`${entry.data.title} | SQLTemple Docs`}
+  description={entry.data.description}
+  currentSlug={entry.slug}
+>
+  <h1 class="text-3xl font-semibold mb-2">{entry.data.title}</h1>
+  {entry.data.description && <p class="text-muted mb-6">{entry.data.description}</p>}
+  <Content />
+</DocsLayout>

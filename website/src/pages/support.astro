@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Support SQLTemple"
+  description="Ways to contribute, donate, and help SQLTemple grow."
+>
+  <section class="container section space-y-6">
+    <h1 class="text-3xl font-semibold">Support SQLTemple</h1>
+    <p class="text-muted text-lg max-w-3xl">
+      SQLTemple is an independent project. Here are lightweight ways to help:
+      contribute code, share feedback, or support hosting costs in the future.
+    </p>
+    <div class="grid gap-4 md:grid-cols-3">
+      <div class="rounded-xl border border-border bg-surface-2 p-5">
+        <h3 class="text-xl font-semibold mb-2">Contribute</h3>
+        <p class="text-muted mb-3">
+          Open issues, tackle bugs, or add docs. Good first issues are tagged in
+          GitHub.
+        </p>
+        <a
+          class="text-accent"
+          href="https://github.com/vicotrbb/sqltemple/issues"
+          target="_blank"
+          rel="noreferrer">View issues →</a
+        >
+      </div>
+      <div class="rounded-xl border border-border bg-surface-2 p-5">
+        <h3 class="text-xl font-semibold mb-2">Feedback</h3>
+        <p class="text-muted mb-3">
+          Request features or share what slows you down. It shapes the roadmap.
+        </p>
+        <a class="text-accent" href="mailto:victorbona+sqltemple@hotmail.com"
+          >Email maintainer →</a
+        >
+      </div>
+      <div class="rounded-xl border border-border bg-surface-2 p-5">
+        <h3 class="text-xl font-semibold mb-2">Donate (soon)</h3>
+        <p class="text-muted">
+          We will add donation links to help the continue development of
+          SQLTemple. Stay tuned.
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

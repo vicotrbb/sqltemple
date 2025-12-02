@@ -1,0 +1,185 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ValueTabs from "../components/ValueTabs";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "SQLTemple",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS, Windows, Linux",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  url: "https://sqltemple.com",
+  description:
+    "AI-powered SQL IDE with Monaco Editor, and several AI integrations.",
+};
+---
+
+<BaseLayout structuredData={structuredData}>
+  <section
+    class="container section grid gap-10 md:grid-cols-[1.1fr_0.9fr] items-center"
+  >
+    <div class="space-y-6">
+      <Badge>AI-first SQL IDE</Badge>
+      <h1 class="text-4xl md:text-5xl font-semibold leading-tight">
+        Ship better SQL with AI that understands your schema.
+      </h1>
+      <p class="text-lg text-muted leading-relaxed">
+        SQLTemple blends Monaco Editor, execution plan visualization, and
+        OpenAI-powered assistance to keep your database work fast, accurate, and
+        enjoyable.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="https://github.com/vicotrbb/sqltemple/releases"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button size="lg">Download SQLTemple</Button>
+        </a>
+        <a href="/docs/">
+          <Button variant="secondary" size="lg">Read the docs</Button>
+        </a>
+      </div>
+      <div class="grid grid-cols-2 gap-4 text-sm text-muted">
+        <div>
+          <p class="text-white text-xl font-semibold">AI explain & optimize</p>
+          <p>Understands your query plan and offers targeted fixes.</p>
+        </div>
+        <div>
+          <p class="text-white text-xl font-semibold">
+            Execution plan visualizer
+          </p>
+          <p>See performance hotspots quickly in a clean tree view.</p>
+        </div>
+      </div>
+    </div>
+    <Card
+      class="p-6 border border-border/80 bg-gradient-to-br from-surface-2 to-[#0b0d12]"
+    >
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-sm text-muted">Live preview</span>
+        <span class="text-xs rounded-full bg-white/10 px-2 py-1 text-highlight"
+          >Fast & lightweight</span
+        >
+      </div>
+      <div class="rounded-xl border border-border bg-[#0c0e14] p-4 shadow-soft">
+        <div class="flex items-center gap-2 text-xs text-muted mb-3">
+          <span class="h-3 w-3 rounded-full bg-[#ef4444]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#f59e0b]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#22c55e]"></span>
+          <span class="ml-auto">Monaco Editor</span>
+        </div>
+        <pre
+          class="text-sm leading-relaxed text-[#c3f0ff] whitespace-pre-wrap">
+WITH top_customers AS (
+  SELECT customer_id, SUM(total) AS revenue
+  FROM orders
+  GROUP BY customer_id
+  ORDER BY revenue DESC
+  LIMIT 20
+)
+SELECT c.name, tc.revenue
+FROM top_customers tc
+JOIN customers c ON c.id = tc.customer_id
+ORDER BY tc.revenue DESC;
+        </pre>
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-muted">
+        <div class="rounded-lg border border-border/80 bg-white/5 p-3">
+          <p class="text-white font-semibold">Query time</p>
+          <p>32 ms • cached</p>
+        </div>
+        <div class="rounded-lg border border-border/80 bg-white/5 p-3">
+          <p class="text-white font-semibold">AI suggestion</p>
+          <p>Consider partial indexes on orders.total</p>
+        </div>
+      </div>
+    </Card>
+  </section>
+
+  <section class="container section">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <p class="text-sm uppercase tracking-[0.2em] text-muted">Features</p>
+        <h2 class="text-3xl font-semibold">
+          Built for speed, clarity, and deep insight
+        </h2>
+      </div>
+      <a href="/docs/" class="text-muted hover:text-white text-sm"
+        >Read docs →</a
+      >
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+      <Card class="p-5">
+        <h3 class="text-xl font-semibold mb-2">Monaco + AI</h3>
+        <p class="text-muted">
+          Schema-aware completions, inline explanations, and promptable AI
+          sidekick for hard queries.
+        </p>
+      </Card>
+      <Card class="p-5">
+        <h3 class="text-xl font-semibold mb-2">Execution plan visualizer</h3>
+        <p class="text-muted">
+          Tree view with timing, row counts, and AI annotations to spot the slow
+          steps instantly.
+        </p>
+      </Card>
+      <Card class="p-5">
+        <h3 class="text-xl font-semibold mb-2">Results built to scale</h3>
+        <p class="text-muted">
+          Virtualized grids keep huge result sets smooth, with CSV/JSON/Excel
+          exports built in.
+        </p>
+      </Card>
+    </div>
+  </section>
+
+  <section class="container section">
+    <div class="grid gap-8 lg:grid-cols-[0.6fr_1fr] items-center">
+      <div>
+        <p class="text-sm uppercase tracking-[0.2em] text-muted">Workflow</p>
+        <h2 class="text-3xl font-semibold mb-3">
+          From question to optimized query in minutes
+        </h2>
+        <p class="text-muted">
+          Switch between writing, running, and optimizing without leaving the
+          same focused dark workspace.
+        </p>
+      </div>
+      <ValueTabs client:visible />
+    </div>
+  </section>
+
+  <section class="container section">
+    <Card
+      class="p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+    >
+      <div>
+        <p class="text-sm uppercase tracking-[0.2em] text-muted">Get started</p>
+        <h3 class="text-2xl font-semibold">
+          Install SQLTemple and run your first query today.
+        </h3>
+        <p class="text-muted">
+          Mac, Windows, and Linux builds. Works great with PostgreSQL today;
+          more engines coming soon.
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <a href="/docs/">
+          <Button size="lg">Open documentation</Button>
+        </a>
+        <a
+          href="https://github.com/vicotrbb/sqltemple"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button variant="secondary" size="lg">View on GitHub</Button>
+        </a>
+      </div>
+    </Card>
+  </section>
+</BaseLayout>

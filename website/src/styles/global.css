@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  color-scheme: dark;
+  background-color: #0f1117;
+  color: #e5ecf5;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at 20% 20%, rgba(97, 218, 251, 0.08), transparent 35%),
+    radial-gradient(circle at 80% 30%, rgba(65, 41, 145, 0.12), transparent 40%),
+    #0f1117;
+  color: #e5ecf5;
+  min-height: 100vh;
+}
+
+a {
+  color: #61dafb;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+::selection {
+  background: rgba(97, 218, 251, 0.35);
+  color: #0f1117;
+}
+
+.prose code {
+  background: #141824;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+  color: #e5ecf5;
+  font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.prose pre {
+  background: #0c0e14;
+  border: 1px solid #1f2433;
+  border-radius: 0.9rem;
+  padding: 1.05rem 1.15rem;
+  overflow: auto;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: block;
+  min-width: 100%;
+  color: #d7e3f7;
+  line-height: 1.6;
+}
+
+.container {
+  width: min(1100px, 90vw);
+  margin: 0 auto;
+}
+
+.section {
+  padding: 4rem 0;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.1rem;
+}
+
+.prose li::marker {
+  color: #61dafb;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  letter-spacing: -0.01em;
+}

@@ -1,0 +1,19 @@
+---
+import { getCollection } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const docs = await getCollection('docs');
+const sorted = docs.sort((a, b) => a.data.order - b.data.order);
+const first = sorted[0];
+---
+
+{first ? (
+  <meta http-equiv="refresh" content={`0; url=/docs/${first.slug}/`} />
+) : (
+  <DocsLayout>
+    <div class="container py-24 text-center">
+      <h1 class="text-3xl font-semibold">Docs coming soon</h1>
+      <p class="text-muted mt-3">We are writing the documentation.</p>
+    </div>
+  </DocsLayout>
+)}

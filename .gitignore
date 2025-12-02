@@ -91,6 +91,13 @@ out
 .nuxt
 dist
 
+# Astro website build artifacts
+website/node_modules/
+website/.astro/
+website/dist/
+website/.vercel/
+website/.netlify/
+
 # Gatsby files
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js
