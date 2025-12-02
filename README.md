@@ -81,7 +81,17 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 
 ## 🚀 Installation
 
-### Option 1: Download Pre-built App
+### Option 1: Homebrew (macOS)
+
+```bash
+brew tap victorbona/sqltemple https://github.com/vicotrbb/sqltemple
+brew install --cask sqltemple
+```
+
+- If macOS Gatekeeper blocks the first launch, right-click the app in Finder and choose **Open** (current build is not yet notarized).
+- Homebrew will download the signed/notarized DMG once it is published to the GitHub release matching the version in `Casks/sqltemple.rb`.
+
+### Option 2: Download Pre-built App
 
 1. Visit the [SQLTemple Releases](https://github.com/vicotrbb/sqltemple/releases) page
 2. Download the installer for your platform:
@@ -91,7 +101,7 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 3. Install as you would any native application for that platform
 4. Launch SQLTemple from Applications / Start Menu / your desktop environment
 
-### Option 2: Build from Source
+### Option 3: Build from Source
 
 ```bash
 # Clone the repository
