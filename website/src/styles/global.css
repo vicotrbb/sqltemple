@@ -2,22 +2,23 @@
 
 :root {
   color-scheme: dark;
-  background-color: #0f1117;
+  background-color: #1e1e1e;
   color: #e5ecf5;
 }
 
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at 20% 20%, rgba(97, 218, 251, 0.08), transparent 35%),
-    radial-gradient(circle at 80% 30%, rgba(65, 41, 145, 0.12), transparent 40%),
-    #0f1117;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(78, 201, 176, 0.12), transparent 32%),
+    radial-gradient(circle at 80% 15%, rgba(0, 122, 204, 0.14), transparent 38%),
+    #1e1e1e;
   color: #e5ecf5;
   min-height: 100vh;
 }
 
 a {
-  color: #61dafb;
+  color: #4ec9b0;
   text-decoration: none;
 }
 
@@ -26,8 +27,8 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(97, 218, 251, 0.35);
-  color: #0f1117;
+  background: rgba(78, 201, 176, 0.35);
+  color: #0b0d10;
 }
 
 .prose code {

@@ -24,9 +24,9 @@ const { title = 'SQLTemple | AI-powered SQL IDE', description = 'SQLTemple is a 
     <meta name="twitter:description" content={description} />
     {structuredData && <script type="application/ld+json">{JSON.stringify(structuredData)}</script>}
   </head>
-  <body class="text-white">
+  <body class="text-white min-h-screen flex flex-col">
     <NavBar />
-    <main>
+    <main class="flex-1">
       <slot />
     </main>
     <Footer />

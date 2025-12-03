@@ -1,12 +1,17 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<BaseLayout title="About SQLTemple" description="What SQLTemple is, why it exists, and the stack behind it.">
+<BaseLayout
+  title="About SQLTemple"
+  description="What SQLTemple is, why it exists, and the stack behind it."
+>
   <section class="container section space-y-6">
     <h1 class="text-3xl font-semibold">About SQLTemple</h1>
     <p class="text-muted text-lg max-w-3xl">
-      SQLTemple is an AI-powered SQL IDE built by Victor Bona. It blends the Monaco editor with execution plan insights and OpenAI assistance so you can ship faster SQL safely.
+      SQLTemple is an AI-powered SQL IDE built by Victor Bona. It blends the
+      Monaco editor with execution plan insights and OpenAI assistance so you
+      can ship faster SQL safely.
     </p>
     <div class="grid gap-4 md:grid-cols-2">
       <div class="rounded-xl border border-border bg-surface-2 p-5">
@@ -20,7 +25,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="rounded-xl border border-border bg-surface-2 p-5">
         <h3 class="text-xl font-semibold mb-2">Why build it?</h3>
-        <p class="text-muted">Traditional SQL tools are either heavy or lack modern AI assistance. SQLTemple keeps the workflow lean, dark-themed, and tuned for iteration speed.</p>
+        <p class="text-muted">
+          Traditional SQL tools are either heavy or lack modern AI assistance.
+          SQLTemple keeps the workflow lean, dark-themed, and tuned for
+          iteration speed.
+        </p>
       </div>
     </div>
   </section>

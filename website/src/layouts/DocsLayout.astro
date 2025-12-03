@@ -21,33 +21,35 @@ const {
     <title>{title}</title>
     <meta name="description" content={description} />
   </head>
-  <body class="text-white">
+  <body class="text-white min-h-screen flex flex-col">
     <NavBar />
-    <div class="container grid gap-10 py-14 lg:grid-cols-[260px_1fr]">
-      <aside class="rounded-2xl border border-border bg-gradient-to-b from-surface-2 to-[#0c101a] p-5 sticky top-8 h-fit shadow-soft">
-        <p class="text-xs uppercase tracking-[0.25em] text-muted mb-4">Docs</p>
-        <nav class="flex flex-col gap-1 text-sm">
-          {sorted.map((entry) => {
-            const active = currentSlug === entry.slug;
-            return (
-              <a
-                class={`rounded-lg px-3 py-2 transition ${
-                  active
-                    ? 'bg-white/10 text-white border border-border'
-                    : 'hover:bg-white/5 text-muted'
-                }`}
-                href={`/docs/${entry.slug}/`}
-              >
-                {entry.data.title}
-              </a>
-            );
-          })}
-        </nav>
-      </aside>
-      <article class="prose prose-invert max-w-3xl prose-headings:font-semibold prose-h1:text-4xl prose-h2:text-2xl prose-p:leading-relaxed prose-li:leading-relaxed prose-code:text-sm bg-surface-2/60 border border-border rounded-2xl p-8 shadow-soft">
-        <slot />
-      </article>
-    </div>
+    <main class="flex-1">
+      <div class="container grid gap-10 py-14 lg:grid-cols-[260px_1fr]">
+        <aside class="rounded-2xl border border-border bg-gradient-to-b from-surface-2 to-[#0c101a] p-5 sticky top-8 h-fit shadow-soft">
+          <p class="text-xs uppercase tracking-[0.25em] text-muted mb-4">Docs</p>
+          <nav class="flex flex-col gap-1 text-sm">
+            {sorted.map((entry) => {
+              const active = currentSlug === entry.slug;
+              return (
+                <a
+                  class={`rounded-lg px-3 py-2 transition ${
+                    active
+                      ? 'bg-white/10 text-accent border border-border'
+                      : 'hover:bg-white/5 text-muted'
+                  }`}
+                  href={`/docs/${entry.slug}/`}
+                >
+                  {entry.data.title}
+                </a>
+              );
+            })}
+          </nav>
+        </aside>
+        <article class="prose prose-invert max-w-3xl prose-headings:font-semibold prose-h1:text-4xl prose-h2:text-2xl prose-p:leading-relaxed prose-li:leading-relaxed prose-code:text-sm bg-surface-2/60 border border-border rounded-2xl p-8 shadow-soft">
+          <slot />
+        </article>
+      </div>
+    </main>
     <Footer />
   </body>
 </html>
