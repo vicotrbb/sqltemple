@@ -231,6 +231,7 @@ export class AgentController {
         });
         break;
       }
+
       case "action": {
         const message = await this.history.appendMessage(session.id, {
           role: "assistant",
@@ -250,6 +251,7 @@ export class AgentController {
         });
         break;
       }
+
       case "observation": {
         const message = await this.history.appendMessage(session.id, {
           role: "tool",
@@ -362,5 +364,6 @@ function chunkText(text: string, chunkSize = 80): string[] {
   for (let i = 0; i < text.length; i += chunkSize) {
     chunks.push(text.slice(i, i + chunkSize));
   }
+
   return chunks;
 }

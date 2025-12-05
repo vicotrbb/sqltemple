@@ -20,6 +20,7 @@ export class SchemaExplorerTool implements AgentTool {
     if (!context.connection) {
       throw new Error("Connect to a database before inspecting schemas.");
     }
+
     const args = this.parseInput(input);
     const schemaName = args.schema?.trim() || "public";
 
@@ -145,6 +146,7 @@ export class SchemaExplorerTool implements AgentTool {
     if (Array.isArray(value)) {
       return value.slice(0, COLUMN_PREVIEW_LIMIT);
     }
+
     if (typeof value === "string" && value.trim() !== "") {
       try {
         const parsed = JSON.parse(value);
@@ -155,6 +157,7 @@ export class SchemaExplorerTool implements AgentTool {
         return [];
       }
     }
+
     return [];
   }
 

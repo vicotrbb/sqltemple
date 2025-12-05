@@ -6,7 +6,7 @@ interface RunSqlInput {
   limitRows?: number;
 }
 
-const MAX_ROWS_IN_SUMMARY = 20;
+const MAX_ROWS_IN_SUMMARY = 25;
 
 export class RunSqlTool implements AgentTool {
   readonly name = "sql_runner";
@@ -66,6 +66,7 @@ export class RunSqlTool implements AgentTool {
       if (error instanceof Error) {
         throw error;
       }
+
       throw new Error("Invalid JSON input for sql_runner tool.");
     }
   }

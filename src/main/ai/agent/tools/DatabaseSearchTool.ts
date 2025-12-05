@@ -6,7 +6,7 @@ interface SearchInput {
   limit?: number;
 }
 
-const DEFAULT_LIMIT = 24;
+const DEFAULT_LIMIT = 25;
 
 export class DatabaseSearchTool implements AgentTool {
   readonly name = "database_search";
@@ -19,6 +19,7 @@ export class DatabaseSearchTool implements AgentTool {
     if (!context.connection) {
       throw new Error("Connect to a database before searching metadata.");
     }
+
     const args = this.parseInput(input);
     const limit = Math.min(Math.max(args.limit ?? DEFAULT_LIMIT, 5), 100);
     const pattern = `%${this.escapeLike(args.query)}%`;

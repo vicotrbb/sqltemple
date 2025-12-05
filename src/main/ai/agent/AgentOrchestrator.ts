@@ -25,7 +25,7 @@ export interface OrchestratorRunParams {
   signal?: AbortSignal;
 }
 
-const MAX_STEPS = 6;
+const MAX_STEPS = 10;
 
 export class AgentOrchestrator {
   private readonly toolMap: Map<string, AgentTool>;
