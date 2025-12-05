@@ -5,6 +5,7 @@ import * as path from "path";
 import { PostgresClient } from "../database/PostgresClient";
 import { StorageManager } from "../storage/StorageManager";
 import { AIService } from "../ai/AIService";
+import { AgentController } from "../ai/agent/AgentController";
 import { MenuBuilder } from "../menu/menuBuilder";
 import { DatabaseConnectionConfig } from "../database/interfaces";
 
@@ -12,6 +13,7 @@ let currentClient: PostgresClient | null = null;
 let currentConnection: DatabaseConnectionConfig | null = null;
 let storageManager: StorageManager;
 let aiService: AIService;
+let agentController: AgentController;
 let menuBuilderInstance: MenuBuilder | null = null;
 
 export function registerMenuBuilder(builder: MenuBuilder | null): void {
@@ -23,6 +25,12 @@ export async function initializeIpcHandlers(
 ): Promise<void> {
   storageManager = storage;
   aiService = new AIService(storageManager);
+  agentController = new AgentController({
+    aiService,
+    storage: storageManager,
+    getClient: () => currentClient,
+    getConnection: () => currentConnection,
+  });
 
   ipcMain.handle(
     "connect-database",
@@ -376,6 +384,58 @@ export async function initializeIpcHandlers(
     try {
       const result = await aiService.analyzeData(prompt);
       return { success: true, result };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle(
+    "agent:start",
+    async (
+      event,
+      payload: {
+        intent: string;
+        sessionId?: string;
+      }
+    ) => {
+      try {
+        if (!payload?.intent) {
+          throw new Error("Intent is required.");
+        }
+        const session = await agentController.startOrContinueSession(
+          payload.intent,
+          event.sender,
+          payload.sessionId
+        );
+        return { success: true, session };
+      } catch (error: any) {
+        return { success: false, error: error.message || String(error) };
+      }
+    }
+  );
+
+  ipcMain.handle("agent:cancel", async (event, sessionId: string) => {
+    try {
+      await agentController.cancel(sessionId);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("agent:listSessions", async () => {
+    try {
+      const sessions = await agentController.listSessions(100);
+      return { success: true, sessions };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  });
+
+  ipcMain.handle("agent:getSession", async (event, sessionId: string) => {
+    try {
+      const session = await agentController.getSessionWithMessages(sessionId);
+      return { success: true, ...session };
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
     }

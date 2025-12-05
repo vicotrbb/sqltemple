@@ -196,6 +196,7 @@ const VirtualizedTable: React.FC<{
 }) => {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(300);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [statsTooltip, setStatsTooltip] = useState<{
     visible: boolean;
     position: { x: number; y: number };
@@ -216,19 +217,20 @@ const VirtualizedTable: React.FC<{
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const updateHeight = () => {
+    const updateDimensions = () => {
       if (containerRef.current) {
         const height =
           containerRef.current.clientHeight -
           HEADER_HEIGHT -
           ROW_RESIZE_HANDLE_HEIGHT;
         setContainerHeight(Math.max(height, 0));
+        setContainerWidth(containerRef.current.clientWidth);
       }
     };
 
-    updateHeight();
-    window.addEventListener("resize", updateHeight);
-    return () => window.removeEventListener("resize", updateHeight);
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
   const visibleRange = useMemo(() => {
@@ -296,6 +298,15 @@ const VirtualizedTable: React.FC<{
 
   const offsetY = visibleRange.startIndex * rowHeight;
 
+  const totalColumnWidth = useMemo(() => {
+    return (result.columns || []).reduce(
+      (sum, column) => sum + getColumnWidth(column.name),
+      0
+    );
+  }, [result, getColumnWidth]);
+
+  const tableWidth = Math.max(totalColumnWidth, containerWidth);
+
   return (
     <div
       ref={containerRef}
@@ -319,7 +330,10 @@ const VirtualizedTable: React.FC<{
           className="sticky top-0 z-10 bg-vscode-bg-quaternary border-b border-vscode-border"
           style={{ height: HEADER_HEIGHT }}
         >
-          <div className="flex">
+          <div
+            className="flex"
+            style={{ width: tableWidth, minWidth: tableWidth }}
+          >
             {(result.columns || []).map((column, index) => {
               const columnWidth = getColumnWidth(column.name);
               return (
@@ -336,15 +350,22 @@ const VirtualizedTable: React.FC<{
           </div>
         </div>
 
-        <RowResizeHandle
-          rowHeight={rowHeight}
-          onResize={onRowHeightChange}
+        <div
           className="relative z-10"
-        />
+          style={{ width: tableWidth, minWidth: tableWidth }}
+        >
+          <RowResizeHandle
+            rowHeight={rowHeight}
+            onResize={onRowHeightChange}
+            className="w-full"
+          />
+        </div>
 
         <div
-          className="absolute top-0 left-0 right-0"
+          className="absolute top-0 left-0"
           style={{
+            width: tableWidth,
+            minWidth: tableWidth,
             transform: `translateY(${
               offsetY + HEADER_HEIGHT + ROW_RESIZE_HANDLE_HEIGHT
             }px)`,
@@ -358,7 +379,11 @@ const VirtualizedTable: React.FC<{
                 <div
                   key={actualRowIndex}
                   className="flex border-b border-vscode-border hover:bg-vscode-bg-tertiary"
-                  style={{ height: rowHeight }}
+                  style={{
+                    height: rowHeight,
+                    width: tableWidth,
+                    minWidth: tableWidth,
+                  }}
                 >
                   {(result.columns || []).map((column, colIndex) => {
                     const { display, fullText } = formatCellValue(

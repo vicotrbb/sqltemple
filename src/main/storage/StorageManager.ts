@@ -14,6 +14,28 @@ export interface QueryHistoryEntry {
   success: boolean;
 }
 
+export type AgentSessionStatus = "running" | "completed" | "error";
+
+export interface AgentSessionRecord {
+  id: string;
+  connectionId?: number | null;
+  title: string;
+  status: AgentSessionStatus;
+  lastMessage?: string | null;
+  metadata?: Record<string, any> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentMessageRecord {
+  id: string;
+  sessionId: string;
+  role: "user" | "assistant" | "tool" | "system";
+  content: string;
+  metadata?: Record<string, any> | null;
+  createdAt: string;
+}
+
 export class StorageManager {
   private db: Database.Database;
   private encryptionKey: Buffer;
@@ -103,6 +125,32 @@ export class StorageManager {
     }
   }
 
+  private serializeMetadata(value?: Record<string, any> | null): string | null {
+    if (!value || Object.keys(value).length === 0) {
+      return null;
+    }
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      console.warn("Failed to serialize metadata:", error);
+      return null;
+    }
+  }
+
+  private deserializeMetadata(
+    value?: string | null
+  ): Record<string, any> | null {
+    if (!value) {
+      return null;
+    }
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      console.warn("Failed to deserialize metadata:", error);
+      return null;
+    }
+  }
+
   private initializeTables(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS connections (
@@ -147,6 +195,33 @@ export class StorageManager {
       CREATE INDEX IF NOT EXISTS idx_history_run_at 
       ON query_history(run_at DESC);
 
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS agent_sessions (
+        id TEXT PRIMARY KEY,
+        connection_id INTEGER,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        last_message TEXT,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (connection_id) REFERENCES connections (id)
+      );
+
+      CREATE TABLE IF NOT EXISTS agent_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_agent_messages_session 
+        ON agent_messages(session_id, created_at);
     `);
   }
 
@@ -324,6 +399,183 @@ export class StorageManager {
       model: model || "gpt-4o-mini",
       baseUrl: baseUrl && baseUrl.trim() !== "" ? baseUrl : undefined,
     };
+  }
+
+  async createAgentSession(data: {
+    id?: string;
+    connectionId?: number | null;
+    title: string;
+    status?: AgentSessionStatus;
+    lastMessage?: string | null;
+    metadata?: Record<string, any> | null;
+  }): Promise<AgentSessionRecord> {
+    const id = data.id || crypto.randomUUID();
+    const stmt = this.db.prepare(`
+      INSERT INTO agent_sessions (id, connection_id, title, status, last_message, metadata)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const metadata = this.serializeMetadata(data.metadata);
+    stmt.run(
+      id,
+      data.connectionId ?? null,
+      data.title,
+      data.status ?? "running",
+      data.lastMessage ?? null,
+      metadata
+    );
+
+    return {
+      id,
+      connectionId: data.connectionId ?? null,
+      title: data.title,
+      status: data.status ?? "running",
+      lastMessage: data.lastMessage ?? null,
+      metadata: data.metadata ?? null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  async updateAgentSession(
+    sessionId: string,
+    update: {
+      status?: AgentSessionStatus;
+      lastMessage?: string | null;
+      metadata?: Record<string, any> | null;
+      title?: string;
+    }
+  ): Promise<void> {
+    const fields: string[] = [];
+    const params: any[] = [];
+
+    if (update.status) {
+      fields.push("status = ?");
+      params.push(update.status);
+    }
+
+    if (update.lastMessage !== undefined) {
+      fields.push("last_message = ?");
+      params.push(update.lastMessage);
+    }
+
+    if (update.metadata !== undefined) {
+      fields.push("metadata = ?");
+      params.push(this.serializeMetadata(update.metadata));
+    }
+
+    if (update.title !== undefined) {
+      fields.push("title = ?");
+      params.push(update.title);
+    }
+
+    fields.push("updated_at = CURRENT_TIMESTAMP");
+
+    const stmt = this.db.prepare(
+      `UPDATE agent_sessions SET ${fields.join(", ")} WHERE id = ?`
+    );
+    stmt.run(...params, sessionId);
+  }
+
+  async addAgentMessage(
+    sessionId: string,
+    message: {
+      id?: string;
+      role: "user" | "assistant" | "tool" | "system";
+      content: string;
+      metadata?: Record<string, any> | null;
+    }
+  ): Promise<AgentMessageRecord> {
+    const id = message.id || crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      INSERT INTO agent_messages (id, session_id, role, content, metadata, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id,
+      sessionId,
+      message.role,
+      message.content,
+      this.serializeMetadata(message.metadata),
+      createdAt
+    );
+
+    return {
+      id,
+      sessionId,
+      role: message.role,
+      content: message.content,
+      metadata: message.metadata ?? null,
+      createdAt,
+    };
+  }
+
+  async listAgentSessions(limit: number = 50): Promise<AgentSessionRecord[]> {
+    const stmt = this.db.prepare(`
+      SELECT id, connection_id, title, status, last_message, metadata, created_at, updated_at
+      FROM agent_sessions
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `);
+
+    const rows = stmt.all(limit) as any[];
+    return rows.map((row) => ({
+      id: row.id,
+      connectionId: row.connection_id ?? null,
+      title: row.title,
+      status: row.status,
+      lastMessage: row.last_message ?? null,
+      metadata: this.deserializeMetadata(row.metadata),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async getAgentSessionWithMessages(
+    sessionId: string
+  ): Promise<{
+    session: AgentSessionRecord | null;
+    messages: AgentMessageRecord[];
+  }> {
+    const sessionRow = this.db
+      .prepare(
+        `SELECT id, connection_id, title, status, last_message, metadata, created_at, updated_at
+         FROM agent_sessions WHERE id = ?`
+      )
+      .get(sessionId) as any;
+
+    const session = sessionRow
+      ? {
+          id: sessionRow.id,
+          connectionId: sessionRow.connection_id ?? null,
+          title: sessionRow.title,
+          status: sessionRow.status,
+          lastMessage: sessionRow.last_message ?? null,
+          metadata: this.deserializeMetadata(sessionRow.metadata),
+          createdAt: sessionRow.created_at,
+          updatedAt: sessionRow.updated_at,
+        }
+      : null;
+
+    const messagesStmt = this.db.prepare(
+      `SELECT id, session_id, role, content, metadata, created_at
+       FROM agent_messages
+       WHERE session_id = ?
+       ORDER BY datetime(created_at)`
+    );
+
+    const messages = messagesStmt.all(sessionId).map((row: any) => ({
+      id: row.id,
+      sessionId: row.session_id,
+      role: row.role,
+      content: row.content,
+      metadata: this.deserializeMetadata(row.metadata),
+      createdAt: row.created_at,
+    }));
+
+    return { session, messages };
   }
 
   close(): void {

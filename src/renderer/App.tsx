@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { ConnectionManager } from "./components/ConnectionManager";
 import { UnifiedExplorer } from "./components/UnifiedExplorer";
 import { ResizeHandle } from "./components/ResizeHandle";
@@ -30,6 +36,7 @@ import {
   FormatIcon,
   PlusIcon,
   BrainIcon,
+  PanelRightIcon,
 } from "./components/icons/IconLibrary";
 import {
   DatabaseConnectionConfig,
@@ -44,6 +51,19 @@ import {
   ErrorCategory,
 } from "./services/ErrorService";
 import { AppTab } from "./services/TabService";
+import { AgentSidebar } from "./components/agent/AgentSidebar";
+import { agentClient } from "./services/AgentClient";
+import type {
+  AgentSessionRecord,
+  AgentMessageRecord,
+} from "../main/storage/StorageManager";
+import type { AgentStreamEvent } from "../main/ai/agent/types";
+
+const compareSessions = (a: AgentSessionRecord, b: AgentSessionRecord) => {
+  const aTime = new Date(a.updatedAt).getTime();
+  const bTime = new Date(b.updatedAt).getTime();
+  return bTime - aTime;
+};
 
 const AppContent: React.FC = () => {
   const [showConnectionManager, setShowConnectionManager] = useState(false);
@@ -58,6 +78,28 @@ const AppContent: React.FC = () => {
   const [showPreferences, setShowPreferences] = useState(false);
   const [showSpotlight, setShowSpotlight] = useState(false);
   const [rightSidebarView, setRightSidebarView] = useState<"topology" | null>(
+    null
+  );
+  const [showAgentSidebar, setShowAgentSidebar] = useState(false);
+  const [agentSidebarWidth, setAgentSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("agentSidebarWidth");
+    return saved ? parseInt(saved, 10) : 360;
+  });
+  const [isAgentSidebarResizing, setIsAgentSidebarResizing] = useState(false);
+  const [agentSessions, setAgentSessions] = useState<AgentSessionRecord[]>([]);
+  const [activeAgentSessionId, setActiveAgentSessionId] = useState<
+    string | null
+  >(null);
+  const [agentMessagesMap, setAgentMessagesMap] = useState<
+    Record<string, AgentMessageRecord[]>
+  >({});
+  const [agentStreamingContent, setAgentStreamingContent] = useState<
+    Record<string, string>
+  >({});
+  const [agentInputValue, setAgentInputValue] = useState("");
+  const [agentIsSending, setAgentIsSending] = useState(false);
+  const loadedAgentSessions = useRef<Set<string>>(new Set());
+  const [draftAgentSessionId, setDraftAgentSessionId] = useState<string | null>(
     null
   );
   const [topologyTable, setTopologyTable] = useState<{
@@ -169,6 +211,264 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const upsertAgentSession = useCallback(
+    (partial: Partial<AgentSessionRecord> & { id: string }) => {
+      setAgentSessions((prev) => {
+        const existing = prev.find((session) => session.id === partial.id);
+        const merged: AgentSessionRecord = {
+          id: partial.id,
+          connectionId: partial.connectionId ?? existing?.connectionId ?? null,
+          title: partial.title ?? existing?.title ?? "Conversation",
+          status: partial.status ?? existing?.status ?? "running",
+          lastMessage: partial.lastMessage ?? existing?.lastMessage ?? null,
+          metadata: partial.metadata ?? existing?.metadata ?? null,
+          createdAt:
+            partial.createdAt ??
+            existing?.createdAt ??
+            new Date().toISOString(),
+          updatedAt:
+            partial.updatedAt ??
+            existing?.updatedAt ??
+            new Date().toISOString(),
+        };
+        const others = prev.filter((session) => session.id !== partial.id);
+        return [merged, ...others].sort(compareSessions);
+      });
+    },
+    []
+  );
+
+  const appendAgentMessage = useCallback(
+    (sessionId: string, message: AgentMessageRecord) => {
+      loadedAgentSessions.current.add(sessionId);
+      setAgentMessagesMap((prev) => {
+        const existing = prev[sessionId] || [];
+        const index = existing.findIndex((item) => item.id === message.id);
+        let updated: AgentMessageRecord[];
+
+        if (index >= 0) {
+          updated = [...existing];
+          updated[index] = message;
+        } else {
+          updated = [...existing, message];
+        }
+
+        updated.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        return { ...prev, [sessionId]: updated };
+      });
+    },
+    []
+  );
+
+  const removeDraftSession = useCallback((draftId: string | null) => {
+    if (!draftId) {
+      return;
+    }
+
+    setAgentSessions((prev) =>
+      prev.filter((session) => session.id !== draftId)
+    );
+
+    setAgentMessagesMap((prev) => {
+      if (!prev[draftId]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[draftId];
+      return next;
+    });
+
+    loadedAgentSessions.current.delete(draftId);
+  }, []);
+
+  const loadAgentSessionMessages = useCallback(async (sessionId: string) => {
+    if (loadedAgentSessions.current.has(sessionId)) {
+      return;
+    }
+
+    try {
+      const { messages } = await agentClient.getSession(sessionId);
+      loadedAgentSessions.current.add(sessionId);
+      setAgentMessagesMap((prev) => ({ ...prev, [sessionId]: messages }));
+    } catch (error: any) {
+      errorService.logError(
+        ErrorLevel.ERROR,
+        ErrorCategory.AI,
+        "Failed to load agent messages",
+        {
+          userMessage:
+            error instanceof Error ? error.message : "Unable to load messages",
+        }
+      );
+    }
+  }, []);
+
+  const handleAgentEvent = useCallback(
+    (event: AgentStreamEvent) => {
+      switch (event.type) {
+        case "session-started":
+          upsertAgentSession(event.session);
+          break;
+        case "message":
+          appendAgentMessage(event.sessionId, event.message);
+          setAgentStreamingContent((prev) => {
+            if (event.message.metadata?.streaming) {
+              return {
+                ...prev,
+                [event.message.id]: event.message.content || "",
+              };
+            }
+
+            if (prev[event.message.id]) {
+              const next = { ...prev };
+              delete next[event.message.id];
+              return next;
+            }
+
+            return prev;
+          });
+          break;
+        case "token":
+          setAgentStreamingContent((prev) => ({
+            ...prev,
+            [event.messageId]: (prev[event.messageId] || "") + event.token,
+          }));
+          break;
+        case "status":
+          upsertAgentSession({
+            id: event.sessionId,
+            status: event.status,
+            updatedAt: new Date().toISOString(),
+          });
+          break;
+        case "error":
+          errorService.logError(
+            ErrorLevel.ERROR,
+            ErrorCategory.AI,
+            "Agent error",
+            { userMessage: event.error }
+          );
+          break;
+        default:
+          break;
+      }
+    },
+    [appendAgentMessage, upsertAgentSession]
+  );
+
+  useEffect(() => {
+    const unsubscribe = agentClient.onEvent(handleAgentEvent);
+    return () => unsubscribe();
+  }, [handleAgentEvent]);
+
+  const loadAgentSessions = useCallback(async () => {
+    try {
+      const sessions = await agentClient.listSessions();
+      setAgentSessions((prev) => {
+        const draftSessions = prev.filter((session) => session.metadata?.draft);
+        return [...draftSessions, ...sessions].sort(compareSessions);
+      });
+
+      if (sessions.length > 0 && !activeAgentSessionId) {
+        const firstSessionId = sessions[0].id;
+        setActiveAgentSessionId(firstSessionId);
+        await loadAgentSessionMessages(firstSessionId);
+      }
+    } catch (error: any) {
+      errorService.logError(
+        ErrorLevel.ERROR,
+        ErrorCategory.AI,
+        "Failed to load agent sessions",
+        {
+          userMessage:
+            error instanceof Error ? error.message : "Unable to load sessions",
+        }
+      );
+    }
+  }, [activeAgentSessionId, loadAgentSessionMessages]);
+
+  useEffect(() => {
+    if (!showAgentSidebar) {
+      return;
+    }
+    loadAgentSessions();
+  }, [showAgentSidebar, loadAgentSessions]);
+
+  const handleAgentSend = useCallback(
+    async (input: string) => {
+      if (!input.trim()) return;
+      setAgentIsSending(true);
+      try {
+        const previousSessionId = activeAgentSessionId;
+        const session = await agentClient.startSession(
+          input,
+          activeAgentSessionId || undefined
+        );
+        upsertAgentSession(session);
+        setShowAgentSidebar(true);
+        setActiveAgentSessionId(session.id);
+        loadedAgentSessions.current.add(session.id);
+        setAgentMessagesMap((prev) =>
+          prev[session.id] ? prev : { ...prev, [session.id]: [] }
+        );
+
+        if (previousSessionId && previousSessionId.startsWith("draft-")) {
+          removeDraftSession(previousSessionId);
+          setDraftAgentSessionId(null);
+        }
+      } catch (error: any) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error("Unable to send request to agent");
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.AI,
+          "Agent request failed",
+          { userMessage: err.message }
+        );
+        throw err;
+      } finally {
+        setAgentIsSending(false);
+      }
+    },
+    [activeAgentSessionId, upsertAgentSession, removeDraftSession]
+  );
+
+  const handleAgentSessionSelect = useCallback(
+    async (sessionId: string | null) => {
+      setActiveAgentSessionId(sessionId);
+      if (!sessionId) {
+        setAgentInputValue("");
+        return;
+      }
+      if (sessionId.startsWith("draft-")) {
+        setAgentInputValue("");
+        return;
+      }
+      try {
+        await loadAgentSessionMessages(sessionId);
+      } catch (error: any) {
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.AI,
+          "Failed to load conversation",
+          {
+            userMessage:
+              error instanceof Error
+                ? error.message
+                : "Unable to open conversation",
+          }
+        );
+      }
+    },
+    [loadAgentSessionMessages]
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isInputFocused =
@@ -252,6 +552,9 @@ const AppContent: React.FC = () => {
       } else if (matchesShortcut("toggle-schema")) {
         e.preventDefault();
         refreshSchema();
+      } else if (matchesShortcut("toggle-agent")) {
+        e.preventDefault();
+        setShowAgentSidebar((prev) => !prev);
       } else if (matchesShortcut("connect-database")) {
         e.preventDefault();
         setShowConnectionManager(true);
@@ -300,6 +603,17 @@ const AppContent: React.FC = () => {
         );
         setSidebarWidth(constrainedWidth);
       }
+
+      if (isAgentSidebarResizing) {
+        const newWidth = window.innerWidth - e.clientX;
+        const minWidth = 280;
+        const maxWidth = 640;
+        const constrainedWidth = Math.min(
+          Math.max(newWidth, minWidth),
+          maxWidth
+        );
+        setAgentSidebarWidth(constrainedWidth);
+      }
     };
 
     const handleMouseUp = () => {
@@ -317,9 +631,17 @@ const AppContent: React.FC = () => {
         document.body.style.userSelect = "";
         document.body.classList.remove("resizing");
       }
+
+      if (isAgentSidebarResizing) {
+        setIsAgentSidebarResizing(false);
+        localStorage.setItem("agentSidebarWidth", agentSidebarWidth.toString());
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.body.classList.remove("resizing");
+      }
     };
 
-    if (isResizing || isSidebarResizing) {
+    if (isResizing || isSidebarResizing || isAgentSidebarResizing) {
       document.body.style.cursor = isResizing ? "ns-resize" : "ew-resize";
       document.body.style.userSelect = "none";
       document.body.classList.add("resizing");
@@ -331,7 +653,13 @@ const AppContent: React.FC = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, isSidebarResizing, sidebarWidth]);
+  }, [
+    isResizing,
+    isSidebarResizing,
+    isAgentSidebarResizing,
+    sidebarWidth,
+    agentSidebarWidth,
+  ]);
 
   const createNewTab = () => {
     appService.createNewTab();
@@ -589,6 +917,7 @@ const AppContent: React.FC = () => {
     },
     onToggleResults: handleToggleResults,
     onToggleHistory: () => setShowQueryHistory(!showQueryHistory),
+    onToggleAgentSidebar: () => setShowAgentSidebar((prev) => !prev),
 
     onConnectDatabase: () => setShowConnectionManager(true),
     onDisconnectDatabase: handleDisconnect,
@@ -623,6 +952,107 @@ const AppContent: React.FC = () => {
   const isQueryTabActive = Boolean(activeQueryTab);
   const shouldShowResultsPanel = showResultsPanel && isQueryTabActive;
   const explorerVisible = showConnectionsExplorer || showSchemaExplorer;
+  const activeAgentMessages = useMemo(
+    () =>
+      activeAgentSessionId ? agentMessagesMap[activeAgentSessionId] || [] : [],
+    [activeAgentSessionId, agentMessagesMap]
+  );
+
+  const handleInsertSuggestedSql = useCallback((sql: string) => {
+    if (!sql?.trim()) {
+      return;
+    }
+
+    let inserted = appService.addQueryToActiveTabWithNewlines(sql);
+    if (!inserted) {
+      const newTabId = appService.createNewTab();
+      if (newTabId) {
+        appService.setActiveTab(newTabId);
+        inserted = appService.addQueryToActiveTabWithNewlines(sql);
+      }
+    }
+
+    if (!inserted) {
+      errorService.logError(
+        ErrorLevel.ERROR,
+        ErrorCategory.UI,
+        "Insert failed",
+        {
+          userMessage: "Unable to insert SQL into the editor.",
+        }
+      );
+    }
+  }, []);
+
+  const handleRunSuggestedSql = useCallback(
+    async (sql: string) => {
+      if (!sql?.trim()) {
+        return;
+      }
+      if (!isConnected) {
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.UI,
+          "Not connected",
+          { userMessage: "Connect to a database before running queries." }
+        );
+        return;
+      }
+      if (isExecuting) {
+        return;
+      }
+
+      if (!activeQueryTab) {
+        const newTabId = appService.createNewTab();
+        if (newTabId) {
+          appService.setActiveTab(newTabId);
+        }
+      }
+
+      const activeTabCheck = appService.getActiveTab();
+      if (!activeTabCheck || activeTabCheck.type !== "query") {
+        errorService.logError(
+          ErrorLevel.ERROR,
+          ErrorCategory.UI,
+          "No query tab",
+          { userMessage: "Open a query tab to run SQL suggestions." }
+        );
+        return;
+      }
+
+      setShowResultsPanel(true);
+      setIsExecuting(true);
+      const success = await appService.executeQuery(sql);
+      if (!success) {
+        setIsExecuting(false);
+      }
+    },
+    [activeQueryTab, isConnected, isExecuting]
+  );
+
+  const handleStartNewAgentConversation = useCallback(() => {
+    removeDraftSession(draftAgentSessionId);
+
+    const draftId = `draft-${Date.now()}`;
+    const timestamp = new Date().toISOString();
+    const draftSession: AgentSessionRecord = {
+      id: draftId,
+      connectionId: currentConnection?.id ?? null,
+      title: "New Conversation",
+      status: "running",
+      lastMessage: null,
+      metadata: { draft: true },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    setAgentSessions((prev) => [draftSession, ...prev]);
+    setAgentMessagesMap((prev) => ({ ...prev, [draftId]: [] }));
+    loadedAgentSessions.current.add(draftId);
+    setActiveAgentSessionId(draftId);
+    setAgentInputValue("");
+    setDraftAgentSessionId(draftId);
+  }, [currentConnection?.id, draftAgentSessionId, removeDraftSession]);
 
   useEffect(() => {
     if (editorInstance) {
@@ -843,6 +1273,18 @@ const AppContent: React.FC = () => {
                     <BrainIcon className="w-4 h-4 text-vscode-text-secondary" />
                   </button>
                 )}
+
+                <button
+                  onClick={() => setShowAgentSidebar((prev) => !prev)}
+                  className={`p-2 rounded transition-colors ${
+                    showAgentSidebar
+                      ? "bg-vscode-bg-quaternary text-vscode-text"
+                      : "hover:bg-vscode-bg-quaternary text-vscode-text-secondary"
+                  }`}
+                  title="Toggle Agent Sidebar (⌘+L)"
+                >
+                  <PanelRightIcon className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -942,6 +1384,27 @@ const AppContent: React.FC = () => {
               }}
             />
           </div>
+        )}
+
+        {showAgentSidebar && (
+          <AgentSidebar
+            width={agentSidebarWidth}
+            onResizeStart={() => setIsAgentSidebarResizing(true)}
+            onClose={() => setShowAgentSidebar(false)}
+            onSend={handleAgentSend}
+            onSelectSession={handleAgentSessionSelect}
+            onStartNewSession={handleStartNewAgentConversation}
+            onInsertSql={handleInsertSuggestedSql}
+            onRunSql={(sql) => handleRunSuggestedSql(sql)}
+            sessions={agentSessions}
+            activeSessionId={activeAgentSessionId}
+            messages={activeAgentMessages}
+            streamingContent={agentStreamingContent}
+            inputValue={agentInputValue}
+            onInputChange={setAgentInputValue}
+            isSending={agentIsSending}
+            connectionName={currentConnection?.name}
+          />
         )}
 
         {showConnectionManager && (

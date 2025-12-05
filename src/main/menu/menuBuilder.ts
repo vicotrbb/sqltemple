@@ -148,6 +148,10 @@ export class MenuBuilder {
       this.mainWindow.webContents.send("menu:toggle-history");
     });
 
+    this.registerAction("view:toggle-agent", () => {
+      this.mainWindow.webContents.send("menu:toggle-agent");
+    });
+
     this.registerAction("view:zoom-in", () => {
       this.mainWindow.webContents.zoomLevel += 0.5;
     });
@@ -420,6 +424,13 @@ export class MenuBuilder {
           accelerator: "CmdOrCtrl+H",
           enabled: this.isEnabled("view:toggle-history"),
           click: () => this.executeAction("view:toggle-history"),
+        },
+        {
+          id: "view:toggle-agent",
+          label: "Toggle Agent Sidebar",
+          accelerator: "CmdOrCtrl+L",
+          enabled: this.isEnabled("view:toggle-agent"),
+          click: () => this.executeAction("view:toggle-agent"),
         },
         { type: "separator" },
         {

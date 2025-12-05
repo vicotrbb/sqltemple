@@ -202,6 +202,13 @@ const defaultShortcuts: KeyboardShortcut[] = [
     defaultKeys: ["Cmd+3", "Ctrl+3"],
     category: "View",
   },
+  {
+    id: "view:toggle-agent",
+    name: "Toggle Agent Sidebar",
+    description: "Show/hide the AI agent sidebar",
+    defaultKeys: ["Cmd+L", "Ctrl+L"],
+    category: "View",
+  },
 
   {
     id: "ai:create-query",
