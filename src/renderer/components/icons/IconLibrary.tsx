@@ -23,6 +23,10 @@ const Icon: React.FC<
   </svg>
 );
 
+/**
+ * The following icons were generated using AI.
+ */
+
 export const NewFileIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
@@ -196,6 +200,17 @@ export const DisconnectIcon: React.FC<IconProps> = (props) => (
     <path d="M14 22a2 2 0 1 1-4 0a2 2 0 0 1 4 0zM14 2a2 2 0 1 1-4 0a2 2 0 0 1 4 0z" />
     <path d="M6 10h2m8 0h2m-9 8v2m0-16v2" />
     <line x1="18" y1="6" x2="6" y2="18" />
+  </Icon>
+);
+
+export const TopologyIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <circle cx="6" cy="7" r="2" />
+    <circle cx="18" cy="7" r="2" />
+    <circle cx="12" cy="18" r="2" />
+    <line x1="8" y1="7" x2="16" y2="7" />
+    <line x1="7.3" y1="8.5" x2="11.2" y2="16" />
+    <line x1="16.7" y1="8.5" x2="12.8" y2="16" />
   </Icon>
 );
 
@@ -375,18 +390,16 @@ export const LoadingIcon: React.FC<IconProps> = (props) => (
 
 export const ConnectedIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v6m0 6v6" />
-    <path d="M1 12h6m6 0h6" />
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="8 12 11 15 17 9" />
   </Icon>
 );
 
 export const DisconnectedIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v6m0 6v6" />
-    <path d="M1 12h6m6 0h6" />
-    <line x1="1" y1="1" x2="23" y2="23" />
+    <circle cx="12" cy="12" r="9" />
+    <line x1="8" y1="8" x2="16" y2="16" />
+    <line x1="16" y1="8" x2="8" y2="16" />
   </Icon>
 );
 

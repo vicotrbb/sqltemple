@@ -16,6 +16,8 @@ import {
   ColumnIcon,
   AddConnectionIcon,
   RefreshIcon,
+  TopologyIcon,
+  InfoIcon,
 } from "./icons/IconLibrary";
 import {
   DatabaseConnectionConfig,
@@ -131,6 +133,14 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
       );
     }
   }, [currentConnection]);
+
+  useEffect(() => {
+    if (currentConnection?.database) {
+      setExpandedDatabases((prev) =>
+        new Set(prev).add(currentConnection.database)
+      );
+    }
+  }, [currentConnection?.database]);
 
   useEffect(() => {
     // Auto-expand schemas with tables when schema loads
@@ -434,12 +444,20 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
 
     const items: ContextMenuItem[] = [
       {
+        label: "Open Table Details",
+        onClick: () => {
+          onTableDoubleClick?.(table.name, schemaName);
+          setContextMenu(null);
+        },
+        icon: <InfoIcon size={14} />,
+      },
+      {
         label: "See Topology",
         onClick: () => {
           onShowTopology?.(table.name, schemaName);
           setContextMenu(null);
         },
-        icon: <RefreshIcon size={14} />,
+        icon: <TopologyIcon size={14} />,
       },
       { divider: true },
       {
@@ -459,7 +477,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
     onTableDoubleClick?.(table.name, schemaName);
   };
 
-  const renderColumns = (columns: ColumnInfo[]) => {
+  const renderColumns = (columns: ColumnInfo[], level: number) => {
     if (!columns) return null;
     return columns.map((column) => (
       <ExplorerNode
@@ -468,7 +486,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
         label={column.name}
         icon={<ColumnIcon size={12} />}
         iconColor="text-vscode-text-tertiary"
-        level={5}
+        level={level}
         hasChildren={false}
       />
     ));
@@ -481,12 +499,14 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
     icon: React.ReactNode,
     iconColor: string,
     objects: any[] | undefined,
-    renderObject: (obj: any, schemaName: string) => React.ReactNode
+    renderObject: (obj: any, schemaName: string) => React.ReactNode,
+    sectionLevel: number
   ) => {
     const sectionKey = `${schemaInfo.name}.${sectionName}`;
     const isLoading = loadingObjects.has(sectionKey);
     const isExpanded = expandedSections.has(sectionKey);
     const objectCount = objects?.length || 0;
+    const childLevel = sectionLevel + 1;
 
     return (
       <ExplorerNode
@@ -498,7 +518,7 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
         count={objectCount}
         isExpanded={isExpanded}
         isLoading={isLoading}
-        level={3}
+        level={sectionLevel}
         hasChildren={true}
         onClick={() => toggleSection(sectionKey, schemaInfo.name, objectType)}
       >
@@ -509,12 +529,316 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
           <ExplorerNode
             id={`${sectionKey}-empty`}
             label={`No ${sectionName.toLowerCase()} found`}
-            level={4}
+            level={childLevel}
             hasChildren={false}
           />
         )}
       </ExplorerNode>
     );
+  };
+
+  const renderSchemas = (schemaLevel: number) => {
+    if (!schema?.schemas) return null;
+
+    return schema.schemas.map((schemaInfo: SchemaInfo) => {
+      const schemaExpanded = expandedSchemas.has(schemaInfo.name);
+      const sectionLevel = schemaLevel + 1;
+      const objectLevel = schemaLevel + 2;
+      const columnLevel = schemaLevel + 3;
+
+      return (
+        <ExplorerNode
+          key={schemaInfo.name}
+          id={schemaInfo.name}
+          label={schemaInfo.name}
+          icon={<SchemaIcon size={16} />}
+          iconColor="text-vscode-yellow"
+          isExpanded={schemaExpanded}
+          level={schemaLevel}
+          hasChildren={true}
+          onClick={() => toggleSchema(schemaInfo.name)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              items: [
+                {
+                  label: "Refresh",
+                  onClick: () => onRefresh?.(),
+                  icon: <RefreshIcon size={14} />,
+                },
+              ],
+            });
+          }}
+        >
+          {schemaExpanded && (
+            <div>
+              {/* Tables Section */}
+              <ExplorerNode
+                id={`${schemaInfo.name}.Tables`}
+                label="Tables"
+                icon={<TableIcon size={16} />}
+                iconColor="text-vscode-blue"
+                count={schemaInfo.tables.length}
+                isExpanded={expandedSections.has(`${schemaInfo.name}.Tables`)}
+                level={sectionLevel}
+                hasChildren={true}
+                onClick={() => {
+                  const sectionKey = `${schemaInfo.name}.Tables`;
+                  const newExpanded = new Set(expandedSections);
+                  if (newExpanded.has(sectionKey)) {
+                    newExpanded.delete(sectionKey);
+                  } else {
+                    newExpanded.add(sectionKey);
+                  }
+                  setExpandedSections(newExpanded);
+                }}
+              >
+                {expandedSections.has(`${schemaInfo.name}.Tables`) && (
+                  <div>
+                    {schemaInfo.tables &&
+                      schemaInfo.tables.map((table: TableInfo) => {
+                        const tableKey = `${schemaInfo.name}.${table.name}`;
+                        const columns =
+                          loadedTableColumns[tableKey] || table.columns;
+                        const isLoading = loadingObjects.has(tableKey);
+                        const isExpanded = expandedObjects.has(tableKey);
+
+                        return (
+                          <ExplorerNode
+                            key={tableKey}
+                            id={tableKey}
+                            label={table.name}
+                            icon={<TableIcon size={16} />}
+                            iconColor="text-vscode-blue"
+                            count={
+                              table.columnCount !== undefined
+                                ? table.columnCount
+                                : columns.length
+                            }
+                            isExpanded={isExpanded}
+                            isLoading={isLoading}
+                            level={objectLevel}
+                            hasChildren={true}
+                            onClick={() =>
+                              toggleObject(
+                                tableKey,
+                                schemaInfo.name,
+                                table.name,
+                                "table"
+                              )
+                            }
+                            onDoubleClick={() =>
+                              handleTableDoubleClick(table, schemaInfo.name)
+                            }
+                            onContextMenu={(e) =>
+                              handleTableContextMenu(e, table, schemaInfo.name)
+                            }
+                          >
+                            {isExpanded &&
+                              columns.length > 0 &&
+                              renderColumns(columns, columnLevel)}
+                            {isExpanded &&
+                              columns.length === 0 &&
+                              !isLoading && (
+                                <ExplorerNode
+                                  id={`${tableKey}-no-columns`}
+                                  label="No columns found"
+                                  level={columnLevel}
+                                  hasChildren={false}
+                                />
+                              )}
+                          </ExplorerNode>
+                        );
+                      })}
+                  </div>
+                )}
+              </ExplorerNode>
+
+              {/* Views Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Views",
+                "views",
+                <ViewIcon size={16} />,
+                "text-vscode-green",
+                loadedSchemaObjects[schemaInfo.name]?.views,
+                (view: ViewInfo, schemaName: string) => {
+                  const viewKey = `${schemaName}.view.${view.name}`;
+                  const columns = loadedViewColumns[viewKey] || [];
+                  const isLoading = loadingObjects.has(viewKey);
+                  const isExpanded = expandedObjects.has(viewKey);
+
+                  return (
+                    <ExplorerNode
+                      key={viewKey}
+                      id={viewKey}
+                      label={view.name}
+                      icon={<ViewIcon size={16} />}
+                      iconColor="text-vscode-green"
+                      count={view.columnCount || columns.length}
+                      isExpanded={isExpanded}
+                      isLoading={isLoading}
+                      level={objectLevel}
+                      hasChildren={true}
+                      onClick={() =>
+                        toggleObject(viewKey, schemaName, view.name, "view")
+                      }
+                    >
+                      {isExpanded &&
+                        columns.length > 0 &&
+                        renderColumns(columns, columnLevel)}
+                      {isExpanded && columns.length === 0 && !isLoading && (
+                        <ExplorerNode
+                          id={`${viewKey}-no-columns`}
+                          label="No columns found"
+                          level={columnLevel}
+                          hasChildren={false}
+                        />
+                      )}
+                    </ExplorerNode>
+                  );
+                },
+                sectionLevel
+              )}
+
+              {/* Functions Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Functions",
+                "functions",
+                <FunctionIcon size={16} />,
+                "text-vscode-purple",
+                loadedSchemaObjects[schemaInfo.name]?.functions,
+                (func: FunctionInfo) => (
+                  <ExplorerNode
+                    key={func.name}
+                    id={func.name}
+                    label={func.name}
+                    icon={<FunctionIcon size={16} />}
+                    iconColor="text-vscode-purple"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+
+              {/* Procedures Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Procedures",
+                "procedures",
+                <ProcedureIcon size={16} />,
+                "text-vscode-orange",
+                loadedSchemaObjects[schemaInfo.name]?.procedures,
+                (proc: ProcedureInfo) => (
+                  <ExplorerNode
+                    key={proc.name}
+                    id={proc.name}
+                    label={proc.name}
+                    icon={<ProcedureIcon size={16} />}
+                    iconColor="text-vscode-orange"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+
+              {/* Sequences Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Sequences",
+                "sequences",
+                <SequenceIcon size={16} />,
+                "text-vscode-cyan",
+                loadedSchemaObjects[schemaInfo.name]?.sequences,
+                (seq: SequenceInfo) => (
+                  <ExplorerNode
+                    key={seq.name}
+                    id={seq.name}
+                    label={seq.name}
+                    icon={<SequenceIcon size={16} />}
+                    iconColor="text-vscode-cyan"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+
+              {/* Triggers Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Triggers",
+                "triggers",
+                <TriggerIcon size={16} />,
+                "text-vscode-red",
+                loadedSchemaObjects[schemaInfo.name]?.triggers,
+                (trigger: TriggerInfo) => (
+                  <ExplorerNode
+                    key={trigger.name}
+                    id={trigger.name}
+                    label={trigger.name}
+                    icon={<TriggerIcon size={16} />}
+                    iconColor="text-vscode-red"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+
+              {/* Indexes Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Indexes",
+                "indexes",
+                <IndexIcon size={16} />,
+                "text-vscode-pink",
+                loadedSchemaObjects[schemaInfo.name]?.indexes,
+                (index: IndexInfo) => (
+                  <ExplorerNode
+                    key={index.name}
+                    id={index.name}
+                    label={index.name}
+                    icon={<IndexIcon size={16} />}
+                    iconColor="text-vscode-pink"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+
+              {/* Domains Section */}
+              {renderSchemaSection(
+                schemaInfo,
+                "Domains",
+                "domains",
+                <DomainIcon size={16} />,
+                "text-vscode-brown",
+                loadedSchemaObjects[schemaInfo.name]?.domains,
+                (domain: DomainInfo) => (
+                  <ExplorerNode
+                    key={domain.name}
+                    id={domain.name}
+                    label={domain.name}
+                    icon={<DomainIcon size={16} />}
+                    iconColor="text-vscode-brown"
+                    level={objectLevel}
+                    hasChildren={false}
+                  />
+                ),
+                sectionLevel
+              )}
+            </div>
+          )}
+        </ExplorerNode>
+      );
+    });
   };
 
   const renderAddConnection = () => (
@@ -599,415 +923,41 @@ export const UnifiedExplorer: React.FC<UnifiedExplorerProps> = ({
                   (showSchemaExplorer ? (
                     <div>
                       {/* Databases Section */}
-                      {schema.databases && schema.databases.length > 0 && (
+                      {schema.databases && schema.databases.length > 0 ? (
                         <div>
-                          {schema.databases.map((db) => (
-                            <ExplorerNode
-                              key={db.name}
-                              id={db.name}
-                              label={db.name}
-                              icon={<FolderIcon size={16} />}
-                              iconColor="text-vscode-purple"
-                              isExpanded={expandedDatabases.has(db.name)}
-                              level={1}
-                              hasChildren={true}
-                              onClick={() => toggleDatabase(db.name)}
-                            >
-                              {expandedDatabases.has(db.name) && db.owner && (
-                                <ExplorerNode
-                                  id={`${db.name}-owner`}
-                                  label={`Owner: ${db.owner}`}
-                                  level={2}
-                                  hasChildren={false}
-                                />
-                              )}
-                            </ExplorerNode>
-                          ))}
+                          {schema.databases.map((db) => {
+                            const dbExpanded = expandedDatabases.has(db.name);
+                            const isActiveDb =
+                              currentConnection?.database === db.name;
+
+                            return (
+                              <ExplorerNode
+                                key={db.name}
+                                id={db.name}
+                                label={db.name}
+                                icon={<FolderIcon size={16} />}
+                                iconColor="text-vscode-purple"
+                                isExpanded={dbExpanded}
+                                level={1}
+                                hasChildren={true}
+                                onClick={() => toggleDatabase(db.name)}
+                              >
+                                {dbExpanded && isActiveDb && renderSchemas(2)}
+                                {dbExpanded && !isActiveDb && (
+                                  <ExplorerNode
+                                    id={`${db.name}-schemas-unavailable`}
+                                    label="Schemas shown after connecting to this database"
+                                    level={2}
+                                    hasChildren={false}
+                                  />
+                                )}
+                              </ExplorerNode>
+                            );
+                          })}
                         </div>
+                      ) : (
+                        renderSchemas(1)
                       )}
-
-                      {/* Schemas Section */}
-                      {schema.schemas &&
-                        schema.schemas.map((schemaInfo: SchemaInfo) => (
-                          <ExplorerNode
-                            key={schemaInfo.name}
-                            id={schemaInfo.name}
-                            label={schemaInfo.name}
-                            icon={<SchemaIcon size={16} />}
-                            iconColor="text-vscode-yellow"
-                            isExpanded={expandedSchemas.has(schemaInfo.name)}
-                            level={
-                              schema.databases && schema.databases.length > 0
-                                ? 2
-                                : 1
-                            }
-                            hasChildren={true}
-                            onClick={() => toggleSchema(schemaInfo.name)}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              setContextMenu({
-                                x: e.clientX,
-                                y: e.clientY,
-                                items: [
-                                  {
-                                    label: "Refresh",
-                                    onClick: () => onRefresh?.(),
-                                    icon: <RefreshIcon size={14} />,
-                                  },
-                                ],
-                              });
-                            }}
-                          >
-                            {expandedSchemas.has(schemaInfo.name) && (
-                              <div>
-                                {/* Tables Section */}
-                                <ExplorerNode
-                                  id={`${schemaInfo.name}.Tables`}
-                                  label="Tables"
-                                  icon={<TableIcon size={16} />}
-                                  iconColor="text-vscode-blue"
-                                  count={schemaInfo.tables.length}
-                                  isExpanded={expandedSections.has(
-                                    `${schemaInfo.name}.Tables`
-                                  )}
-                                  level={
-                                    schema.databases &&
-                                    schema.databases.length > 0
-                                      ? 3
-                                      : 2
-                                  }
-                                  hasChildren={true}
-                                  onClick={() => {
-                                    const sectionKey = `${schemaInfo.name}.Tables`;
-                                    const newExpanded = new Set(
-                                      expandedSections
-                                    );
-                                    if (newExpanded.has(sectionKey)) {
-                                      newExpanded.delete(sectionKey);
-                                    } else {
-                                      newExpanded.add(sectionKey);
-                                    }
-                                    setExpandedSections(newExpanded);
-                                  }}
-                                >
-                                  {expandedSections.has(
-                                    `${schemaInfo.name}.Tables`
-                                  ) && (
-                                    <div>
-                                      {schemaInfo.tables &&
-                                        schemaInfo.tables.map(
-                                          (table: TableInfo) => {
-                                            const tableKey = `${schemaInfo.name}.${table.name}`;
-                                            const columns =
-                                              loadedTableColumns[tableKey] ||
-                                              table.columns;
-                                            const isLoading =
-                                              loadingObjects.has(tableKey);
-                                            const isExpanded =
-                                              expandedObjects.has(tableKey);
-
-                                            return (
-                                              <ExplorerNode
-                                                key={tableKey}
-                                                id={tableKey}
-                                                label={table.name}
-                                                icon={<TableIcon size={16} />}
-                                                iconColor="text-vscode-blue"
-                                                count={
-                                                  table.columnCount !==
-                                                  undefined
-                                                    ? table.columnCount
-                                                    : columns.length
-                                                }
-                                                isExpanded={isExpanded}
-                                                isLoading={isLoading}
-                                                level={
-                                                  schema.databases &&
-                                                  schema.databases.length > 0
-                                                    ? 4
-                                                    : 3
-                                                }
-                                                hasChildren={true}
-                                                onClick={() =>
-                                                  toggleObject(
-                                                    tableKey,
-                                                    schemaInfo.name,
-                                                    table.name,
-                                                    "table"
-                                                  )
-                                                }
-                                                onDoubleClick={() =>
-                                                  handleTableDoubleClick(
-                                                    table,
-                                                    schemaInfo.name
-                                                  )
-                                                }
-                                                onContextMenu={(e) =>
-                                                  handleTableContextMenu(
-                                                    e,
-                                                    table,
-                                                    schemaInfo.name
-                                                  )
-                                                }
-                                              >
-                                                {isExpanded &&
-                                                  columns.length > 0 &&
-                                                  renderColumns(columns)}
-                                                {isExpanded &&
-                                                  columns.length === 0 &&
-                                                  !isLoading && (
-                                                    <ExplorerNode
-                                                      id={`${tableKey}-no-columns`}
-                                                      label="No columns found"
-                                                      level={
-                                                        schema.databases &&
-                                                        schema.databases
-                                                          .length > 0
-                                                          ? 5
-                                                          : 4
-                                                      }
-                                                      hasChildren={false}
-                                                    />
-                                                  )}
-                                              </ExplorerNode>
-                                            );
-                                          }
-                                        )}
-                                    </div>
-                                  )}
-                                </ExplorerNode>
-
-                                {/* Views Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Views",
-                                  "views",
-                                  <ViewIcon size={16} />,
-                                  "text-vscode-green",
-                                  loadedSchemaObjects[schemaInfo.name]?.views,
-                                  (view: ViewInfo, schemaName: string) => {
-                                    const viewKey = `${schemaName}.view.${view.name}`;
-                                    const columns =
-                                      loadedViewColumns[viewKey] || [];
-                                    const isLoading =
-                                      loadingObjects.has(viewKey);
-                                    const isExpanded =
-                                      expandedObjects.has(viewKey);
-
-                                    return (
-                                      <ExplorerNode
-                                        key={viewKey}
-                                        id={viewKey}
-                                        label={view.name}
-                                        icon={<ViewIcon size={16} />}
-                                        iconColor="text-vscode-green"
-                                        count={
-                                          view.columnCount || columns.length
-                                        }
-                                        isExpanded={isExpanded}
-                                        isLoading={isLoading}
-                                        level={
-                                          schema.databases &&
-                                          schema.databases.length > 0
-                                            ? 4
-                                            : 3
-                                        }
-                                        hasChildren={true}
-                                        onClick={() =>
-                                          toggleObject(
-                                            viewKey,
-                                            schemaName,
-                                            view.name,
-                                            "view"
-                                          )
-                                        }
-                                      >
-                                        {isExpanded &&
-                                          columns.length > 0 &&
-                                          renderColumns(columns)}
-                                        {isExpanded &&
-                                          columns.length === 0 &&
-                                          !isLoading && (
-                                            <ExplorerNode
-                                              id={`${viewKey}-no-columns`}
-                                              label="No columns found"
-                                              level={
-                                                schema.databases &&
-                                                schema.databases.length > 0
-                                                  ? 5
-                                                  : 4
-                                              }
-                                              hasChildren={false}
-                                            />
-                                          )}
-                                      </ExplorerNode>
-                                    );
-                                  }
-                                )}
-
-                                {/* Functions Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Functions",
-                                  "functions",
-                                  <FunctionIcon size={16} />,
-                                  "text-vscode-purple",
-                                  loadedSchemaObjects[schemaInfo.name]
-                                    ?.functions,
-                                  (func: FunctionInfo) => (
-                                    <ExplorerNode
-                                      key={func.name}
-                                      id={func.name}
-                                      label={func.name}
-                                      icon={<FunctionIcon size={16} />}
-                                      iconColor="text-vscode-purple"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-
-                                {/* Procedures Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Procedures",
-                                  "procedures",
-                                  <ProcedureIcon size={16} />,
-                                  "text-vscode-orange",
-                                  loadedSchemaObjects[schemaInfo.name]
-                                    ?.procedures,
-                                  (proc: ProcedureInfo) => (
-                                    <ExplorerNode
-                                      key={proc.name}
-                                      id={proc.name}
-                                      label={proc.name}
-                                      icon={<ProcedureIcon size={16} />}
-                                      iconColor="text-vscode-orange"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-
-                                {/* Sequences Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Sequences",
-                                  "sequences",
-                                  <SequenceIcon size={16} />,
-                                  "text-vscode-cyan",
-                                  loadedSchemaObjects[schemaInfo.name]
-                                    ?.sequences,
-                                  (seq: SequenceInfo) => (
-                                    <ExplorerNode
-                                      key={seq.name}
-                                      id={seq.name}
-                                      label={seq.name}
-                                      icon={<SequenceIcon size={16} />}
-                                      iconColor="text-vscode-cyan"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-
-                                {/* Triggers Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Triggers",
-                                  "triggers",
-                                  <TriggerIcon size={16} />,
-                                  "text-vscode-red",
-                                  loadedSchemaObjects[schemaInfo.name]
-                                    ?.triggers,
-                                  (trigger: TriggerInfo) => (
-                                    <ExplorerNode
-                                      key={trigger.name}
-                                      id={trigger.name}
-                                      label={trigger.name}
-                                      icon={<TriggerIcon size={16} />}
-                                      iconColor="text-vscode-red"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-
-                                {/* Indexes Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Indexes",
-                                  "indexes",
-                                  <IndexIcon size={16} />,
-                                  "text-vscode-pink",
-                                  loadedSchemaObjects[schemaInfo.name]?.indexes,
-                                  (index: IndexInfo) => (
-                                    <ExplorerNode
-                                      key={index.name}
-                                      id={index.name}
-                                      label={index.name}
-                                      icon={<IndexIcon size={16} />}
-                                      iconColor="text-vscode-pink"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-
-                                {/* Domains Section */}
-                                {renderSchemaSection(
-                                  schemaInfo,
-                                  "Domains",
-                                  "domains",
-                                  <DomainIcon size={16} />,
-                                  "text-vscode-brown",
-                                  loadedSchemaObjects[schemaInfo.name]?.domains,
-                                  (domain: DomainInfo) => (
-                                    <ExplorerNode
-                                      key={domain.name}
-                                      id={domain.name}
-                                      label={domain.name}
-                                      icon={<DomainIcon size={16} />}
-                                      iconColor="text-vscode-brown"
-                                      level={
-                                        schema.databases &&
-                                        schema.databases.length > 0
-                                          ? 4
-                                          : 3
-                                      }
-                                      hasChildren={false}
-                                    />
-                                  )
-                                )}
-                              </div>
-                            )}
-                          </ExplorerNode>
-                        ))}
                     </div>
                   ) : (
                     <ExplorerNode
