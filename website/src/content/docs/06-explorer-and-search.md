@@ -1,7 +1,7 @@
 ---
 title: Navigate schemas and search fast
 description: Use the schema explorer, spotlight search, and object filtering to stay quick.
-order: 7
+order: 6
 ---
 
 ## Schema explorer

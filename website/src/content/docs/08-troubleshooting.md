@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: Fix common launch, connection, performance, and AI issues.
-order: 6
+order: 8
 ---
 
 ## macOS cannot open the app
