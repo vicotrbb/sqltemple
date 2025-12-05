@@ -97,6 +97,7 @@ const configureAutoUpdater = async () => {
     provider: "github",
     owner: "victorbona",
     repo: "sqltemple",
+    releaseType: "release",
   });
 
   const autoUpdateEnabled =

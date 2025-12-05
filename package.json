@@ -1,6 +1,6 @@
 {
   "name": "sqltemple",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A modern, AI-powered SQL IDE built with Electron and React.",
   "main": ".webpack/main",
   "scripts": {
