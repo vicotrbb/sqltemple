@@ -4,7 +4,7 @@ description: Streamed, tool-aware conversations that can insert or run SQL for y
 order: 9
 ---
 
-SQLTemple ships with an autonomous, database-aware agent that lives in a right-hand sidebar. It can read your intent, inspect the connected database, call safe tools, and stream answers—complete with a persistent conversation history.
+SQLTemple ships with an autonomous, database-aware agent that lives in a right-hand sidebar. It can read your intent, inspect the connected database, call safe tools, and stream answers, complete with a persistent conversation history.
 
 ## Opening the sidebar
 
@@ -36,8 +36,8 @@ The agent automatically reuses the active database connection and AI provider/mo
 
 When the agent is confident in a query, it emits an **SQL suggestion card**:
 
-- **Insert** — appends the exact SQL to your current editor tab (without clearing existing text).
-- **Run** — executes immediately, opens the results grid, and streams rows using the same safeguards as manual execution.
+- **Insert** - appends the exact SQL to your current editor tab (without clearing existing text).
+- **Run** - executes immediately, opens the results grid, and streams rows using the same safeguards as manual execution.
 
 Cards stay inside the chat history so you can revisit, copy, or re-run them later.
 
@@ -45,6 +45,6 @@ Cards stay inside the chat history so you can revisit, copy, or re-run them late
 
 - Be specific about the business question (“Join task_executions with execution_events by correlation_id”) to reduce follow-up tool calls.
 - Use the conversation history to branch: reopen a past session, then continue or start a new draft.
-- Keep an eye on the Processing dropdowns when troubleshooting—if a tool failed (e.g., no schema access), the agent will log that there.
+- Keep an eye on the Processing dropdowns when troubleshooting, if a tool failed (e.g., no schema access), the agent will log that there.
 
 With the agent sidebar you can go from idea → verified SQL → executed results without leaving SQLTemple or losing the audit trail of how the answer was produced.
