@@ -1,7 +1,7 @@
 ---
 title: Plans, topology, and analysis
 description: Visual tools to understand performance and relationships.
-order: 8
+order: 7
 ---
 
 ## Execution plans

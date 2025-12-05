@@ -22,6 +22,12 @@ const tabs = [
     title: "Fix slow queries with AI",
     body: "Execution plan visualizer plus AI optimization gives targeted fixes specific to your schema.",
   },
+  {
+    key: "chat",
+    label: "Chat",
+    title: "Chat with SQLTemple Agent",
+    body: "Enter in a conversation with the SQLTemple Agent, optimize, run, understand, explore the database with a chat like experience.",
+  },
 ];
 
 export default function ValueTabs() {

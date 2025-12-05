@@ -78,6 +78,25 @@ export class AIService {
     return await provider.getAvailableModels(config);
   }
 
+  async completePrompt(prompt: {
+    systemPrompt: string;
+    userPrompt: string;
+    temperature?: number;
+    maxTokens?: number;
+  }): Promise<string> {
+    const { config, provider } = await this.getConfigAndProvider();
+    const response = await provider.complete(
+      {
+        systemPrompt: prompt.systemPrompt,
+        userPrompt: prompt.userPrompt,
+        temperature: prompt.temperature,
+        maxTokens: prompt.maxTokens,
+      },
+      config
+    );
+    return response.content;
+  }
+
   async analyzeQueryPlan(query: string, plan: any): Promise<string> {
     const { config, provider } = await this.getConfigAndProvider();
 

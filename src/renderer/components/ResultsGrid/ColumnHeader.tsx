@@ -65,7 +65,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 
   return (
     <div
-      className="relative flex items-center justify-between px-3 py-1.5 text-left font-medium text-vscode-text border-r border-vscode-border last:border-r-0 bg-vscode-bg-quaternary"
+      className="relative flex items-center justify-between px-3 text-left font-medium text-vscode-text border-r border-vscode-border last:border-r-0 bg-vscode-bg-quaternary h-full"
       style={{ width, minWidth: width, maxWidth: width }}
       onMouseEnter={(e) => {
         setIsHovered(true);
@@ -76,18 +76,18 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         onStatsLeave();
       }}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0 flex-1 h-full">
+        <div className="flex items-center gap-2 min-w-0 h-full py-2">
           <div className="truncate font-medium text-sm leading-tight">
             {column.name}
           </div>
           {badges.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex gap-1 overflow-hidden">
               {badges.map((badge, index) => (
                 <span
                   key={`${badge.label}-${index}`}
                   title={badge.title}
-                  className={`px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide border rounded ${badge.className}`}
+                  className={`px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide border rounded whitespace-nowrap ${badge.className}`}
                 >
                   {badge.label}
                 </span>

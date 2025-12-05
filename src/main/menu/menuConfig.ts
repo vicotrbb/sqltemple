@@ -80,6 +80,11 @@ export const menuConfig: MenuConfig = {
       label: "Toggle Query History",
       accelerator: "CmdOrCtrl+H",
     },
+    {
+      id: "view:toggle-agent",
+      label: "Toggle Agent Sidebar",
+      accelerator: "CmdOrCtrl+L",
+    },
     { type: "separator", id: "separator-1", label: "" },
     { id: "view:zoom-in", label: "Zoom In", accelerator: "CmdOrCtrl+Plus" },
     { id: "view:zoom-out", label: "Zoom Out", accelerator: "CmdOrCtrl+-" },
@@ -102,10 +107,10 @@ export const menuConfig: MenuConfig = {
     { id: "database:connect", label: "Connect to Database..." },
     { id: "database:disconnect", label: "Disconnect" },
     { type: "separator", id: "separator-1", label: "" },
-    { 
-      id: "database:spotlight-search", 
-      label: "Search Database Objects...", 
-      accelerator: "CmdOrCtrl+P" 
+    {
+      id: "database:spotlight-search",
+      label: "Search Database Objects...",
+      accelerator: "CmdOrCtrl+P",
     },
     { type: "separator", id: "separator-1b", label: "" },
     {

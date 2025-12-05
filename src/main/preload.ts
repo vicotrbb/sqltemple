@@ -81,6 +81,16 @@ contextBridge.exposeInMainWorld("api", {
   aiAnalyzeData: (prompt: string) =>
     ipcRenderer.invoke("ai-analyze-data", prompt),
 
+  agent: {
+    start: (intent: string, sessionId?: string) =>
+      ipcRenderer.invoke("agent:start", { intent, sessionId }),
+    cancel: (sessionId: string) =>
+      ipcRenderer.invoke("agent:cancel", sessionId),
+    listSessions: () => ipcRenderer.invoke("agent:listSessions"),
+    getSession: (sessionId: string) =>
+      ipcRenderer.invoke("agent:getSession", sessionId),
+  },
+
   storage: {
     get: (key: string) => ipcRenderer.invoke("storage-get", key),
     set: (key: string, value: string) =>
@@ -118,6 +128,7 @@ contextBridge.exposeInMainWorld("api", {
         "menu:toggle-schema",
         "menu:toggle-results",
         "menu:toggle-history",
+        "menu:toggle-agent",
         "menu:connect-database",
         "menu:disconnect-database",
         "menu:refresh-schema",
@@ -134,6 +145,7 @@ contextBridge.exposeInMainWorld("api", {
         "menu:previous-tab",
         "menu:show-keyboard-shortcuts",
         "menu:show-about",
+        "agent:event",
       ];
 
       if (validChannels.includes(channel)) {

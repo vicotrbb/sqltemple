@@ -34,6 +34,7 @@ SQLTemple is a modern, AI-powered SQL IDE built with Electron and React. It prov
 - **Data Analysis**: AI-powered insights and pattern recognition from query results
 - **Smart Completions**: Context-aware SQL completions based on your database schema
 - **Multiple AI Models**: Support for GPT-4, GPT-4o, GPT-3.5, and O1 models
+- **Autonomous Agent Sidebar**: ReAct-style AI agent that can explore schemas, run tools, and stream answers while keeping a full conversation history
 
 ### 📊 Advanced Visualization & Analysis
 
@@ -171,15 +172,16 @@ npm run make
 
 ### View & Navigation
 
-| Action           | macOS         | Windows/Linux  |
-| ---------------- | ------------- | -------------- |
-| Find             | `Cmd+F`       | `Ctrl+F`       |
-| Find & Replace   | `Cmd+Shift+F` | `Ctrl+Shift+F` |
-| Toggle History   | `Cmd+H`       | `Ctrl+H`       |
-| Spotlight Search | `Cmd+K`       | `Ctrl+K`       |
-| Zoom In          | `Cmd++`       | `Ctrl++`       |
-| Zoom Out         | `Cmd+-`       | `Ctrl+-`       |
-| Reset Zoom       | `Cmd+0`       | `Ctrl+0`       |
+| Action               | macOS         | Windows/Linux  |
+| -------------------- | ------------- | -------------- |
+| Find                 | `Cmd+F`       | `Ctrl+F`       |
+| Find & Replace       | `Cmd+Shift+F` | `Ctrl+Shift+F` |
+| Toggle History       | `Cmd+H`       | `Ctrl+H`       |
+| Toggle Agent Sidebar | `Cmd+L`       | `Ctrl+L`       |
+| Spotlight Search     | `Cmd+K`       | `Ctrl+K`       |
+| Zoom In              | `Cmd++`       | `Ctrl++`       |
+| Zoom Out             | `Cmd+-`       | `Ctrl+-`       |
+| Reset Zoom           | `Cmd+0`       | `Ctrl+0`       |
 
 ### Tabs & Windows
 
@@ -472,3 +474,25 @@ Apache 2.0 - see LICENSE file for details
 ---
 
 <p align="center">Made with ❤️ by developers, for developers</p>
+## 🤖 SQLTemple Agent Sidebar
+
+SQLTemple now includes a fully autonomous agent that lives in the right-hand sidebar (toggle with `Cmd+L` / `Ctrl+L` or the toolbar button).
+
+### Key Capabilities
+
+- **Streaming Conversations**: Every response streams tokens in real time and is grouped into collapsible “Processing” traces so you can audit the agent’s ReAct loop.
+- **Database-Aware Tools**: The agent can inspect schemas, run SQL safely, perform fuzzy searches across schemas/tables/views/columns, and suggest finished SQL for you to insert or execute.
+- **Conversation History**: Sessions are stored locally. Reopen past conversations from the left list, duplicate them, or start a new draft with one click.
+- **SQL Suggestions with Actions**: When the agent proposes SQL, it renders a card with “Insert” (append to the current tab without losing your work) and “Run” (execute immediately and open results) buttons.
+- **Contextual Awareness**: The agent automatically reuses the currently-connected database and configured AI provider/model, so there’s nothing else to set up.
+
+### Using the Agent
+
+1. **Open the Sidebar**: Press `Cmd+L` / `Ctrl+L` or click the side-panel button in the toolbar.
+2. **Start or Pick a Conversation**: Use “New Conversation” for a blank session or select any previous session from the list.
+3. **Describe Your Intent**: Type natural language instructions—e.g., “Build me a query to fetch all task_executions with their artifacts”.
+4. **Watch the Trace**: Expand “Processing” to see tool calls (schema inspection, database search, SQL runner, etc.).
+5. **Apply SQL Suggestions**: Click **Insert** or **Run** on any SQL card the agent generates. Insert keeps your editor content, while Run executes the SQL immediately and streams rows into the grid.
+6. **Resume Later**: All turns are persisted, so you can revisit a conversation, continue asking questions, or duplicate its SQL.
+
+> Tip: Because the agent uses the same AI provider/model you configure in AI Settings, you can swap providers (OpenAI, Claude, local models) without changing your workflow.

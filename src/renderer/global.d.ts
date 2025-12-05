@@ -1,4 +1,5 @@
-import { DatabaseConnectionConfig } from '../main/database/interfaces';
+import type { DatabaseConnectionConfig } from '../main/database/interfaces';
+import type { AgentSessionRecord, AgentMessageRecord } from '../main/storage/StorageManager';
 
 export interface IElectronAPI {
   connectDatabase: (config: DatabaseConnectionConfig) => Promise<any>;
@@ -44,6 +45,18 @@ export interface IElectronAPI {
   aiCreateQuery: (prompt: string) => Promise<any>;
   aiOptimizeQuery: (sql: string) => Promise<any>;
   aiAnalyzeData: (prompt: string) => Promise<any>;
+
+  agent: {
+    start: (
+      intent: string,
+      sessionId?: string
+    ) => Promise<{ success: boolean; session?: AgentSessionRecord; error?: string }>;
+    cancel: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+    listSessions: () => Promise<{ success: boolean; sessions?: AgentSessionRecord[]; error?: string }>;
+    getSession: (
+      sessionId: string
+    ) => Promise<{ success: boolean; session?: AgentSessionRecord | null; messages?: AgentMessageRecord[]; error?: string }>;
+  };
 
   storage: {
     get: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;

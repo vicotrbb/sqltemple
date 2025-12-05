@@ -17,6 +17,7 @@ export interface MenuActionHandlers {
   onToggleSchema?: () => void;
   onToggleResults?: () => void;
   onToggleHistory?: () => void;
+  onToggleAgentSidebar?: () => void;
 
   onConnectDatabase?: () => void;
   onDisconnectDatabase?: () => void;
@@ -57,6 +58,7 @@ export function useMenuActions(handlers: MenuActionHandlers) {
       "menu:toggle-schema": "onToggleSchema",
       "menu:toggle-results": "onToggleResults",
       "menu:toggle-history": "onToggleHistory",
+      "menu:toggle-agent": "onToggleAgentSidebar",
       "menu:connect-database": "onConnectDatabase",
       "menu:disconnect-database": "onDisconnectDatabase",
       "menu:refresh-schema": "onRefreshSchema",

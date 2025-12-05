@@ -269,6 +269,13 @@ export const BrainIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
+export const PanelRightIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <line x1="15" y1="4" x2="15" y2="20" />
+  </Icon>
+);
+
 export const HistoryIcon: React.FC<IconProps> = (props) => (
   <Icon {...props}>
     <circle cx="12" cy="12" r="10" />
