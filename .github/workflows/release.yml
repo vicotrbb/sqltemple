@@ -229,6 +229,11 @@ jobs:
           TAG_NAME="${{ steps.version.outputs.is_tag == 'true' && github.ref_name || format('v{0}', steps.version.outputs.version) }}"
           RELEASE_NAME="SQLTemple ${{ steps.version.outputs.version }}"
           IS_PRERELEASE="${{ steps.version.outputs.is_tag == 'false' || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'rc') }}"
+          TARGET_FLAG=""
+
+          if [ "${{ steps.version.outputs.is_tag }}" != "true" ]; then
+            TARGET_FLAG="--target $GITHUB_SHA"
+          fi
           
           BODY="## SQLTemple ${{ steps.version.outputs.version }}
 
@@ -242,11 +247,12 @@ jobs:
           ### Changes
           See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes."
           
+          CREATE_CMD="gh release create \"$TAG_NAME\" --title \"$RELEASE_NAME\" --notes \"$BODY\" $TARGET_FLAG"
           if [ "$IS_PRERELEASE" = "true" ]; then
-            gh release create "$TAG_NAME" --title "$RELEASE_NAME" --notes "$BODY" --prerelease
-          else
-            gh release create "$TAG_NAME" --title "$RELEASE_NAME" --notes "$BODY"
+            CREATE_CMD="$CREATE_CMD --prerelease"
           fi
+          echo "Running: $CREATE_CMD"
+          eval $CREATE_CMD
 
       - name: Upload Release Assets
         if: steps.version_check.outputs.should_release == 'true'
