@@ -1,23 +1,24 @@
 ---
-import NavBar from '../components/NavBar.astro';
-import Footer from '../components/Footer.astro';
-import { getCollection } from 'astro:content';
-import '../styles/tailwind.css';
-import '../styles/global.css';
+import NavBar from "../components/NavBar.astro";
+import Footer from "../components/Footer.astro";
+import { getCollection } from "astro:content";
+import "../styles/tailwind.css";
+import "../styles/global.css";
 
-const docs = await getCollection('docs');
+const docs = await getCollection("docs");
 const sorted = docs.sort((a, b) => a.data.order - b.data.order);
 const {
-  title = 'SQLTemple Documentation | Guides for the AI-powered SQL IDE',
-  description =
-    'Dive into installation, configuration, AI workflows, and advanced SQLTemple features with step-by-step docs for your team.',
+  title = "SQLTemple Documentation | Guides for the AI-powered SQL IDE",
+  description = "Dive into installation, configuration, AI workflows, and advanced SQLTemple features with step-by-step docs for your team.",
   currentSlug,
 } = Astro.props;
-const siteOrigin = Astro.site?.origin ?? 'https://sqltemple.dev';
-const canonicalUrl = currentSlug ? `${siteOrigin}/docs/${currentSlug}/` : `${siteOrigin}/docs/`;
+const siteOrigin = Astro.site?.origin ?? "https://sqltemple.dev";
+const canonicalUrl = currentSlug
+  ? `${siteOrigin}/docs/${currentSlug}/`
+  : `${siteOrigin}/docs/`;
 const currentUrl = Astro.url?.href ?? canonicalUrl;
-const ogImage = `${siteOrigin}/og.png`;
-const ogImageAlt = 'SQLTemple agent sidebar and documentation preview';
+const ogImage = `/og.png`;
+const ogImageAlt = "SQLTemple agent sidebar and documentation preview";
 ---
 
 <html lang="en" class="dark">
@@ -48,27 +49,35 @@ const ogImageAlt = 'SQLTemple agent sidebar and documentation preview';
     <NavBar />
     <main class="flex-1">
       <div class="container grid gap-10 py-14 lg:grid-cols-[260px_1fr]">
-        <aside class="rounded-2xl border border-border bg-gradient-to-b from-surface-2 to-[#0c101a] p-5 sticky top-8 h-fit shadow-soft">
-          <p class="text-xs uppercase tracking-[0.25em] text-muted mb-4">Docs</p>
+        <aside
+          class="rounded-2xl border border-border bg-gradient-to-b from-surface-2 to-[#0c101a] p-5 sticky top-8 h-fit shadow-soft"
+        >
+          <p class="text-xs uppercase tracking-[0.25em] text-muted mb-4">
+            Docs
+          </p>
           <nav class="flex flex-col gap-1 text-sm">
-            {sorted.map((entry) => {
-              const active = currentSlug === entry.slug;
-              return (
-                <a
-                  class={`rounded-lg px-3 py-2 transition ${
-                    active
-                      ? 'bg-white/10 text-accent border border-border'
-                      : 'hover:bg-white/5 text-muted'
-                  }`}
-                  href={`/docs/${entry.slug}/`}
-                >
-                  {entry.data.title}
-                </a>
-              );
-            })}
+            {
+              sorted.map((entry) => {
+                const active = currentSlug === entry.slug;
+                return (
+                  <a
+                    class={`rounded-lg px-3 py-2 transition ${
+                      active
+                        ? "bg-white/10 text-accent border border-border"
+                        : "hover:bg-white/5 text-muted"
+                    }`}
+                    href={`/docs/${entry.slug}/`}
+                  >
+                    {entry.data.title}
+                  </a>
+                );
+              })
+            }
           </nav>
         </aside>
-        <article class="prose prose-invert max-w-3xl prose-headings:font-semibold prose-h1:text-4xl prose-h2:text-2xl prose-p:leading-relaxed prose-li:leading-relaxed prose-code:text-sm bg-surface-2/60 border border-border rounded-2xl p-8 shadow-soft">
+        <article
+          class="prose prose-invert max-w-3xl prose-headings:font-semibold prose-h1:text-4xl prose-h2:text-2xl prose-p:leading-relaxed prose-li:leading-relaxed prose-code:text-sm bg-surface-2/60 border border-border rounded-2xl p-8 shadow-soft"
+        >
           <slot />
         </article>
       </div>
