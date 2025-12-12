@@ -1,7 +1,7 @@
 ---
 title: Agent sidebar
-description: Streamed, tool-aware conversations that can insert or run SQL for you.
-order: 9
+description: Streamed, tool-aware conversations that inspect schema, propose SQL, and insert or run queries with one click.
+order: 8
 ---
 
 SQLTemple ships with an autonomous, database-aware agent that lives in a right-hand sidebar. It can read your intent, inspect the connected database, call safe tools, and stream answers, complete with a persistent conversation history.

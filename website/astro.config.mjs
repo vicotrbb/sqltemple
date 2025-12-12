@@ -4,7 +4,7 @@ import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://sqltemple.com',
+  site: 'https://sqltemple.dev',
   integrations: [react(), tailwind(), sitemap()],
   markdown: {
     shikiConfig: {
