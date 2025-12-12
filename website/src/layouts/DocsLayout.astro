@@ -12,6 +12,9 @@ const {
   description = 'Learn how to install, configure, and use SQLTemple effectively.',
   currentSlug,
 } = Astro.props;
+const siteOrigin = Astro.site?.origin ?? 'https://sqltemple.com';
+const ogImage = `${siteOrigin}/og.png`;
+const canonicalUrl = currentSlug ? `${siteOrigin}/docs/${currentSlug}/` : `${siteOrigin}/docs/`;
 ---
 
 <html lang="en" class="dark">
@@ -20,6 +23,18 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:secure_url" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
   </head>
   <body class="text-white min-h-screen flex flex-col">
     <NavBar />

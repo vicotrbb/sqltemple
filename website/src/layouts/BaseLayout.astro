@@ -4,7 +4,13 @@ import Footer from '../components/Footer.astro';
 import '../styles/tailwind.css';
 import '../styles/global.css';
 
-const { title = 'SQLTemple | AI-powered SQL IDE', description = 'SQLTemple is a modern, AI-first SQL IDE with Monaco Editor, execution plans, and AI assistance.', structuredData } = Astro.props;
+const {
+  title = 'SQLTemple | AI-powered SQL IDE',
+  description = 'SQLTemple is a modern, AI-first SQL IDE with Monaco Editor, execution plans, and AI assistance.',
+  structuredData,
+} = Astro.props;
+const siteOrigin = Astro.site?.origin ?? 'https://sqltemple.com';
+const ogImage = `${siteOrigin}/og.png`;
 ---
 
 <html lang="en" class="dark">
@@ -18,10 +24,14 @@ const { title = 'SQLTemple | AI-powered SQL IDE', description = 'SQLTemple is a 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:url" content={siteOrigin} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:secure_url" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     {structuredData && <script type="application/ld+json">{JSON.stringify(structuredData)}</script>}
   </head>
   <body class="text-white min-h-screen flex flex-col">
