@@ -81,11 +81,172 @@ export interface AppConfig {
 
 const defaultShortcuts: KeyboardShortcut[] = [
   {
-    id: "file:new-tab",
+    id: "new-tab",
     name: "New Tab",
     description: "Create a new query tab",
     defaultKeys: ["Cmd+T", "Ctrl+T"],
     category: "File",
+  },
+  {
+    id: "open-spotlight",
+    name: "Open Spotlight Search",
+    description: "Open universal search for database objects",
+    defaultKeys: ["Cmd+P", "Ctrl+P"],
+    category: "Navigation",
+  },
+  {
+    id: "save-query",
+    name: "Save Query",
+    description: "Save the current query",
+    defaultKeys: ["Cmd+S", "Ctrl+S"],
+    category: "File",
+  },
+  {
+    id: "duplicate-tab",
+    name: "Duplicate Tab",
+    description: "Duplicate current tab",
+    defaultKeys: ["Cmd+Shift+T", "Ctrl+Shift+T"],
+    category: "File",
+  },
+  {
+    id: "execute-query",
+    name: "Execute Query",
+    description: "Run the current SQL query",
+    defaultKeys: ["Cmd+Enter", "Ctrl+Enter"],
+    category: "Database",
+  },
+  {
+    id: "execute-selection",
+    name: "Execute Selection",
+    description: "Run the selected SQL query",
+    defaultKeys: ["Cmd+Shift+Enter", "Ctrl+Shift+Enter"],
+    category: "Database",
+  },
+  {
+    id: "explain-query",
+    name: "Explain Query",
+    description: "Show query execution plan",
+    defaultKeys: ["Cmd+E", "Ctrl+E"],
+    category: "Database",
+  },
+  {
+    id: "refresh-schema",
+    name: "Refresh Schema",
+    description: "Reload database schema",
+    defaultKeys: ["F5"],
+    category: "Database",
+  },
+  {
+    id: "connect-database",
+    name: "Connect to Database",
+    description: "Open connection dialog",
+    defaultKeys: ["Cmd+Shift+C", "Ctrl+Shift+C"],
+    category: "Database",
+  },
+  {
+    id: "disconnect-database",
+    name: "Disconnect Database",
+    description: "Disconnect from current database",
+    defaultKeys: ["Cmd+Shift+D", "Ctrl+Shift+D"],
+    category: "Database",
+  },
+  {
+    id: "toggle-connections",
+    name: "Toggle Connections Panel",
+    description: "Show/hide connections panel",
+    defaultKeys: ["Cmd+1", "Ctrl+1"],
+    category: "View",
+  },
+  {
+    id: "toggle-schema",
+    name: "Toggle Schema Explorer",
+    description: "Show/hide schema explorer",
+    defaultKeys: ["Cmd+2", "Ctrl+2"],
+    category: "View",
+  },
+  {
+    id: "toggle-results",
+    name: "Toggle Results Panel",
+    description: "Show/hide results panel",
+    defaultKeys: ["Cmd+3", "Ctrl+3"],
+    category: "View",
+  },
+  {
+    id: "toggle-history",
+    name: "Toggle History",
+    description: "Show/hide query history",
+    defaultKeys: ["Cmd+H", "Ctrl+H"],
+    category: "View",
+  },
+  {
+    id: "toggle-agent",
+    name: "Toggle Agent Sidebar",
+    description: "Show/hide the AI agent sidebar",
+    defaultKeys: ["Cmd+L", "Ctrl+L"],
+    category: "View",
+  },
+  {
+    id: "focus-editor",
+    name: "Focus Editor",
+    description: "Focus the query editor",
+    defaultKeys: ["Cmd+0", "Ctrl+0"],
+    category: "View",
+  },
+  {
+    id: "clear-editor",
+    name: "Clear Editor",
+    description: "Clear the current query editor",
+    defaultKeys: ["Cmd+Shift+K", "Ctrl+Shift+K"],
+    category: "Edit",
+  },
+  {
+    id: "format-query",
+    name: "Format Query",
+    description: "Format the current SQL query",
+    defaultKeys: ["Shift+Alt+F"],
+    category: "Edit",
+  },
+  {
+    id: "create-query-ai",
+    name: "Create Query with AI",
+    description: "Open AI query creation dialog",
+    defaultKeys: ["Cmd+Shift+N", "Ctrl+Shift+N"],
+    category: "AI",
+  },
+  {
+    id: "explain-query-ai",
+    name: "Explain Query with AI",
+    description: "Get AI explanation for selected query",
+    defaultKeys: ["Cmd+Shift+E", "Ctrl+Shift+E"],
+    category: "AI",
+  },
+  {
+    id: "optimize-query-ai",
+    name: "Optimize Query with AI",
+    description: "Optimize selected query using AI",
+    defaultKeys: ["Cmd+Shift+O", "Ctrl+Shift+O"],
+    category: "AI",
+  },
+  {
+    id: "close-tab",
+    name: "Close Tab",
+    description: "Close the current tab",
+    defaultKeys: ["Cmd+W", "Ctrl+W"],
+    category: "Window",
+  },
+  {
+    id: "next-tab",
+    name: "Next Tab",
+    description: "Switch to next tab",
+    defaultKeys: ["Cmd+Tab", "Ctrl+Tab"],
+    category: "Window",
+  },
+  {
+    id: "previous-tab",
+    name: "Previous Tab",
+    description: "Switch to previous tab",
+    defaultKeys: ["Cmd+Shift+Tab", "Ctrl+Shift+Tab"],
+    category: "Window",
   },
   {
     id: "file:open-query",
@@ -95,20 +256,12 @@ const defaultShortcuts: KeyboardShortcut[] = [
     category: "File",
   },
   {
-    id: "file:save-query",
-    name: "Save Query",
-    description: "Save the current query",
-    defaultKeys: ["Cmd+S", "Ctrl+S"],
-    category: "File",
-  },
-  {
     id: "file:save-query-as",
     name: "Save Query As",
     description: "Save query with new filename",
     defaultKeys: ["Cmd+Shift+S", "Ctrl+Shift+S"],
     category: "File",
   },
-
   {
     id: "edit:undo",
     name: "Undo",
@@ -137,123 +290,37 @@ const defaultShortcuts: KeyboardShortcut[] = [
     defaultKeys: ["Cmd+H", "Ctrl+H"],
     category: "Edit",
   },
-  {
-    id: "edit:format-query",
-    name: "Format Query",
-    description: "Format the current SQL query",
-    defaultKeys: ["Cmd+Shift+F", "Ctrl+Shift+F"],
-    category: "Edit",
-  },
-
-  {
-    id: "database:execute-query",
-    name: "Execute Query",
-    description: "Run the current SQL query",
-    defaultKeys: ["Cmd+Enter", "Ctrl+Enter"],
-    category: "Database",
-  },
-  {
-    id: "database:execute-selected",
-    name: "Execute Selected",
-    description: "Run selected SQL text",
-    defaultKeys: ["Cmd+Shift+Enter", "Ctrl+Shift+Enter"],
-    category: "Database",
-  },
-  {
-    id: "database:explain-query",
-    name: "Explain Query",
-    description: "Show query execution plan",
-    defaultKeys: ["Cmd+E", "Ctrl+E"],
-    category: "Database",
-  },
-  {
-    id: "database:refresh-schema",
-    name: "Refresh Schema",
-    description: "Reload database schema",
-    defaultKeys: ["F5"],
-    category: "Database",
-  },
-
-  {
-    id: "view:toggle-history",
-    name: "Toggle History",
-    description: "Show/hide query history",
-    defaultKeys: ["Cmd+H", "Ctrl+H"],
-    category: "View",
-  },
-  {
-    id: "view:toggle-connections",
-    name: "Toggle Connections",
-    description: "Show/hide connections panel",
-    defaultKeys: ["Cmd+1", "Ctrl+1"],
-    category: "View",
-  },
-  {
-    id: "view:toggle-schema",
-    name: "Toggle Schema",
-    description: "Show/hide schema explorer",
-    defaultKeys: ["Cmd+2", "Ctrl+2"],
-    category: "View",
-  },
-  {
-    id: "view:toggle-results",
-    name: "Toggle Results",
-    description: "Show/hide results panel",
-    defaultKeys: ["Cmd+3", "Ctrl+3"],
-    category: "View",
-  },
-  {
-    id: "view:toggle-agent",
-    name: "Toggle Agent Sidebar",
-    description: "Show/hide the AI agent sidebar",
-    defaultKeys: ["Cmd+L", "Ctrl+L"],
-    category: "View",
-  },
-
-  {
-    id: "ai:create-query",
-    name: "Create Query with AI",
-    description: "Open AI query creation dialog",
-    defaultKeys: ["Cmd+Shift+N", "Ctrl+Shift+N"],
-    category: "AI",
-  },
-  {
-    id: "ai:explain-query",
-    name: "Explain Query with AI",
-    description: "Get AI explanation for selected query",
-    defaultKeys: ["Cmd+Shift+E", "Ctrl+Shift+E"],
-    category: "AI",
-  },
-  {
-    id: "ai:optimize-query",
-    name: "Optimize Query with AI",
-    description: "Optimize selected query using AI",
-    defaultKeys: ["Cmd+Shift+O", "Ctrl+Shift+O"],
-    category: "AI",
-  },
-
-  {
-    id: "window:close-tab",
-    name: "Close Tab",
-    description: "Close the current tab",
-    defaultKeys: ["Cmd+W", "Ctrl+W"],
-    category: "Window",
-  },
-  {
-    id: "window:next-tab",
-    name: "Next Tab",
-    description: "Switch to next tab",
-    defaultKeys: ["Cmd+Tab", "Ctrl+Tab"],
-    category: "Window",
-  },
-  {
-    id: "window:previous-tab",
-    name: "Previous Tab",
-    description: "Switch to previous tab",
-    defaultKeys: ["Cmd+Shift+Tab", "Ctrl+Shift+Tab"],
-    category: "Window",
-  },
 ];
+
+const mergeShortcutSettings = (saved?: ShortcutSettings): ShortcutSettings => {
+  const savedShortcuts = saved?.shortcuts ?? [];
+  const savedMap = new Map(
+    savedShortcuts.map((shortcut) => [shortcut.id, shortcut])
+  );
+
+  const mergedShortcuts = defaultShortcuts.map((shortcut) => {
+    const savedShortcut = savedMap.get(shortcut.id);
+    if (savedShortcut?.customKeys?.length) {
+      return { ...shortcut, customKeys: savedShortcut.customKeys };
+    }
+    return shortcut;
+  });
+
+  savedShortcuts.forEach((shortcut) => {
+    if (
+      !defaultShortcuts.some(
+        (defaultShortcut) => defaultShortcut.id === shortcut.id
+      )
+    ) {
+      mergedShortcuts.push(shortcut);
+    }
+  });
+
+  return {
+    enableGlobalShortcuts: saved?.enableGlobalShortcuts ?? true,
+    shortcuts: mergedShortcuts,
+  };
+};
 
 const defaultConfig: AppConfig = {
   general: {
@@ -298,10 +365,7 @@ const defaultConfig: AppConfig = {
     connectionPooling: true,
     keepAliveInterval: 30,
   },
-  shortcuts: {
-    shortcuts: defaultShortcuts,
-    enableGlobalShortcuts: true,
-  },
+  shortcuts: mergeShortcutSettings(),
   version: "1.0.0",
   lastModified: new Date().toISOString(),
 };
@@ -377,13 +441,21 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         const result = await storage.get("app_config");
         if (result.success && result.value) {
           const parsedConfig = JSON.parse(result.value);
-          setConfig({ ...defaultConfig, ...parsedConfig });
+          setConfig({
+            ...defaultConfig,
+            ...parsedConfig,
+            shortcuts: mergeShortcutSettings(parsedConfig.shortcuts),
+          });
         }
       } else {
         const savedConfig = localStorage.getItem("sqltemple-config");
         if (savedConfig) {
           const parsedConfig = JSON.parse(savedConfig);
-          setConfig({ ...defaultConfig, ...parsedConfig });
+          setConfig({
+            ...defaultConfig,
+            ...parsedConfig,
+            shortcuts: mergeShortcutSettings(parsedConfig.shortcuts),
+          });
         }
       }
     } catch (error) {
@@ -486,7 +558,9 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   };
 
   const getShortcut = (id: string): string[] => {
-    const shortcut = config.shortcuts.shortcuts.find((s) => s.id === id);
+    const shortcut =
+      config.shortcuts.shortcuts.find((s) => s.id === id) ||
+      defaultShortcuts.find((s) => s.id === id);
     if (!shortcut) return [];
     return shortcut.customKeys || shortcut.defaultKeys;
   };
@@ -506,7 +580,11 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         throw new Error("Invalid config format");
       }
 
-      const mergedConfig = { ...defaultConfig, ...importedConfig };
+      const mergedConfig = {
+        ...defaultConfig,
+        ...importedConfig,
+        shortcuts: mergeShortcutSettings(importedConfig.shortcuts),
+      };
       setConfig(mergedConfig);
       setHasUnsavedChanges(true);
       return true;

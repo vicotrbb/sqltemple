@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
+import React, { useState } from "react";
+import { useSettings } from "../contexts/ConfigContext";
 
 interface KeyboardShortcutsProps {
   onClose: () => void;
 }
 
-export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onClose }) => {
+export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
+  onClose,
+}) => {
   const { settings, updateShortcut, resetShortcuts } = useSettings();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempKeys, setTempKeys] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
 
   const handleStartEdit = (id: string) => {
-    const shortcut = settings.keyboardShortcuts.find(s => s.id === id);
+    const shortcut = settings.keyboardShortcuts.find((s) => s.id === id);
     if (shortcut) {
       setEditingId(id);
       setTempKeys(shortcut.customKeys || shortcut.defaultKeys);
@@ -42,39 +44,41 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onClose })
       e.stopPropagation();
 
       const keys: string[] = [];
-      if (e.metaKey) keys.push('Cmd');
-      if (e.ctrlKey) keys.push('Ctrl');
-      if (e.altKey) keys.push('Alt');
-      if (e.shiftKey) keys.push('Shift');
+      if (e.metaKey) keys.push("Cmd");
+      if (e.ctrlKey) keys.push("Ctrl");
+      if (e.altKey) keys.push("Alt");
+      if (e.shiftKey) keys.push("Shift");
 
-      if (e.key && !['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      if (e.key && !["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
         keys.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
       }
 
       if (keys.length > 0) {
-        setTempKeys([keys.join('+')]);
+        setTempKeys([keys.join("+")]);
         setRecording(false);
-        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener("keydown", handleKeyDown);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     setTimeout(() => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
       setRecording(false);
     }, 5000);
   };
 
   const formatKeys = (keys: string[]): string => {
-    return keys.join(', ');
+    return keys.join(", ");
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 modal-backdrop">
       <div className="bg-vscode-bg-secondary rounded-md shadow-2xl w-[800px] max-h-[85vh] overflow-hidden border border-vscode-border animate-fadeIn">
         <div className="px-6 py-4 border-b border-vscode-border flex justify-between items-center bg-vscode-bg-tertiary">
-          <h2 className="text-lg font-medium text-vscode-text">Keyboard Shortcuts</h2>
+          <h2 className="text-lg font-medium text-vscode-text">
+            Keyboard Shortcuts
+          </h2>
           <button
             onClick={onClose}
             className="text-vscode-text-secondary hover:text-vscode-text transition-colors text-xl"
@@ -82,31 +86,39 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onClose })
             ✕
           </button>
         </div>
-        
+
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           <div className="space-y-4">
-            {settings.keyboardShortcuts.map(shortcut => {
+            {settings.keyboardShortcuts.map((shortcut) => {
               const isEditing = editingId === shortcut.id;
               const currentKeys = shortcut.customKeys || shortcut.defaultKeys;
-              
+
               return (
                 <div
                   key={shortcut.id}
                   className="flex items-center justify-between p-4 bg-vscode-bg rounded border border-vscode-border hover:border-vscode-blue transition-colors"
                 >
                   <div className="flex-1">
-                    <h3 className="font-medium text-vscode-text">{shortcut.name}</h3>
-                    <p className="text-sm text-vscode-text-secondary mt-1">{shortcut.description}</p>
+                    <h3 className="font-medium text-vscode-text">
+                      {shortcut.name}
+                    </h3>
+                    <p className="text-sm text-vscode-text-secondary mt-1">
+                      {shortcut.description}
+                    </p>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     {isEditing ? (
                       <>
                         <div className="px-3 py-1 bg-vscode-bg-tertiary rounded border border-vscode-border min-w-[150px] text-center">
                           {recording ? (
-                            <span className="text-vscode-blue animate-pulse">Press keys...</span>
+                            <span className="text-vscode-blue animate-pulse">
+                              Press keys...
+                            </span>
                           ) : (
-                            <span className="font-mono text-sm">{formatKeys(tempKeys)}</span>
+                            <span className="font-mono text-sm">
+                              {formatKeys(tempKeys)}
+                            </span>
                           )}
                         </div>
                         <button
@@ -147,7 +159,7 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onClose })
               );
             })}
           </div>
-          
+
           <div className="mt-6 flex justify-end">
             <button
               onClick={resetShortcuts}
