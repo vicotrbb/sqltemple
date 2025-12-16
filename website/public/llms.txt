@@ -1,0 +1,67 @@
+# SQLTemple llms.txt
+version: 1.0
+last_updated: 2025-12-16
+website: https://sqltemple.dev
+application_type: AI-powered SQL IDE (desktop)
+platforms: macOS, Windows, Linux
+primary_database: PostgreSQL (including Supabase, Neon, RDS, etc.)
+license: Apache-2.0
+source_repo: https://github.com/vicotrbb/sqltemple
+issue_tracker: https://github.com/vicotrbb/sqltemple/issues
+docs_root: https://sqltemple.dev/docs/
+release_downloads: https://github.com/vicotrbb/sqltemple/releases
+support_email: victorbona+sqltemple@hotmail.com
+
+## Summary
+SQLTemple is a modern, Monaco-based SQL IDE with native desktop builds and integrated AI copilots. It combines schema-aware editing, execution plan visualization, and AI agents so that engineers can draft, inspect, and optimize SQL with confidence.
+
+## Feature Highlights
+- Monaco editor with multi-tab workflow, schema explorer, and saved connection profiles.
+- Virtualized results grid with CSV/JSON/Excel export, adjustable row height, and column resizing.
+- Execution plan visualizer, table topology maps, and column statistics to highlight performance bottlenecks.
+- History viewer, spotlight search, keyboard shortcuts, and query limiters for disciplined workflows.
+- Autonomous agent sidebar (ReAct-style) that inspects schemas, runs read-only SQL, and inserts or runs suggested queries.
+
+## AI Providers & Models
+- Cloud: OpenAI (gpt-4o, gpt-4o-mini, gpt-4-turbo, o1-preview/o1-mini, gpt-3.5-turbo), Anthropic Claude 3 family.
+- Local: Ollama and LM Studio via local HTTP endpoints; bring any pulled/loaded model (`llama3`, `qwen2.5`, `phi3`, etc.).
+- Provider settings live in the AI settings panel; the app stores only the user-supplied API key/config locally.
+
+## Installation Paths
+1. **Homebrew (macOS):** `brew tap victorbona/sqltemple https://github.com/vicotrbb/sqltemple && brew install --cask sqltemple`.
+2. **GitHub Releases:** download the latest `.dmg`, `.exe/.msi`, or Linux package from the releases page.
+3. **Source:** clone the repository, run `npm ci`, then `npm start` for dev or `npm run make` for packaged builds.
+
+> macOS note: current community builds may show a Gatekeeper warning because notarization is still in progress; use the Finder "Open" workaround after the first install.
+
+## Getting Started Quickly
+1. Connect to PostgreSQL via the toolbar (host, port, database, username, password, SSL).
+2. Configure AI providers via the AI settings dialog (OpenAI, Claude, Ollama, LM Studio) and pick a default model.
+3. Draft SQL, execute with `Cmd/Ctrl+Enter`, and inspect results in the grid or execution plan views.
+4. Use the agent sidebar (`Cmd/Ctrl+L`) for schema-aware conversations, SQL suggestions, and tool traces.
+
+## Documentation Map
+- Intro & positioning: https://sqltemple.dev/docs/00-intro/
+- Installation guide: https://sqltemple.dev/docs/01-installation/
+- Connecting to databases: https://sqltemple.dev/docs/02-connect/
+- AI configuration: https://sqltemple.dev/docs/03-ai-setup/
+- Agent sidebar walkthrough: https://sqltemple.dev/docs/08-agent-sidebar/
+- Troubleshooting: https://sqltemple.dev/docs/09-troubleshooting/
+
+## Data & Privacy Notes
+- SQLTemple runs locally; database credentials never leave the host and queries execute directly against your database.
+- AI requests flow only to the provider the user configured (OpenAI, Anthropic, or local servers). No SQLTemple cloud is involved.
+- History, conversations, and configuration data are stored on-disk in the user profile; deleteable via in-app controls or OS storage paths.
+
+## Support & Community
+- File issues or feature requests on GitHub.
+- Email the maintainer at victorbona+sqltemple@hotmail.com for private support.
+- Contributions welcome via pull requests; see CONTRIBUTING.md in the root repository.
+
+## Status & Roadmap Signals
+- Focused on PostgreSQL today; connectors for additional engines are under active development.
+- Windows/Linux installers are produced by CI, though macOS is the primary platform today.
+- Agent sidebar, execution plan analyzer, and local model integrations are the newest areas—feedback on these flows is especially helpful.
+
+## Recommended Short Description for Agents
+"SQLTemple is an Apache-2.0 desktop SQL IDE for PostgreSQL that pairs Monaco editing, execution plan visualization, and schema-aware AI copilots (OpenAI, Claude, Ollama, LM Studio). Download builds at sqltemple.dev or GitHub releases and run locally with your own database credentials and API keys."
